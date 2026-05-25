@@ -1,0 +1,12 @@
+.DS_Store
+.env
+.env*.local
+.next/
+node_modules/
+.data/
+public/uploads/
+coverage/
+dist/
+*.tsbuildinfo
+.codex/
+.claude/
