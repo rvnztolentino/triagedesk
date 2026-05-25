@@ -1,121 +1,66 @@
 # TriageDesk
 
-AI-powered internal operations triage for schools, clinics, offices, and facilities teams.
+TriageDesk is an internal operations triage app for schools, clinics, offices, and facilities teams. Requesters submit plain-language issues, Groq generates structured triage suggestions, and admins review the result before it becomes a trackable ticket.
 
-TriageDesk turns messy operational requests into structured work: a requester submits a plain-language issue, AI suggests category/priority/department/summary, and an admin reviews the output before it becomes a trackable ticket. The product is built as a portfolio-ready full-stack prototype with Supabase Auth, requester/admin/owner roles, Supabase persistence/storage, and Groq-powered server-side triage.
+The app includes Supabase authentication, requester/admin/owner roles, request image uploads, ticket history, workspace seeding, and responsive workspace controls for mobile layout, light/dark theme, profile sign-out, and accent color selection.
 
-Use free/no-card accounts or local Supabase only. Do not enter payment information for this project.
+## Tech Stack
 
-## Why This Is Not Just A Ticket App
+- Next.js 16 App Router
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- Supabase Auth, Database, and Storage
+- Groq chat completions for AI triage
+- Zod for validation
+- Vitest, ESLint, and TypeScript checks
 
-- Role-based workflow: requesters submit and track their own work; admins manage triage and tickets; the protected owner manages user roles.
-- Human-in-the-loop AI triage: AI drafts structured ticket data, but admins approve, edit, reject, or mark duplicates.
-- Operational prioritization: requests are classified by priority, department, SLA risk, aging work, and workload impact.
-- Requester-scoped tracking: non-admin users only see tickets connected to their own submitted requests.
-- Activity visibility: ticket updates, request saves, triage events, notes, and status changes are captured in activity/history views.
+## Setup
 
-## Complete Workflow
+1. Install dependencies:
 
-1. A requester signs in and submits a messy request such as: `Aircon in Room 304 is leaking again. Floor is wet near the outlet.`
-2. Server-side AI triage generates a structured title, category, priority, department, summary, reasoning, and similar-ticket suggestions.
-3. An admin reviews the AI output in the triage inbox.
-4. The admin approves, edits, rejects, or marks the request as a duplicate.
-5. Approved requests become tickets.
-6. Admins update ticket status, department, internal notes, and resolution notes.
-7. Requesters view progress for their own approved tickets.
-8. Dashboard metrics and activity history update from workspace data.
+```sh
+pnpm install
+```
 
-## Technical Highlights
+2. Create a local environment file:
 
-- Supabase Auth email/password login and signup.
-- Email verification is required before an account can sign in or receive an app role.
-- Supabase `user_profiles` roles with requester default signup behavior.
-- `SEED_ADMIN_EMAIL` bootstrap for the protected owner account; signup has no role selector.
-- Requester-scoped ticket visibility using requester ownership on requests and tickets.
-- Admin/owner dashboard, review queue, ticket mutation actions, settings, and workspace reset; user management is owner-only.
-- Server-only Groq handling through Next.js server actions; API keys stay out of client components.
-- AI safeguards: validate setup/input before calls, reuse exact-match prior triage where possible, and send clipped/minimal prompt context.
-- Deterministic rules triage helper for tests and sample logic; runtime request submission requires Groq configuration.
-- Similar-ticket suggestions and lightweight duplicate detection based on existing ticket metadata and matching terms. No embeddings/vector search are used.
-- Activity history/audit trail for request saves, AI triage completion, approvals, status changes, notes, duplicate marking, and resolution.
-- Supabase Storage support for optional request images through the `request-images` bucket.
+```sh
+cp .env.example .env.local
+```
 
-## Implemented Features
+3. Create or open a Supabase project.
 
-- Dark, operations-focused UI based on `.codex/design/`.
-- Request submission with description, location, optional contact, optional urgency note, and optional image upload.
-- Admin review queue with editable AI suggestions.
-- Ticket list/detail with filters, status changes, department reassignment, notes, resolution notes, activity history, and similar-ticket suggestions.
-- Dashboard with backlog, high priority, SLA risk, aging tickets, assigned work, resolved work, priority distribution, department workload, resolution trend, and recent activity.
-- Owner-only user management for requester/admin role assignment. Owner access cannot be assigned or removed from the user management screen.
-- Settings page for configuration and access policy review.
-- Health endpoint for setup status.
+4. Enable Supabase Email Auth with email confirmation turned on.
 
-## Quick Seed/Sample Walkthrough
+5. Add these Supabase redirect URLs for local development:
 
-1. Complete `.codex/setup.md`.
-2. Start the app:
+```txt
+http://localhost:3000
+http://localhost:3000/auth/callback
+```
+
+6. Run the SQL in `supabase/schema.sql` in the Supabase SQL editor.
+
+7. Confirm the `request-images` storage bucket exists. The schema attempts to create it automatically.
+
+8. Create a Groq API key and add it to `.env.local`.
+
+9. Start the app and verify setup:
 
 ```sh
 pnpm dev
 ```
 
-3. Open `/api/health` and confirm `ok: true`.
-4. Open `/signup`, create the owner account with the exact `SEED_ADMIN_EMAIL`, then verify that email from the Supabase email link.
-5. From the admin dashboard, click **Reset Workspace** to load sample operational data.
-6. Sign out, then create and verify a requester account with a different email.
-7. Submit this sample request from `/submit`:
+Open:
 
 ```txt
-Aircon in Room 304 is leaking again. Floor is wet near the outlet.
+http://localhost:3000/api/health
 ```
 
-8. Sign back in as admin, open `/review`, inspect the AI triage output, and approve the request.
-9. Update the created ticket through `open`, `in-progress`, and `resolved`.
-10. Sign in as the requester and confirm only their own ticket progress is visible.
+The health response should return `ok: true`.
 
-## Walkthrough / Screenshots
-
-Add screenshots or a short GIF for this flow before publishing the portfolio page:
-
-- Requester signup and request submission.
-- AI triage confirmation with suggested title, priority, department, summary, and reasoning.
-- Admin review screen showing approve/edit/reject/duplicate actions.
-- Ticket detail page with status updates, notes, similar-ticket suggestions, and activity history.
-- Requester ticket view showing scoped progress.
-- Admin dashboard showing operational metrics and recent activity.
-- Owner user management screen showing requester/admin role controls.
-
-## Free-Only Checklist
-
-- Required AI provider is configured with `AI_PROVIDER=groq`.
-- Required database/auth provider is Supabase.
-- Required optional-image storage is the `request-images` bucket.
-- Do not add OpenAI billing or any paid API key.
-- Do not enable paid Supabase, Vercel, storage, database, or AI add-ons.
-- If a provider asks for payment information or a card, stop setup under the free-only constraint.
-- Package versions are exact pins. Do not use version ranges or `latest`.
-- Next.js is pinned to `16.2.6`, newer than the `16.0.7` patched floor listed in the CVE-2025-66478 advisory.
-
-## Architecture
-
-- `app/` - Next.js App Router pages, route handlers, and server actions.
-- `components/` - shared app shell/layout.
-- `lib/schema.ts` - Zod schemas and domain types.
-- `lib/auth.ts` - Supabase Auth session cookies, profile roles, signup/login/logout, and role checks.
-- `lib/supabase.ts` - Supabase clients and runtime setup detection.
-- `lib/store.ts` - Supabase CRUD, seed/reset, requester scoping, metrics, and mutations.
-- `lib/triage.ts` - Groq runtime triage plus deterministic rules helper for tests/sample logic.
-- `supabase/schema.sql` - Supabase tables, indexes, departments, profile roles, requester ownership columns, and storage bucket setup.
-
-## Setup
-
-```sh
-pnpm install
-cp .env.example .env.local
-```
-
-Then follow `.codex/setup.md` to configure Supabase Auth, Supabase Database/Storage, Groq, `SEED_ADMIN_EMAIL`, and the schema.
+## Configuration
 
 Required environment variables:
 
@@ -123,37 +68,57 @@ Required environment variables:
 AI_PROVIDER=groq
 GROQ_API_KEY=
 GROQ_MODEL=openai/gpt-oss-20b
+
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+
 SEED_ADMIN_EMAIL=admin@example.com
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 SUPABASE_REQUEST_IMAGES_BUCKET=request-images
 ```
 
-Useful routes:
+`SUPABASE_SERVICE_ROLE_KEY` is server-only. Do not expose it in client code or commit real keys.
 
-- `/login` sign in
-- `/signup` requester signup and seed-owner bootstrap
-- `/auth/callback` email verification callback
-- `/submit` requester submission
-- `/tickets` requester/admin ticket list
-- `/` admin dashboard
-- `/review` admin review queue
-- `/users` owner-only user management
-- `/settings` authenticated user appearance settings plus admin/owner system settings
-- `/api/health` setup health check
+`SEED_ADMIN_EMAIL` bootstraps the protected owner account. Sign up with that exact email and verify it through Supabase email confirmation. Other verified signups become requesters by default.
 
-## Verification
+## How to Run
+
+Development:
 
 ```sh
-pnpm audit --audit-level moderate
+pnpm dev
+```
+
+Production build:
+
+```sh
+pnpm build
+pnpm start
+```
+
+Quality checks:
+
+```sh
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm build
 ```
 
-## Resume One-Liner
+## Useful Routes
 
-Built an authenticated AI operations triage system that converts messy facility, clinic, admin, security, and IT requests into requester-scoped tickets with admin-reviewed AI triage, role management, activity history, duplicate suggestions, analytics, and resolution tracking.
+- `/signup` - create an account
+- `/login` - sign in
+- `/submit` - submit an operations request
+- `/tickets` - view requester or admin ticket lists
+- `/review` - admin triage review queue
+- `/users` - owner-only role management
+- `/settings` - system status and appearance settings
+- `/api/health` - setup health check
+
+## Notes
+
+- Runtime request submission requires `AI_PROVIDER=groq` and `GROQ_API_KEY`.
+- Supabase email confirmation must stay enabled; the app rejects immediate signup sessions.
+- Request images are limited to image files up to 5 MB.
+- The `request-images` bucket is public for this prototype and should not be used for sensitive production files.
