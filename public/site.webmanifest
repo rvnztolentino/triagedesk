@@ -1,0 +1,22 @@
+{
+  "name": "TriageDesk",
+  "short_name": "TriageDesk",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "theme_color": "#10b981",
+  "background_color": "#0a0a0a",
+  "display": "standalone",
+  "start_url": "/"
+}

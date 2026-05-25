@@ -138,7 +138,7 @@ export default async function Dashboard() {
           ))}
         </div>
 
-        <div className="col-span-12 lg:col-span-7 bg-[#111111] border border-neutral-800 rounded-2xl overflow-hidden self-start">
+        <div className="col-span-12 lg:col-span-7 bg-[#111111] border border-neutral-800 rounded-2xl overflow-hidden flex h-[520px] lg:h-[668px] min-h-0 flex-col">
           <div className="p-5 border-b border-neutral-800 flex justify-between items-center bg-[#151515]">
             <h3 className="font-bold text-neutral-300 flex items-center gap-2">
               <Clock size={16} className="text-neutral-500" /> Recent Activity
@@ -147,7 +147,7 @@ export default async function Dashboard() {
               View Tickets &rarr;
             </Link>
           </div>
-          <div className="overflow-y-auto max-h-[430px]">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {recentActivity.length === 0 ? (
               <div className="p-10 text-center">
                 <h4 className="font-semibold text-white text-sm">No activity yet</h4>
@@ -176,8 +176,8 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-5 flex flex-col gap-6">
-          <div className="bg-neutral-900 border border-emerald-500/30 rounded-2xl p-8 flex-1 shadow-[0_0_40px_-15px_rgba(16,185,129,0.15)] relative overflow-hidden">
+        <div className="col-span-12 lg:col-span-5 flex flex-col gap-6 lg:h-[668px]">
+          <div className="bg-neutral-900 border border-emerald-500/30 rounded-2xl p-8 min-h-[520px] lg:min-h-0 lg:flex-1 shadow-[0_0_40px_-15px_rgba(16,185,129,0.15)] relative overflow-hidden">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">AI Triage Result</span>
@@ -232,7 +232,7 @@ export default async function Dashboard() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid shrink-0 grid-cols-2 gap-4">
             <div className="bg-[#111111] border border-neutral-800 rounded-xl p-5">
               <Database className="text-emerald-400 mb-4" size={20} />
               <div className="text-xs uppercase tracking-wider text-neutral-500 font-bold">Data Store</div>

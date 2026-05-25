@@ -1,6 +1,7 @@
 import { CheckCircle2, Settings } from "lucide-react";
-import { requireAdmin, getSeedAdminEmail } from "@/lib/auth";
+import { requireUser, getSeedAdminEmail } from "@/lib/auth";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
+import { ThemeSettingsPanel } from "@/components/theme-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -23,63 +24,70 @@ function maskEmail(value: string) {
 }
 
 export default async function SettingsPage() {
-  await requireAdmin();
-  const setup = getRuntimeSetupStatus();
-  const missing = setup.missing.map(setupLabel);
-  const seedAdminEmail = getSeedAdminEmail();
+  const user = await requireUser();
+  const isAdmin = user.role === "admin";
+  const setup = isAdmin ? getRuntimeSetupStatus() : null;
+  const missing = setup ? setup.missing.map(setupLabel) : [];
+  const seedAdminEmail = isAdmin ? getSeedAdminEmail() : "";
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white font-space">Settings</h1>
-          <p className="text-neutral-500 mt-1">Review workspace configuration and access policy.</p>
+          <p className="text-neutral-500 mt-1">
+            {isAdmin ? "Review workspace configuration and access policy." : "Manage your personal appearance preferences."}
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Settings size={17} className="text-emerald-400" />
-            <h2 className="font-semibold text-white">System Health</h2>
+      {isAdmin && setup ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <Settings size={17} className="text-emerald-400" />
+              <h2 className="font-semibold text-white">System Health</h2>
+            </div>
+            <div className="space-y-4 text-sm">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+                <span className="text-neutral-500">Database</span>
+                <span className="text-neutral-200">{setup.supabaseConfigured ? "Configured" : "Missing setup"}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+                <span className="text-neutral-500">AI triage</span>
+                <span className="text-neutral-200">{setup.groqConfigured ? "Configured" : "Missing setup"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500">Image bucket</span>
+                <span className="text-neutral-200">{setup.storageBucket}</span>
+              </div>
+            </div>
           </div>
-          <div className="space-y-4 text-sm">
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-              <span className="text-neutral-500">Database</span>
-              <span className="text-neutral-200">{setup.supabaseConfigured ? "Configured" : "Missing setup"}</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-              <span className="text-neutral-500">AI triage</span>
-              <span className="text-neutral-200">{setup.groqConfigured ? "Configured" : "Missing setup"}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-neutral-500">Image bucket</span>
-              <span className="text-neutral-200">{setup.storageBucket}</span>
-            </div>
-          </div>
-        </div>
 
-        <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <CheckCircle2 size={17} className="text-emerald-400" />
-            <h2 className="font-semibold text-white">Access Policy</h2>
-          </div>
-          <div className="space-y-4 text-sm">
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-              <span className="text-neutral-500">Signup default role</span>
-              <span className="text-neutral-200">Requester</span>
+          <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <CheckCircle2 size={17} className="text-emerald-400" />
+              <h2 className="font-semibold text-white">Access Policy</h2>
             </div>
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-              <span className="text-neutral-500">Seed admin email</span>
-              <span className="text-neutral-200">{maskEmail(seedAdminEmail)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-neutral-500">Admin role changes</span>
-              <span className="text-neutral-200">Admins only</span>
+            <div className="space-y-4 text-sm">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+                <span className="text-neutral-500">Signup default role</span>
+                <span className="text-neutral-200">Requester</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+                <span className="text-neutral-500">Seed admin email</span>
+                <span className="text-neutral-200">{maskEmail(seedAdminEmail)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500">Admin role changes</span>
+                <span className="text-neutral-200">Admins only</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : null}
+
+      <ThemeSettingsPanel />
 
       {missing.length > 0 ? (
         <div className="bg-[#111111] border border-amber-500/30 rounded-2xl p-6">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { signUpAction } from "@/app/actions";
+import { BrandIcon } from "@/components/brand-icon";
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams;
@@ -9,7 +10,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-black font-bold text-2xl">T</div>
+          <BrandIcon size={48} className="mx-auto mb-4 rounded-xl" />
           <h1 className="text-3xl font-bold tracking-tight text-white font-space">Create your account</h1>
           <p className="text-sm text-neutral-500 mt-2">New accounts start as requesters after email verification.</p>
         </div>

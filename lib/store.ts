@@ -281,6 +281,16 @@ const seededActivity: TicketActivityRecord[] = [
   { id: "ACT-1008", requestId: "REQ-1004", action: "AI triage completed", actor: "System", details: "Critical IT request with electrical risk language.", createdAt: "2026-05-24T05:43:00.000Z" },
   { id: "ACT-1009", ticketId: "TRG-1030", action: "Resolved", actor: "Admin", details: "Supplies restocked.", createdAt: "2026-05-22T10:15:00.000Z" },
   { id: "ACT-1010", ticketId: "TRG-1038", action: "Closed", actor: "Maintenance", details: "Drain line cleared and monitored.", createdAt: "2026-05-20T06:00:00.000Z" },
+  { id: "ACT-1011", ticketId: "TRG-1048", action: "Assigned", actor: "Maintenance Lead", details: "HVAC technician assigned for clinic waiting area inspection.", createdAt: "2026-05-24T05:50:00.000Z" },
+  { id: "ACT-1012", ticketId: "TRG-1043", action: "Note added", actor: "IT Support", details: "Replacement projector lamp pulled from storage.", createdAt: "2026-05-24T06:05:00.000Z" },
+  { id: "ACT-1013", ticketId: "TRG-1044", action: "Vendor contacted", actor: "Security Desk", details: "Access controller vendor asked to review East Gate sync logs.", createdAt: "2026-05-24T06:18:00.000Z" },
+  { id: "ACT-1014", ticketId: "TRG-1047", action: "Escalated", actor: "IT Lead", details: "Network outage escalated to infrastructure team.", createdAt: "2026-05-24T06:32:00.000Z" },
+  { id: "ACT-1015", requestId: "REQ-1002", action: "Review pending", actor: "Admin", details: "Clinic HVAC request kept in review for technician availability.", createdAt: "2026-05-24T06:45:00.000Z" },
+  { id: "ACT-1016", ticketId: "TRG-1048", action: "Status changed", actor: "Maintenance Lead", details: "Clinic waiting area ticket moved to in progress.", createdAt: "2026-05-24T07:00:00.000Z" },
+  { id: "ACT-1017", ticketId: "TRG-1043", action: "Scheduled", actor: "IT Support", details: "Projector lamp replacement scheduled before leadership briefing.", createdAt: "2026-05-24T07:15:00.000Z" },
+  { id: "ACT-1018", requestId: "REQ-1004", action: "Safety check requested", actor: "Admin", details: "Maintenance asked to inspect outlet and smoke smell near server closet.", createdAt: "2026-05-24T07:28:00.000Z" },
+  { id: "ACT-1019", ticketId: "TRG-1044", action: "Controller restarted", actor: "Security Desk", details: "East Gate controller restart completed; monitoring badge scans.", createdAt: "2026-05-24T07:42:00.000Z" },
+  { id: "ACT-1020", ticketId: "TRG-1047", action: "Service restored", actor: "IT Lead", details: "Admin wing wired network restored after uplink replacement.", createdAt: "2026-05-24T07:55:00.000Z" },
 ];
 
 const seededNotes: TicketNoteRecord[] = [
@@ -1060,7 +1070,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   const [tickets, reviewItem, activityResult, requestsResult] = await Promise.all([
     fetchTicketRows(client, "all"),
     getLatestNeedsReview(client),
-    client.from("ticket_activity").select("*").order("created_at", { ascending: false }).limit(8),
+    client.from("ticket_activity").select("*").order("created_at", { ascending: false }).limit(20),
     client.from("requests").select("*").order("created_at", { ascending: false }),
   ]);
   requireNoError(activityResult.error, "List recent activity");

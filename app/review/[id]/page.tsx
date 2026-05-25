@@ -169,14 +169,24 @@ export default async function ReviewDetail({ params }: { params: Promise<{ id: s
           </form>
 
           <div className="mt-4 flex flex-wrap items-center gap-4">
-            <form action={markDuplicateAction} className="flex flex-1 min-w-[260px] gap-3">
+            <form action={markDuplicateAction} className="flex flex-1 min-w-[260px] flex-col gap-2 sm:flex-row">
               <input type="hidden" name="requestId" value={request.id} />
-              <select name="duplicateOfTicketId" className="min-w-0 flex-1 appearance-none bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500">
+              <select
+                name="duplicateOfTicketId"
+                required
+                defaultValue=""
+                aria-label="Existing ticket to mark as duplicate"
+                className="min-w-0 flex-1 appearance-none bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="" disabled>Duplicate of existing ticket</option>
                 {tickets.map((ticket) => (
                   <option key={ticket.id} value={ticket.id}>{ticket.id} - {ticket.title}</option>
                 ))}
               </select>
-              <button className="bg-neutral-800 text-white border border-neutral-700 rounded-xl px-5 py-3 text-sm font-bold hover:bg-neutral-700 transition-all flex items-center gap-2">
+              <button
+                disabled={tickets.length === 0}
+                className="bg-neutral-800 text-white border border-neutral-700 rounded-xl px-5 py-3 text-sm font-bold hover:bg-neutral-700 transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
+              >
                 <Copy size={18} /> Duplicate
               </button>
             </form>

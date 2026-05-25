@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { LoaderCircle, MailWarning } from "lucide-react";
 import { completeEmailVerificationFromTokensAction } from "@/app/actions";
 
@@ -11,7 +10,6 @@ function errorFromParams(params: URLSearchParams) {
 }
 
 export function AuthHashCallback() {
-  const router = useRouter();
   const startedRef = useRef(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -42,17 +40,20 @@ export function AuthHashCallback() {
     formData.set("refreshToken", refreshToken);
 
     startTransition(async () => {
-      const result = await completeEmailVerificationFromTokensAction(formData);
-      window.history.replaceState(null, "", window.location.pathname);
+      const timeout = new Promise<{ redirectTo?: string; error: string }>((resolve) => {
+        window.setTimeout(() => resolve({ error: "Email confirmation timed out. Please open the verification link again." }), 15000);
+      });
+      const result = await Promise.race([completeEmailVerificationFromTokensAction(formData), timeout]);
 
       if (result.redirectTo) {
-        router.replace(result.redirectTo);
+        window.location.replace(result.redirectTo);
         return;
       }
 
+      window.history.replaceState(null, "", window.location.pathname);
       setError(result.error || "Email verification failed.");
     });
-  }, [router]);
+  }, []);
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
