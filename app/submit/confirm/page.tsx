@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SubmitConfirm({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   const user = await requireUser();
-  const isAdmin = user.role === "admin";
+  const isAdmin = user.role === "admin" || user.role === "owner";
   const params = await searchParams;
   const result = params.id ? await getRequestBundle(params.id, isAdmin ? undefined : user.id) : await getLatestRequestBundle(isAdmin ? undefined : user.id);
 

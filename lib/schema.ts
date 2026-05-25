@@ -5,7 +5,8 @@ export const departments = ["it", "maintenance", "admin", "security", "clinic", 
 export const requestStatuses = ["needs-review", "approved", "rejected", "duplicate"] as const;
 export const ticketStatuses = ["new", "needs-review", "open", "in-progress", "resolved", "closed"] as const;
 export const triageSources = ["rules", "groq"] as const;
-export const userRoles = ["requester", "admin"] as const;
+export const userRoles = ["requester", "admin", "owner"] as const;
+export const assignableUserRoles = ["requester", "admin"] as const;
 
 export const prioritySchema = z.enum(priorities);
 export const departmentSchema = z.enum(departments);
@@ -13,6 +14,7 @@ export const requestStatusSchema = z.enum(requestStatuses);
 export const ticketStatusSchema = z.enum(ticketStatuses);
 export const triageSourceSchema = z.enum(triageSources);
 export const userRoleSchema = z.enum(userRoles);
+export const assignableUserRoleSchema = z.enum(assignableUserRoles);
 
 export const requestSubmissionSchema = z.object({
   description: z.string().trim().min(10, "Describe the issue in at least 10 characters."),
@@ -58,7 +60,7 @@ export const loginCredentialsSchema = authCredentialsSchema.omit({ displayName: 
 
 export const userRoleUpdateSchema = z.object({
   userId: z.string().uuid(),
-  role: userRoleSchema,
+  role: assignableUserRoleSchema,
 });
 
 export type Priority = z.infer<typeof prioritySchema>;

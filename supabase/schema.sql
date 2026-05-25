@@ -8,10 +8,16 @@ create table if not exists user_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
   display_name text not null default '',
-  role text not null default 'requester' check (role in ('requester', 'admin')),
+  role text not null default 'requester' check (role in ('requester', 'admin', 'owner')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+do $$
+begin
+  alter table user_profiles drop constraint if exists user_profiles_role_check;
+  alter table user_profiles add constraint user_profiles_role_check check (role in ('requester', 'admin', 'owner'));
+end $$;
 
 create table if not exists requests (
   id text primary key,

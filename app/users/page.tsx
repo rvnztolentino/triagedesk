@@ -1,11 +1,11 @@
 import { ShieldCheck, UserCog } from "lucide-react";
 import { updateUserRoleAction } from "@/app/actions";
-import { requireAdmin, listUserProfiles } from "@/lib/auth";
+import { requireOwner, listUserProfiles } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
-  const currentUser = await requireAdmin();
+  const currentUser = await requireOwner();
   const users = await listUserProfiles();
 
   return (
@@ -13,7 +13,7 @@ export default async function UsersPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white font-space">User Management</h1>
-          <p className="text-neutral-500 mt-1">Review account roles and control admin access.</p>
+          <p className="text-neutral-500 mt-1">Review account roles and control admin access. Owner access is protected.</p>
         </div>
       </div>
 
@@ -33,6 +33,8 @@ export default async function UsersPage() {
           ) : (
             users.map((user) => {
               const isSelf = user.id === currentUser.id;
+              const isOwner = user.role === "owner";
+              const roleLocked = isSelf || isOwner;
               return (
                 <div key={user.id} className="p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
@@ -46,6 +48,11 @@ export default async function UsersPage() {
                           You
                         </span>
                       ) : null}
+                      {isOwner ? (
+                        <span className="bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide uppercase">
+                          Protected
+                        </span>
+                      ) : null}
                     </div>
                     <p className="text-sm text-neutral-500">{user.email}</p>
                     <p className="text-xs text-neutral-600 mt-1">Joined {new Date(user.createdAt).toLocaleDateString()}</p>
@@ -56,14 +63,15 @@ export default async function UsersPage() {
                     <select
                       name="role"
                       defaultValue={user.role}
-                      disabled={isSelf}
+                      disabled={roleLocked}
                       className="h-10 bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:text-neutral-600"
                     >
                       <option value="requester">Requester</option>
                       <option value="admin">Admin</option>
+                      {isOwner ? <option value="owner">Owner</option> : null}
                     </select>
                     <button
-                      disabled={isSelf}
+                      disabled={roleLocked}
                       className="h-10 px-4 bg-neutral-800 border border-neutral-700 rounded-xl text-sm font-bold text-white hover:bg-neutral-700 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
                     >
                       Save Role
@@ -81,7 +89,7 @@ export default async function UsersPage() {
         <div>
           <h2 className="font-semibold text-white">Role policy</h2>
           <p className="text-sm text-neutral-500 mt-1">
-            Signup never exposes role selection. The configured seed admin email receives admin access at account creation; after that, only admins can change roles here.
+            Signup never exposes role selection. The configured seed email receives protected owner access at account creation. Only the owner can assign requester/admin roles; owner access cannot be changed here.
           </p>
         </div>
       </div>

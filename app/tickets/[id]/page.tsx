@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TicketDetail({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
-  const isAdmin = user.role === "admin";
+  const isAdmin = user.role === "admin" || user.role === "owner";
   const { id } = await params;
   const detail = await getTicketDetail(id, isAdmin ? undefined : user.id);
   const departments = await listDepartments();

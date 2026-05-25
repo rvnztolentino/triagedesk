@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { requestSubmissionSchema, triageDraftSchema } from "./schema";
+import { requestSubmissionSchema, triageDraftSchema, userRoleSchema, userRoleUpdateSchema } from "./schema";
 
 describe("schemas", () => {
   it("rejects empty request details", () => {
@@ -26,5 +26,16 @@ describe("schemas", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("stores owner as a valid role but blocks manual owner assignment", () => {
+    const storedRole = userRoleSchema.safeParse("owner");
+    const manualUpdate = userRoleUpdateSchema.safeParse({
+      userId: "11111111-1111-4111-8111-111111111111",
+      role: "owner",
+    });
+
+    expect(storedRole.success).toBe(true);
+    expect(manualUpdate.success).toBe(false);
   });
 });

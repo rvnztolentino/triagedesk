@@ -24,7 +24,7 @@ export default async function TicketList({ searchParams }: { searchParams: Promi
   const filter = params.filter || "all";
   const query = normalizeSearch(params.q);
   const requestedPage = pageNumber(params.page);
-  const isAdmin = user.role === "admin";
+  const isAdmin = user.role === "admin" || user.role === "owner";
   const tickets = await listTickets(filter, isAdmin ? undefined : user.id);
   const normalizedQuery = query.toLowerCase();
   const filteredTickets = normalizedQuery

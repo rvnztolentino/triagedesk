@@ -2,13 +2,13 @@
 
 AI-powered internal operations triage for schools, clinics, offices, and facilities teams.
 
-TriageDesk turns messy operational requests into structured work: a requester submits a plain-language issue, AI suggests category/priority/department/summary, and an admin reviews the output before it becomes a trackable ticket. The product is built as a portfolio-ready full-stack prototype with Supabase Auth, requester/admin roles, Supabase persistence/storage, and Groq-powered server-side triage.
+TriageDesk turns messy operational requests into structured work: a requester submits a plain-language issue, AI suggests category/priority/department/summary, and an admin reviews the output before it becomes a trackable ticket. The product is built as a portfolio-ready full-stack prototype with Supabase Auth, requester/admin/owner roles, Supabase persistence/storage, and Groq-powered server-side triage.
 
 Use free/no-card accounts or local Supabase only. Do not enter payment information for this project.
 
 ## Why This Is Not Just A Ticket App
 
-- Role-based workflow: requesters submit and track their own work; admins manage triage, tickets, users, and settings.
+- Role-based workflow: requesters submit and track their own work; admins manage triage and tickets; the protected owner manages user roles.
 - Human-in-the-loop AI triage: AI drafts structured ticket data, but admins approve, edit, reject, or mark duplicates.
 - Operational prioritization: requests are classified by priority, department, SLA risk, aging work, and workload impact.
 - Requester-scoped tracking: non-admin users only see tickets connected to their own submitted requests.
@@ -30,9 +30,9 @@ Use free/no-card accounts or local Supabase only. Do not enter payment informati
 - Supabase Auth email/password login and signup.
 - Email verification is required before an account can sign in or receive an app role.
 - Supabase `user_profiles` roles with requester default signup behavior.
-- `SEED_ADMIN_EMAIL` bootstrap for the first admin account; signup has no admin role selector.
+- `SEED_ADMIN_EMAIL` bootstrap for the protected owner account; signup has no role selector.
 - Requester-scoped ticket visibility using requester ownership on requests and tickets.
-- Admin-only dashboard, review queue, ticket mutation actions, user management, settings, and workspace reset.
+- Admin/owner dashboard, review queue, ticket mutation actions, settings, and workspace reset; user management is owner-only.
 - Server-only Groq handling through Next.js server actions; API keys stay out of client components.
 - AI safeguards: validate setup/input before calls, reuse exact-match prior triage where possible, and send clipped/minimal prompt context.
 - Deterministic rules triage helper for tests and sample logic; runtime request submission requires Groq configuration.
@@ -47,7 +47,7 @@ Use free/no-card accounts or local Supabase only. Do not enter payment informati
 - Admin review queue with editable AI suggestions.
 - Ticket list/detail with filters, status changes, department reassignment, notes, resolution notes, activity history, and similar-ticket suggestions.
 - Dashboard with backlog, high priority, SLA risk, aging tickets, assigned work, resolved work, priority distribution, department workload, resolution trend, and recent activity.
-- User management for admin promotion/demotion.
+- Owner-only user management for requester/admin role assignment. Owner access cannot be assigned or removed from the user management screen.
 - Settings page for configuration and access policy review.
 - Health endpoint for setup status.
 
@@ -61,7 +61,7 @@ pnpm dev
 ```
 
 3. Open `/api/health` and confirm `ok: true`.
-4. Open `/signup`, create the first admin with the exact `SEED_ADMIN_EMAIL`, then verify that email from the Supabase email link.
+4. Open `/signup`, create the owner account with the exact `SEED_ADMIN_EMAIL`, then verify that email from the Supabase email link.
 5. From the admin dashboard, click **Reset Workspace** to load sample operational data.
 6. Sign out, then create and verify a requester account with a different email.
 7. Submit this sample request from `/submit`:
@@ -84,7 +84,7 @@ Add screenshots or a short GIF for this flow before publishing the portfolio pag
 - Ticket detail page with status updates, notes, similar-ticket suggestions, and activity history.
 - Requester ticket view showing scoped progress.
 - Admin dashboard showing operational metrics and recent activity.
-- User management screen showing requester/admin role controls.
+- Owner user management screen showing requester/admin role controls.
 
 ## Free-Only Checklist
 
@@ -134,14 +134,14 @@ SUPABASE_REQUEST_IMAGES_BUCKET=request-images
 Useful routes:
 
 - `/login` sign in
-- `/signup` requester signup and seed-admin bootstrap
+- `/signup` requester signup and seed-owner bootstrap
 - `/auth/callback` email verification callback
 - `/submit` requester submission
 - `/tickets` requester/admin ticket list
 - `/` admin dashboard
 - `/review` admin review queue
-- `/users` admin user management
-- `/settings` admin settings
+- `/users` owner-only user management
+- `/settings` authenticated user appearance settings plus admin/owner system settings
 - `/api/health` setup health check
 
 ## Verification

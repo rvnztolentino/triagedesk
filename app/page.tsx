@@ -32,7 +32,7 @@ function setupRequirementLabel(value: string) {
     NEXT_PUBLIC_SUPABASE_URL: "database URL",
     NEXT_PUBLIC_SUPABASE_ANON_KEY: "browser auth key",
     SUPABASE_SERVICE_ROLE_KEY: "server database key",
-    SEED_ADMIN_EMAIL: "seed admin email",
+    SEED_ADMIN_EMAIL: "seed owner email",
     GROQ_API_KEY: "AI service key",
     "AI_PROVIDER=groq": "AI triage provider",
   };

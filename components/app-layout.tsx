@@ -21,7 +21,7 @@ import { ThemeToggle } from "@/components/theme-controls";
 import type { AppUser } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 
-const adminNavItems = [
+const ownerNavItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/submit", icon: PlusCircle, label: "New Request" },
   { href: "/review", icon: Inbox, label: "Review Queue" },
@@ -29,6 +29,8 @@ const adminNavItems = [
   { href: "/users", icon: Users, label: "Users" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
+
+const adminNavItems = ownerNavItems.filter((item) => item.href !== "/users");
 
 const requesterNavItems = [
   { href: "/submit", icon: PlusCircle, label: "New Request" },
@@ -52,7 +54,7 @@ export function AppLayout({ children, currentUser }: { children: React.ReactNode
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
   const isAuthPage = pathname === "/login" || pathname.startsWith("/signup") || pathname.startsWith("/auth");
-  const navItems = currentUser?.role === "admin" ? adminNavItems : requesterNavItems;
+  const navItems = currentUser?.role === "owner" ? ownerNavItems : currentUser?.role === "admin" ? adminNavItems : requesterNavItems;
 
   React.useEffect(() => {
     React.startTransition(() => {

@@ -8,6 +8,7 @@ import {
   completeEmailVerificationFromTokens,
   getPostVerificationRedirect,
   requireAdmin,
+  requireOwner,
   requireUser,
   signInWithEmail,
   signUpWithEmail,
@@ -177,7 +178,7 @@ export async function signInAction(formData: FormData) {
       password: formText(formData, "password"),
     });
     const user = await signInWithEmail(credentials);
-    redirectTo = user?.role === "admin" ? "/" : "/tickets";
+    redirectTo = user?.role === "admin" || user?.role === "owner" ? "/" : "/tickets";
   } catch (error) {
     redirectWithError("/login", error);
   }
@@ -222,7 +223,7 @@ export async function signOutAction() {
 }
 
 export async function updateUserRoleAction(formData: FormData) {
-  const actor = await requireAdmin();
+  const actor = await requireOwner();
   const input = userRoleUpdateSchema.parse({
     userId: formText(formData, "userId"),
     role: formText(formData, "role"),

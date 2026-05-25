@@ -25,7 +25,7 @@ export function getSeedAdminEmail() {
 
 export function roleForEmail(email: string): UserRole {
   const seedAdminEmail = getSeedAdminEmail();
-  return seedAdminEmail && normalizeEmail(email) === seedAdminEmail ? "admin" : "requester";
+  return seedAdminEmail && normalizeEmail(email) === seedAdminEmail ? "owner" : "requester";
 }
 
 export function assertEmailVerificationRequired(hasImmediateSession: boolean) {
@@ -35,11 +35,12 @@ export function assertEmailVerificationRequired(hasImmediateSession: boolean) {
 }
 
 function profileFromRow(row: ProfileRow): UserProfileRecord {
+  const role = asString(row.role);
   return {
     id: asString(row.id),
     email: asString(row.email),
     displayName: asString(row.display_name),
-    role: row.role === "admin" ? "admin" : "requester",
+    role: role === "owner" || role === "admin" ? role : "requester",
     createdAt: asString(row.created_at),
     updatedAt: asString(row.updated_at),
   };
@@ -55,7 +56,29 @@ function toAppUser(profile: UserProfileRecord): AppUser {
 }
 
 function verificationRedirectFor(user: AppUser) {
-  return user.role === "admin" ? "/" : "/submit";
+  return user.role === "admin" || user.role === "owner" ? "/" : "/submit";
+}
+
+function isPrivilegedRole(role: UserRole) {
+  return role === "admin" || role === "owner";
+}
+
+function isSeedOwnerEmail(email: string) {
+  const seedAdminEmail = getSeedAdminEmail();
+  return Boolean(seedAdminEmail && normalizeEmail(email) === seedAdminEmail);
+}
+
+async function ensureSeedOwnerProfile(profile: UserProfileRecord) {
+  if (isSeedOwnerEmail(profile.email) && profile.role !== "owner") {
+    return upsertUserProfile({
+      id: profile.id,
+      email: profile.email,
+      displayName: profile.displayName,
+      role: "owner",
+    });
+  }
+
+  return profile;
 }
 
 async function setSessionCookies(accessToken: string, refreshToken: string) {
@@ -163,6 +186,8 @@ export async function getCurrentUser(): Promise<AppUser | null> {
       displayName: asString(data.user.user_metadata?.display_name),
       role: roleForEmail(data.user.email),
     });
+  } else {
+    profile = await ensureSeedOwnerProfile(profile);
   }
 
   return toAppUser(profile);
@@ -176,7 +201,13 @@ export async function requireUser() {
 
 export async function requireAdmin() {
   const user = await requireUser();
-  if (user.role !== "admin") redirect("/tickets");
+  if (!isPrivilegedRole(user.role)) redirect("/tickets");
+  return user;
+}
+
+export async function requireOwner() {
+  const user = await requireUser();
+  if (user.role !== "owner") redirect("/tickets");
   return user;
 }
 
@@ -193,7 +224,7 @@ export async function signUpWithEmail(input: AuthCredentials) {
   const credentials = validateSignupInput(input);
   const authClient = requireSupabaseAuthClient();
   if (!getSeedAdminEmail()) {
-    throw new SetupRequiredError("Seed admin email is required before signup.", ["SEED_ADMIN_EMAIL"]);
+    throw new SetupRequiredError("Seed owner email is required before signup.", ["SEED_ADMIN_EMAIL"]);
   }
 
   const { data, error } = await authClient.auth.signUp({
@@ -296,6 +327,8 @@ export async function signInWithEmail(input: { email: string; password: string }
       displayName: asString(data.user.user_metadata?.display_name),
       role: roleForEmail(data.user.email),
     });
+  } else {
+    profile = await ensureSeedOwnerProfile(profile);
   }
   await setSessionCookies(data.session.access_token, data.session.refresh_token);
 
@@ -319,7 +352,7 @@ export async function listUserProfiles() {
 
 export async function countAdmins() {
   const client = requireSupabaseAdminClient();
-  const { count, error } = await client.from("user_profiles").select("id", { count: "exact", head: true }).eq("role", "admin");
+  const { count, error } = await client.from("user_profiles").select("id", { count: "exact", head: true }).in("role", ["admin", "owner"]);
   if (error) {
     throw new Error(`Count admins failed: ${error.message}`);
   }
@@ -328,12 +361,12 @@ export async function countAdmins() {
 }
 
 export async function updateUserRole(actor: AppUser, userId: string, role: UserRole) {
-  if (actor.role !== "admin") {
-    throw new SetupRequiredError("Admin access is required.", []);
+  if (actor.role !== "owner") {
+    throw new SetupRequiredError("Owner access is required.", []);
   }
 
-  if (actor.id === userId && role !== "admin") {
-    throw new Error("You cannot remove your own admin access.");
+  if (role === "owner") {
+    throw new Error("Owner access is reserved for the configured seed owner email.");
   }
 
   const target = await getUserProfile(userId);
@@ -341,11 +374,8 @@ export async function updateUserRole(actor: AppUser, userId: string, role: UserR
     throw new Error("User profile not found.");
   }
 
-  if (target.role === "admin" && role !== "admin") {
-    const admins = await countAdmins();
-    if (admins <= 1) {
-      throw new Error("At least one admin account is required.");
-    }
+  if (target.role === "owner") {
+    throw new Error("Owner access cannot be changed from user management.");
   }
 
   const client = requireSupabaseAdminClient();

@@ -10,7 +10,7 @@ function setupLabel(value: string) {
     NEXT_PUBLIC_SUPABASE_URL: "database URL",
     NEXT_PUBLIC_SUPABASE_ANON_KEY: "browser auth key",
     SUPABASE_SERVICE_ROLE_KEY: "server database key",
-    SEED_ADMIN_EMAIL: "seed admin email",
+    SEED_ADMIN_EMAIL: "seed owner email",
     GROQ_API_KEY: "AI service key",
     "AI_PROVIDER=groq": "AI triage provider",
   };
@@ -25,7 +25,7 @@ function maskEmail(value: string) {
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const isAdmin = user.role === "admin";
+  const isAdmin = user.role === "admin" || user.role === "owner";
   const setup = isAdmin ? getRuntimeSetupStatus() : null;
   const missing = setup ? setup.missing.map(setupLabel) : [];
   const seedAdminEmail = isAdmin ? getSeedAdminEmail() : "";
@@ -75,12 +75,12 @@ export default async function SettingsPage() {
                 <span className="text-neutral-200">Requester</span>
               </div>
               <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-                <span className="text-neutral-500">Seed admin email</span>
+                <span className="text-neutral-500">Seed owner email</span>
                 <span className="text-neutral-200">{maskEmail(seedAdminEmail)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-neutral-500">Admin role changes</span>
-                <span className="text-neutral-200">Admins only</span>
+                <span className="text-neutral-500">Role changes</span>
+                <span className="text-neutral-200">Owner only</span>
               </div>
             </div>
           </div>

@@ -12,10 +12,10 @@ describe("auth role policy", () => {
     expect(roleForEmail("teacher@triagedesk.test")).toBe("requester");
   });
 
-  it("assigns admin only to the configured seed admin email", () => {
+  it("assigns owner only to the configured seed email", () => {
     vi.stubEnv("SEED_ADMIN_EMAIL", "admin@triagedesk.test");
 
-    expect(roleForEmail("ADMIN@triagedesk.test")).toBe("admin");
+    expect(roleForEmail("ADMIN@triagedesk.test")).toBe("owner");
   });
 
   it("does not accept role input during signup validation", () => {
