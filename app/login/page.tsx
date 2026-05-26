@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
 import { signInAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams;
@@ -29,9 +30,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               <label htmlFor="password" className="text-sm font-semibold text-neutral-300">Password</label>
               <input id="password" name="password" type="password" required minLength={8} className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500" />
             </div>
-            <button className="w-full h-11 bg-emerald-500 hover:bg-emerald-600 text-black rounded-xl text-sm font-bold transition-colors inline-flex items-center justify-center gap-2">
+            <SubmitButton pendingText="Signing in...">
               <LockKeyhole size={16} /> Sign in
-            </button>
+            </SubmitButton>
           </form>
           <p className="text-sm text-neutral-500 mt-6 text-center">
             Need an account? <Link href="/signup" className="text-emerald-400 hover:text-emerald-300 font-medium">Create one</Link>

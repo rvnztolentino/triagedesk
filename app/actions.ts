@@ -161,7 +161,7 @@ export async function updateTicketAction(formData: FormData) {
 }
 
 export async function resetWorkspaceDataAction() {
-  await requireAdmin();
+  await requireOwner();
   await resetWorkspaceData();
 
   revalidatePath("/");
