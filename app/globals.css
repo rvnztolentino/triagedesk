@@ -35,7 +35,9 @@ textarea {
   --accent: #10b981;
   --accent-strong: #059669;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-muted: color-mix(in srgb, var(--accent) 80%, transparent);
   --accent-border: color-mix(in srgb, var(--accent) 30%, transparent);
+  --accent-glow: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 html[data-accent="blue"] {
@@ -63,13 +65,25 @@ html[data-accent="yellow"] {
   --accent-strong: #ca8a04;
 }
 
-.bg-emerald-500,
-.hover\:bg-emerald-600:hover {
+.bg-emerald-400,
+.bg-emerald-500 {
   background-color: var(--accent);
+}
+
+.hover\:bg-emerald-600:hover {
+  background-color: var(--accent-strong);
 }
 
 .bg-emerald-500\/10 {
   background-color: var(--accent-soft);
+}
+
+.bg-emerald-500\/80 {
+  background-color: var(--accent-muted);
+}
+
+.shadow-accent-glow {
+  box-shadow: 0 0 40px -15px var(--accent-glow);
 }
 
 .text-emerald-300,

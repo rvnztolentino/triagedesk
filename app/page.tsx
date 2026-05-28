@@ -140,7 +140,7 @@ export default async function Dashboard() {
           ))}
         </div>
 
-        <div className="col-span-12 lg:col-span-7 bg-[#111111] border border-neutral-800 rounded-2xl overflow-hidden flex h-[520px] lg:h-[668px] min-h-0 flex-col">
+        <div className="col-span-12 lg:col-span-7 bg-[#111111] border border-neutral-800 rounded-2xl overflow-hidden flex h-[520px] min-h-0 flex-col lg:h-auto lg:[contain:size]">
           <div className="p-5 border-b border-neutral-800 flex justify-between items-center bg-[#151515]">
             <h3 className="font-bold text-neutral-300 flex items-center gap-2">
               <Clock size={16} className="text-neutral-500" /> Recent Activity
@@ -178,8 +178,8 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-5 flex flex-col gap-6 lg:h-[668px]">
-          <div className="bg-neutral-900 border border-emerald-500/30 rounded-2xl p-8 min-h-[520px] lg:min-h-0 lg:flex-1 shadow-[0_0_40px_-15px_rgba(16,185,129,0.15)] relative overflow-hidden">
+        <div className="col-span-12 lg:col-span-5 flex flex-col gap-6">
+          <div className="bg-neutral-900 border border-emerald-500/30 rounded-2xl p-8 shadow-accent-glow relative overflow-hidden">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">AI Triage Result</span>

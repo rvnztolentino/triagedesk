@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, CheckCircle2, Clock, Search } from
 import { requireUser } from "@/lib/auth";
 import { listTickets } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
+import { ticketStatusIndicatorClass } from "@/lib/ticket-status";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -160,9 +161,9 @@ export default async function TicketList({ searchParams }: { searchParams: Promi
                     <td className="p-6">
                       <div className="flex items-center gap-2">
                         {ticket.status === "resolved" || ticket.status === "closed" ? (
-                          <CheckCircle2 size={16} className="text-emerald-500" />
+                          <CheckCircle2 size={16} className={ticketStatusIndicatorClass(ticket.status)} />
                         ) : (
-                          <div className={cn("w-2 h-2 rounded-full", ticket.priority === "critical" || ticket.priority === "high" ? "bg-red-500 animate-pulse" : "bg-blue-500")} />
+                          <div className={cn("w-2 h-2 rounded-full", ticketStatusIndicatorClass(ticket.status))} />
                         )}
                         <span className="text-sm font-medium capitalize text-neutral-300">{ticket.status.replace("-", " ")}</span>
                       </div>

@@ -5,6 +5,7 @@ import { updateTicketAction } from "@/app/actions";
 import { requireUser } from "@/lib/auth";
 import { getTicketDetail, listDepartments } from "@/lib/store";
 import { ticketStatuses } from "@/lib/schema";
+import { ticketStatusBadgeClass } from "@/lib/ticket-status";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export default async function TicketDetail({ params }: { params: Promise<{ id: s
           <div className="bg-[#111111] rounded-2xl p-8 shadow-xl border border-neutral-800">
             <div className="flex items-center gap-3 mb-4">
               <span className="text-xs font-mono font-bold text-neutral-500">{ticket.id}</span>
-              <span className={cn("text-[10px] px-2 py-1 uppercase tracking-wider font-bold rounded-md", ticket.status === "resolved" || ticket.status === "closed" ? "bg-emerald-500/10 text-emerald-400" : "bg-blue-500/10 text-blue-400")}>
+              <span className={cn("text-[10px] px-2 py-1 uppercase tracking-wider font-bold rounded-md", ticketStatusBadgeClass(ticket.status))}>
                 {ticket.status}
               </span>
               <span className="text-[10px] px-2 py-1 uppercase tracking-wider font-bold rounded-md bg-neutral-800 text-neutral-400">
