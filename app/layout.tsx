@@ -40,7 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="font-sans bg-[#0a0a0a] text-neutral-200 selection:bg-emerald-500 selection:text-black min-h-screen" suppressHydrationWarning>
+      <body className="font-sans bg-[#0a0a0a] text-neutral-200 min-h-screen" suppressHydrationWarning>
         <AppLayout currentUser={currentUser}>{children}</AppLayout>
       </body>
     </html>
