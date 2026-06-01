@@ -63,12 +63,27 @@ export const userRoleUpdateSchema = z.object({
   role: assignableUserRoleSchema,
 });
 
+export const workspaceSlugSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .max(63)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and single hyphens.");
+
+export const workspaceInviteCodeSchema = z
+  .string()
+  .trim()
+  .min(6)
+  .max(80)
+  .regex(/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/, "Use letters, numbers, and single hyphens.");
+
 export type Priority = z.infer<typeof prioritySchema>;
 export type Department = z.infer<typeof departmentSchema>;
 export type RequestStatus = z.infer<typeof requestStatusSchema>;
 export type TicketStatus = z.infer<typeof ticketStatusSchema>;
 export type TriageSource = z.infer<typeof triageSourceSchema>;
 export type UserRole = z.infer<typeof userRoleSchema>;
+export type AssignableUserRole = z.infer<typeof assignableUserRoleSchema>;
 export type RequestSubmission = z.infer<typeof requestSubmissionSchema>;
 export type TriageDraft = z.infer<typeof triageDraftSchema>;
 export type AuthCredentials = z.infer<typeof authCredentialsSchema>;
@@ -81,6 +96,7 @@ export interface DepartmentRecord {
 
 export interface RequestRecord extends RequestSubmission {
   id: string;
+  workspaceId: string;
   requesterUserId?: string;
   status: RequestStatus;
   imageUrl?: string;
@@ -91,12 +107,14 @@ export interface RequestRecord extends RequestSubmission {
 
 export interface TriageResultRecord extends TriageDraft {
   id: string;
+  workspaceId: string;
   requestId: string;
   createdAt: string;
 }
 
 export interface TicketRecord {
   id: string;
+  workspaceId: string;
   requestId?: string;
   requesterUserId?: string;
   title: string;
@@ -120,6 +138,7 @@ export interface TicketRecord {
 
 export interface TicketActivityRecord {
   id: string;
+  workspaceId: string;
   ticketId?: string;
   requestId?: string;
   action: string;
@@ -130,6 +149,7 @@ export interface TicketActivityRecord {
 
 export interface TicketNoteRecord {
   id: string;
+  workspaceId: string;
   ticketId: string;
   actor: string;
   body: string;
@@ -159,4 +179,44 @@ export interface AppUser {
   email: string;
   displayName: string;
   role: UserRole;
+}
+
+export interface WorkspaceRecord {
+  id: string;
+  name: string;
+  slug: string;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface WorkspaceMemberRecord {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  role: UserRole;
+  createdAt: string;
+}
+
+export interface WorkspaceInviteRecord {
+  id: string;
+  workspaceId: string;
+  code: string;
+  role: AssignableUserRole;
+  createdBy?: string;
+  expiresAt?: string;
+  usedAt?: string;
+  revokedAt?: string;
+  isReusable: boolean;
+  createdAt: string;
+}
+
+export interface RequestAttachmentRecord {
+  id: string;
+  workspaceId: string;
+  requestId: string;
+  storagePath: string;
+  publicUrl?: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: string;
 }

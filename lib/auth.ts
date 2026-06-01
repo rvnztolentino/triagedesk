@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { authCredentialsSchema, loginCredentialsSchema, type AppUser, type AuthCredentials, type UserProfileRecord, type UserRole } from "@/lib/schema";
 import { getSupabaseAdminClient, getSupabaseAuthClient, getRuntimeSetupStatus, requireSupabaseAdminClient, requireSupabaseAuthClient, SetupRequiredError } from "@/lib/supabase";
+import { isWorkspaceAdmin, requireWorkspaceMembership } from "@/lib/workspaces";
 
 const ACCESS_COOKIE = "triagedesk_access_token";
 const REFRESH_COOKIE = "triagedesk_refresh_token";
@@ -209,6 +210,24 @@ export async function requireOwner() {
   const user = await requireUser();
   if (user.role !== "owner") redirect("/tickets");
   return user;
+}
+
+export async function requireWorkspaceUser(workspaceSlug: string) {
+  const user = await requireUser();
+  const access = await requireWorkspaceMembership(workspaceSlug, user.id);
+  return { user, ...access };
+}
+
+export async function requireWorkspaceAdmin(workspaceSlug: string) {
+  const access = await requireWorkspaceUser(workspaceSlug);
+  if (!isWorkspaceAdmin(access.membership.role)) redirect(`/w/${workspaceSlug}`);
+  return access;
+}
+
+export async function requireWorkspaceOwner(workspaceSlug: string) {
+  const access = await requireWorkspaceUser(workspaceSlug);
+  if (access.membership.role !== "owner") redirect(`/w/${workspaceSlug}`);
+  return access;
 }
 
 export function getSiteUrl() {

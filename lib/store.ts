@@ -9,6 +9,7 @@ import {
   type DepartmentRecord,
   type AppUser,
   type Priority,
+  type RequestAttachmentRecord,
   type RequestRecord,
   type RequestSubmission,
   type SimilarTicket,
@@ -19,6 +20,7 @@ import {
   type TriageDraft,
   type TriageResultRecord,
 } from "@/lib/schema";
+import { DEMO_WORKSPACE_ID } from "@/lib/workspaces";
 
 export interface ReviewItem {
   request: RequestRecord;
@@ -47,6 +49,7 @@ export interface DashboardData {
 
 type SupabaseRow = Record<string, unknown>;
 type SupabaseError = { message: string } | null;
+type SeedRecord<T extends { workspaceId: string }> = Omit<T, "workspaceId">;
 
 const defaultDepartments: DepartmentRecord[] = [
   { id: "it", name: "IT", description: "Network, devices, software, projectors, printers, accounts." },
@@ -57,7 +60,7 @@ const defaultDepartments: DepartmentRecord[] = [
   { id: "facilities", name: "Facilities", description: "General building operations and space coordination." },
 ];
 
-const seededRequests: RequestRecord[] = [
+const seededRequests: SeedRecord<RequestRecord>[] = [
   {
     id: "REQ-1001",
     description: "There is a significant water leak coming from the ceiling near the back emergency exit. Water is pooling on the floor.",
@@ -107,7 +110,7 @@ const seededRequests: RequestRecord[] = [
   },
 ];
 
-const seededTriageResults: TriageResultRecord[] = [
+const seededTriageResults: SeedRecord<TriageResultRecord>[] = [
   {
     id: "TRI-1001",
     requestId: "REQ-1001",
@@ -162,7 +165,7 @@ const seededTriageResults: TriageResultRecord[] = [
   },
 ];
 
-const seededTickets: TicketRecord[] = [
+const seededTickets: SeedRecord<TicketRecord>[] = [
   {
     id: "TRG-1043",
     title: "Projector bulb burnt out",
@@ -270,7 +273,7 @@ const seededTickets: TicketRecord[] = [
   },
 ];
 
-const seededActivity: TicketActivityRecord[] = [
+const seededActivity: SeedRecord<TicketActivityRecord>[] = [
   { id: "ACT-1001", ticketId: "TRG-1047", action: "Ticket approved", actor: "Admin", details: "Approved as critical IT incident.", createdAt: "2026-05-24T02:40:00.000Z" },
   { id: "ACT-1002", ticketId: "TRG-1047", action: "Status changed", actor: "IT Lead", details: "Moved to in progress; checking switch uplink.", createdAt: "2026-05-24T03:15:00.000Z" },
   { id: "ACT-1003", ticketId: "TRG-1044", action: "Ticket approved", actor: "System", details: "Assigned to Security.", createdAt: "2026-05-24T04:50:00.000Z" },
@@ -293,7 +296,7 @@ const seededActivity: TicketActivityRecord[] = [
   { id: "ACT-1020", ticketId: "TRG-1047", action: "Service restored", actor: "IT Lead", details: "Admin wing wired network restored after uplink replacement.", createdAt: "2026-05-24T07:55:00.000Z" },
 ];
 
-const seededNotes: TicketNoteRecord[] = [
+const seededNotes: SeedRecord<TicketNoteRecord>[] = [
   {
     id: "NOTE-1001",
     ticketId: "TRG-1047",
@@ -312,6 +315,10 @@ const seededNotes: TicketNoteRecord[] = [
 
 function now() {
   return new Date().toISOString();
+}
+
+function withDemoWorkspace<T extends object>(record: T) {
+  return { ...record, workspaceId: DEMO_WORKSPACE_ID };
 }
 
 function requireNoError(error: SupabaseError, context: string) {
@@ -353,17 +360,10 @@ function asStringArray(value: unknown) {
   return [];
 }
 
-function departmentToRow(department: DepartmentRecord) {
-  return {
-    id: department.id,
-    name: department.name,
-    description: department.description,
-  };
-}
-
 function requestToRow(request: RequestRecord) {
   return {
     id: request.id,
+    workspace_id: request.workspaceId,
     requester_user_id: request.requesterUserId ?? null,
     description: request.description,
     location: request.location,
@@ -380,6 +380,7 @@ function requestToRow(request: RequestRecord) {
 function requestFromRow(row: SupabaseRow): RequestRecord {
   return {
     id: asString(row.id),
+    workspaceId: asString(row.workspace_id),
     requesterUserId: row.requester_user_id ? asString(row.requester_user_id) : undefined,
     description: asString(row.description),
     location: asString(row.location),
@@ -396,6 +397,7 @@ function requestFromRow(row: SupabaseRow): RequestRecord {
 function triageToRow(triage: TriageResultRecord) {
   return {
     id: triage.id,
+    workspace_id: triage.workspaceId,
     request_id: triage.requestId,
     source: triage.source,
     title: triage.title,
@@ -412,6 +414,7 @@ function triageToRow(triage: TriageResultRecord) {
 function triageFromRow(row: SupabaseRow): TriageResultRecord {
   return {
     id: asString(row.id),
+    workspaceId: asString(row.workspace_id),
     requestId: asString(row.request_id),
     source: asString(row.source) as TriageResultRecord["source"],
     title: asString(row.title),
@@ -428,6 +431,7 @@ function triageFromRow(row: SupabaseRow): TriageResultRecord {
 function ticketToRow(ticket: TicketRecord) {
   return {
     id: ticket.id,
+    workspace_id: ticket.workspaceId,
     request_id: ticket.requestId ?? null,
     requester_user_id: ticket.requesterUserId ?? null,
     title: ticket.title,
@@ -453,6 +457,7 @@ function ticketToRow(ticket: TicketRecord) {
 function ticketFromRow(row: SupabaseRow): TicketRecord {
   return {
     id: asString(row.id),
+    workspaceId: asString(row.workspace_id),
     requestId: row.request_id ? asString(row.request_id) : undefined,
     requesterUserId: row.requester_user_id ? asString(row.requester_user_id) : undefined,
     title: asString(row.title),
@@ -478,6 +483,7 @@ function ticketFromRow(row: SupabaseRow): TicketRecord {
 function activityToRow(activity: TicketActivityRecord) {
   return {
     id: activity.id,
+    workspace_id: activity.workspaceId,
     ticket_id: activity.ticketId ?? null,
     request_id: activity.requestId ?? null,
     action: activity.action,
@@ -498,6 +504,7 @@ function productActivityText(value: string) {
 function activityFromRow(row: SupabaseRow): TicketActivityRecord {
   return {
     id: asString(row.id),
+    workspaceId: asString(row.workspace_id),
     ticketId: row.ticket_id ? asString(row.ticket_id) : undefined,
     requestId: row.request_id ? asString(row.request_id) : undefined,
     action: productActivityText(asString(row.action)),
@@ -510,6 +517,7 @@ function activityFromRow(row: SupabaseRow): TicketActivityRecord {
 function noteToRow(note: TicketNoteRecord) {
   return {
     id: note.id,
+    workspace_id: note.workspaceId,
     ticket_id: note.ticketId,
     actor: note.actor,
     body: note.body,
@@ -520,6 +528,7 @@ function noteToRow(note: TicketNoteRecord) {
 function noteFromRow(row: SupabaseRow): TicketNoteRecord {
   return {
     id: asString(row.id),
+    workspaceId: asString(row.workspace_id),
     ticketId: asString(row.ticket_id),
     actor: asString(row.actor),
     body: asString(row.body),
@@ -549,8 +558,8 @@ function emptyDashboardData(): DashboardData {
   };
 }
 
-async function clearTable(client: SupabaseClient, table: string, column: string) {
-  const { error } = await client.from(table).delete().not(column, "is", null);
+async function clearWorkspaceTable(client: SupabaseClient, table: string, workspaceId: string) {
+  const { error } = await client.from(table).delete().eq("workspace_id", workspaceId);
   requireNoError(error, `Clear ${table}`);
 }
 
@@ -588,8 +597,8 @@ async function addActivity(
   return activity;
 }
 
-async function fetchTicketRows(client: SupabaseClient, statusFilter?: string, requesterUserId?: string) {
-  let query = client.from("tickets").select("*");
+async function fetchTicketRows(client: SupabaseClient, statusFilter?: string, requesterUserId?: string, workspaceId = DEMO_WORKSPACE_ID) {
+  let query = client.from("tickets").select("*").eq("workspace_id", workspaceId);
 
   if (requesterUserId) {
     query = query.eq("requester_user_id", requesterUserId);
@@ -608,10 +617,11 @@ async function fetchTicketRows(client: SupabaseClient, statusFilter?: string, re
   return ((data ?? []) as SupabaseRow[]).map(ticketFromRow);
 }
 
-async function getLatestTriage(client: SupabaseClient, requestId: string) {
+async function getLatestTriage(client: SupabaseClient, requestId: string, workspaceId = DEMO_WORKSPACE_ID) {
   const { data, error } = await client
     .from("ai_triage_results")
     .select("*")
+    .eq("workspace_id", workspaceId)
     .eq("request_id", requestId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -620,10 +630,33 @@ async function getLatestTriage(client: SupabaseClient, requestId: string) {
   return data ? triageFromRow(data as SupabaseRow) : undefined;
 }
 
-async function getLatestNeedsReview(client: SupabaseClient): Promise<ReviewItem | undefined> {
+async function requireWorkspaceRequest(client: SupabaseClient, requestId: string, workspaceId: string) {
+  const { data, error } = await client
+    .from("requests")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("id", requestId)
+    .maybeSingle();
+  requireNoError(error, "Get workspace request");
+  if (!data) throw new Error("Request not found.");
+}
+
+async function requireWorkspaceTicket(client: SupabaseClient, ticketId: string, workspaceId: string) {
+  const { data, error } = await client
+    .from("tickets")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("id", ticketId)
+    .maybeSingle();
+  requireNoError(error, "Get workspace ticket");
+  if (!data) throw new Error("Ticket not found.");
+}
+
+async function getLatestNeedsReview(client: SupabaseClient, workspaceId = DEMO_WORKSPACE_ID): Promise<ReviewItem | undefined> {
   const { data, error } = await client
     .from("requests")
     .select("*")
+    .eq("workspace_id", workspaceId)
     .eq("status", "needs-review")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -633,36 +666,39 @@ async function getLatestNeedsReview(client: SupabaseClient): Promise<ReviewItem 
   if (!data) return undefined;
 
   const request = requestFromRow(data as SupabaseRow);
-  const triage = await getLatestTriage(client, request.id);
+  const triage = await getLatestTriage(client, request.id, workspaceId);
   if (!triage) return undefined;
 
   return {
     request,
     triage,
-    similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department),
+    similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department, workspaceId),
   };
 }
 
-export async function resetWorkspaceData() {
+export async function resetWorkspaceData(workspaceId = DEMO_WORKSPACE_ID) {
   const client = requireSupabaseAdminClient();
 
-  await clearTable(client, "ticket_notes", "id");
-  await clearTable(client, "ticket_activity", "id");
-  await clearTable(client, "tickets", "id");
-  await clearTable(client, "ai_triage_results", "id");
-  await clearTable(client, "requests", "id");
-  await clearTable(client, "departments", "id");
-  await clearTable(client, "workspace_metadata", "key");
+  if (workspaceId !== DEMO_WORKSPACE_ID) {
+    throw new Error("Only the seeded demo workspace can be reset.");
+  }
 
-  await insertRows(client, "departments", defaultDepartments.map(departmentToRow));
-  await insertRows(client, "requests", seededRequests.map(requestToRow));
-  await insertRows(client, "ai_triage_results", seededTriageResults.map(triageToRow));
-  await insertRows(client, "tickets", seededTickets.map(ticketToRow));
-  await insertRows(client, "ticket_activity", seededActivity.map(activityToRow));
-  await insertRows(client, "ticket_notes", seededNotes.map(noteToRow));
+  await clearWorkspaceTable(client, "ticket_notes", workspaceId);
+  await clearWorkspaceTable(client, "ticket_activity", workspaceId);
+  await clearWorkspaceTable(client, "tickets", workspaceId);
+  await clearWorkspaceTable(client, "ai_triage_results", workspaceId);
+  await clearWorkspaceTable(client, "request_attachments", workspaceId);
+  await clearWorkspaceTable(client, "requests", workspaceId);
+  await clearWorkspaceTable(client, "workspace_metadata", workspaceId);
+
+  await insertRows(client, "requests", seededRequests.map(withDemoWorkspace).map(requestToRow));
+  await insertRows(client, "ai_triage_results", seededTriageResults.map(withDemoWorkspace).map(triageToRow));
+  await insertRows(client, "tickets", seededTickets.map(withDemoWorkspace).map(ticketToRow));
+  await insertRows(client, "ticket_activity", seededActivity.map(withDemoWorkspace).map(activityToRow));
+  await insertRows(client, "ticket_notes", seededNotes.map(withDemoWorkspace).map(noteToRow));
   await insertRows(client, "workspace_metadata", [
-    { key: "seeded", value: "triagedesk-seed-v2" },
-    { key: "seeded_at", value: now() },
+    { workspace_id: workspaceId, key: "seeded", value: "triagedesk-demo-school-seed-v3" },
+    { workspace_id: workspaceId, key: "seeded_at", value: now() },
   ]);
 
   return { ok: true };
@@ -684,11 +720,12 @@ export async function listDepartments() {
   return departments.length > 0 ? departments : defaultDepartments;
 }
 
-export async function createRequest(input: RequestSubmission, imageUrl: string | undefined, requester: AppUser) {
+export async function createRequest(input: RequestSubmission, imageUrl: string | undefined, requester: AppUser, workspaceId = DEMO_WORKSPACE_ID) {
   const client = requireSupabaseAdminClient();
   const timestamp = now();
   const request: RequestRecord = {
     id: await nextNumericId(client, "requests", "id", "REQ"),
+    workspaceId,
     requesterUserId: requester.id,
     ...input,
     contactName: input.contactName || requester.displayName,
@@ -701,6 +738,7 @@ export async function createRequest(input: RequestSubmission, imageUrl: string |
   requireNoError(error, "Create request");
 
   await addActivity(client, {
+    workspaceId,
     requestId: request.id,
     action: "Request saved",
     actor: requester.displayName,
@@ -711,10 +749,40 @@ export async function createRequest(input: RequestSubmission, imageUrl: string |
   return request;
 }
 
-export async function saveTriageResult(requestId: string, triage: TriageDraft) {
+export async function createRequestAttachment(
+  requestId: string,
+  input: Pick<RequestAttachmentRecord, "storagePath" | "publicUrl" | "contentType" | "sizeBytes">,
+  workspaceId = DEMO_WORKSPACE_ID
+) {
   const client = requireSupabaseAdminClient();
+  await requireWorkspaceRequest(client, requestId, workspaceId);
+  const attachment: RequestAttachmentRecord = {
+    id: crypto.randomUUID(),
+    workspaceId,
+    requestId,
+    ...input,
+    createdAt: now(),
+  };
+  const { error } = await client.from("request_attachments").insert({
+    id: attachment.id,
+    workspace_id: attachment.workspaceId,
+    request_id: attachment.requestId,
+    storage_path: attachment.storagePath,
+    public_url: attachment.publicUrl ?? null,
+    content_type: attachment.contentType,
+    size_bytes: attachment.sizeBytes,
+    created_at: attachment.createdAt,
+  });
+  requireNoError(error, "Save request attachment");
+  return attachment;
+}
+
+export async function saveTriageResult(requestId: string, triage: TriageDraft, workspaceId = DEMO_WORKSPACE_ID) {
+  const client = requireSupabaseAdminClient();
+  await requireWorkspaceRequest(client, requestId, workspaceId);
   const record: TriageResultRecord = {
     id: await nextNumericId(client, "ai_triage_results", "id", "TRI"),
+    workspaceId,
     requestId,
     ...triage,
     createdAt: now(),
@@ -724,6 +792,7 @@ export async function saveTriageResult(requestId: string, triage: TriageDraft) {
   requireNoError(error, "Save triage result");
 
   await addActivity(client, {
+    workspaceId,
     requestId,
     action: "AI triage completed",
     actor: "System",
@@ -734,13 +803,14 @@ export async function saveTriageResult(requestId: string, triage: TriageDraft) {
   return record;
 }
 
-export async function listReviewItems(): Promise<ReviewItem[]> {
+export async function listReviewItems(workspaceId = DEMO_WORKSPACE_ID): Promise<ReviewItem[]> {
   const client = getSupabaseAdminClient();
   if (!client) return [];
 
   const { data, error } = await client
     .from("requests")
     .select("*")
+    .eq("workspace_id", workspaceId)
     .eq("status", "needs-review")
     .order("created_at", { ascending: false });
   requireNoError(error, "List review items");
@@ -748,12 +818,12 @@ export async function listReviewItems(): Promise<ReviewItem[]> {
   const requests = ((data ?? []) as SupabaseRow[]).map(requestFromRow);
   const items = await Promise.all(
     requests.map(async (request) => {
-      const triage = await getLatestTriage(client, request.id);
+      const triage = await getLatestTriage(client, request.id, workspaceId);
       if (!triage) return undefined;
       return {
         request,
         triage,
-        similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department),
+        similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department, workspaceId),
       };
     })
   );
@@ -761,11 +831,11 @@ export async function listReviewItems(): Promise<ReviewItem[]> {
   return items.filter((item): item is ReviewItem => Boolean(item));
 }
 
-export async function getRequestBundle(requestId: string, requesterUserId?: string): Promise<ReviewItem | undefined> {
+export async function getRequestBundle(requestId: string, requesterUserId?: string, workspaceId = DEMO_WORKSPACE_ID): Promise<ReviewItem | undefined> {
   const client = getSupabaseAdminClient();
   if (!client) return undefined;
 
-  let query = client.from("requests").select("*").eq("id", requestId);
+  let query = client.from("requests").select("*").eq("workspace_id", workspaceId).eq("id", requestId);
   if (requesterUserId) {
     query = query.eq("requester_user_id", requesterUserId);
   }
@@ -775,41 +845,41 @@ export async function getRequestBundle(requestId: string, requesterUserId?: stri
   if (!data) return undefined;
 
   const request = requestFromRow(data as SupabaseRow);
-  const triage = await getLatestTriage(client, request.id);
+  const triage = await getLatestTriage(client, request.id, workspaceId);
   if (!triage) return undefined;
 
   return {
     request,
     triage,
-    similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department),
+    similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department, workspaceId),
   };
 }
 
-export async function getLatestRequestBundle(requesterUserId?: string) {
+export async function getLatestRequestBundle(requesterUserId?: string, workspaceId = DEMO_WORKSPACE_ID) {
   const client = getSupabaseAdminClient();
   if (!client) return undefined;
 
-  let query = client.from("requests").select("id");
+  let query = client.from("requests").select("id").eq("workspace_id", workspaceId);
   if (requesterUserId) {
     query = query.eq("requester_user_id", requesterUserId);
   }
   const { data, error } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle();
   requireNoError(error, "Get latest request");
 
-  return data ? getRequestBundle(asString((data as SupabaseRow).id)) : undefined;
+  return data ? getRequestBundle(asString((data as SupabaseRow).id), requesterUserId, workspaceId) : undefined;
 }
 
-export async function listTickets(statusFilter?: string, requesterUserId?: string) {
+export async function listTickets(statusFilter?: string, requesterUserId?: string, workspaceId = DEMO_WORKSPACE_ID) {
   const client = getSupabaseAdminClient();
   if (!client) return [];
-  return fetchTicketRows(client, statusFilter, requesterUserId);
+  return fetchTicketRows(client, statusFilter, requesterUserId, workspaceId);
 }
 
-export async function getTicketDetail(ticketId: string, requesterUserId?: string) {
+export async function getTicketDetail(ticketId: string, requesterUserId?: string, workspaceId = DEMO_WORKSPACE_ID) {
   const client = getSupabaseAdminClient();
   if (!client) return undefined;
 
-  let query = client.from("tickets").select("*").eq("id", ticketId);
+  let query = client.from("tickets").select("*").eq("workspace_id", workspaceId).eq("id", ticketId);
   if (requesterUserId) {
     query = query.eq("requester_user_id", requesterUserId);
   }
@@ -819,8 +889,8 @@ export async function getTicketDetail(ticketId: string, requesterUserId?: string
 
   const ticket = ticketFromRow(data as SupabaseRow);
   const [{ data: activityData, error: activityError }, { data: notesData, error: notesError }] = await Promise.all([
-    client.from("ticket_activity").select("*").eq("ticket_id", ticket.id).order("created_at", { ascending: false }),
-    client.from("ticket_notes").select("*").eq("ticket_id", ticket.id).order("created_at", { ascending: false }),
+    client.from("ticket_activity").select("*").eq("workspace_id", workspaceId).eq("ticket_id", ticket.id).order("created_at", { ascending: false }),
+    client.from("ticket_notes").select("*").eq("workspace_id", workspaceId).eq("ticket_id", ticket.id).order("created_at", { ascending: false }),
   ]);
   requireNoError(activityError, "Get ticket activity");
   requireNoError(notesError, "Get ticket notes");
@@ -829,23 +899,24 @@ export async function getTicketDetail(ticketId: string, requesterUserId?: string
     ticket,
     activity: ((activityData ?? []) as SupabaseRow[]).map(activityFromRow),
     notes: ((notesData ?? []) as SupabaseRow[]).map(noteFromRow),
-    similarTickets: await getSimilarTicketsFromClient(client, `${ticket.title} ${ticket.description} ${ticket.location}`, ticket.id, ticket.department),
+    similarTickets: await getSimilarTicketsFromClient(client, `${ticket.title} ${ticket.description} ${ticket.location}`, ticket.id, ticket.department, workspaceId),
   };
 }
 
-export async function getSimilarTickets(text: string, department?: Department) {
+export async function getSimilarTickets(text: string, department?: Department, workspaceId = DEMO_WORKSPACE_ID) {
   const client = getSupabaseAdminClient();
   if (!client) return [];
-  return getSimilarTicketsFromClient(client, text, undefined, department);
+  return getSimilarTicketsFromClient(client, text, undefined, department, workspaceId);
 }
 
-export async function findReusableTriageDraft(input: RequestSubmission): Promise<TriageDraft | undefined> {
+export async function findReusableTriageDraft(input: RequestSubmission, workspaceId = DEMO_WORKSPACE_ID): Promise<TriageDraft | undefined> {
   const client = getSupabaseAdminClient();
   if (!client) return undefined;
 
   const { data, error } = await client
     .from("requests")
     .select("id")
+    .eq("workspace_id", workspaceId)
     .eq("description", input.description)
     .eq("location", input.location)
     .eq("urgency_note", input.urgencyNote)
@@ -856,7 +927,7 @@ export async function findReusableTriageDraft(input: RequestSubmission): Promise
 
   if (!data) return undefined;
 
-  const triage = await getLatestTriage(client, asString((data as SupabaseRow).id));
+  const triage = await getLatestTriage(client, asString((data as SupabaseRow).id), workspaceId);
   if (!triage) return undefined;
 
   return {
@@ -877,22 +948,24 @@ export async function approveRequest(input: {
   priority: Priority;
   department: Department;
   summary: string;
-}) {
+}, workspaceId = DEMO_WORKSPACE_ID) {
   const client = requireSupabaseAdminClient();
 
   const { data: requestData, error: requestError } = await client
     .from("requests")
     .select("*")
+    .eq("workspace_id", workspaceId)
     .eq("id", input.requestId)
     .maybeSingle();
   requireNoError(requestError, "Get request for approval");
 
-  const triage = await getLatestTriage(client, input.requestId);
+  const triage = await getLatestTriage(client, input.requestId, workspaceId);
   if (!requestData || !triage) throw new Error("Request not found.");
 
   const { data: existingData, error: existingError } = await client
     .from("tickets")
     .select("*")
+    .eq("workspace_id", workspaceId)
     .eq("request_id", input.requestId)
     .maybeSingle();
   requireNoError(existingError, "Check existing ticket");
@@ -902,6 +975,7 @@ export async function approveRequest(input: {
   const timestamp = now();
   const ticket: TicketRecord = {
     id: await nextNumericId(client, "tickets", "id", "TRG"),
+    workspaceId,
     requestId: request.id,
     requesterUserId: request.requesterUserId,
     title: input.title,
@@ -923,6 +997,7 @@ export async function approveRequest(input: {
   const { data: updatedRequest, error: updateError } = await client
     .from("requests")
     .update({ status: "approved", reviewed_at: timestamp })
+    .eq("workspace_id", workspaceId)
     .eq("id", request.id)
     .select("id")
     .maybeSingle();
@@ -933,6 +1008,7 @@ export async function approveRequest(input: {
   requireNoError(insertError, "Create ticket");
 
   await addActivity(client, {
+    workspaceId,
     ticketId: ticket.id,
     requestId: request.id,
     action: "Ticket approved",
@@ -944,13 +1020,14 @@ export async function approveRequest(input: {
   return ticket;
 }
 
-export async function rejectRequest(requestId: string) {
+export async function rejectRequest(requestId: string, workspaceId = DEMO_WORKSPACE_ID) {
   const client = requireSupabaseAdminClient();
   const timestamp = now();
 
   const { data, error } = await client
     .from("requests")
     .update({ status: "rejected", reviewed_at: timestamp })
+    .eq("workspace_id", workspaceId)
     .eq("id", requestId)
     .select("id")
     .maybeSingle();
@@ -958,6 +1035,7 @@ export async function rejectRequest(requestId: string) {
   if (!data) throw new Error("Request not found.");
 
   await addActivity(client, {
+    workspaceId,
     requestId,
     action: "Request rejected",
     actor: "Admin",
@@ -966,13 +1044,15 @@ export async function rejectRequest(requestId: string) {
   });
 }
 
-export async function markDuplicate(requestId: string, duplicateOfTicketId: string) {
+export async function markDuplicate(requestId: string, duplicateOfTicketId: string, workspaceId = DEMO_WORKSPACE_ID) {
   const client = requireSupabaseAdminClient();
   const timestamp = now();
+  await requireWorkspaceTicket(client, duplicateOfTicketId, workspaceId);
 
   const { data, error } = await client
     .from("requests")
     .update({ status: "duplicate", duplicate_of_ticket_id: duplicateOfTicketId, reviewed_at: timestamp })
+    .eq("workspace_id", workspaceId)
     .eq("id", requestId)
     .select("id")
     .maybeSingle();
@@ -980,6 +1060,7 @@ export async function markDuplicate(requestId: string, duplicateOfTicketId: stri
   if (!data) throw new Error("Request not found.");
 
   await addActivity(client, {
+    workspaceId,
     requestId,
     action: "Marked duplicate",
     actor: "Admin",
@@ -994,9 +1075,9 @@ export async function updateTicket(input: {
   department: Department;
   resolutionNotes: string;
   note: string;
-}) {
+}, workspaceId = DEMO_WORKSPACE_ID) {
   const client = requireSupabaseAdminClient();
-  const { data, error } = await client.from("tickets").select("*").eq("id", input.ticketId).maybeSingle();
+  const { data, error } = await client.from("tickets").select("*").eq("workspace_id", workspaceId).eq("id", input.ticketId).maybeSingle();
   requireNoError(error, "Get ticket for update");
   if (!data) throw new Error("Ticket not found.");
 
@@ -1024,6 +1105,7 @@ export async function updateTicket(input: {
     changes.push(input.note);
     const note: TicketNoteRecord = {
       id: await nextNumericId(client, "ticket_notes", "id", "NOTE"),
+      workspaceId,
       ticketId: ticket.id,
       actor: "Admin",
       body: input.note,
@@ -1043,6 +1125,7 @@ export async function updateTicket(input: {
       resolved_at: resolvedAt,
       closed_at: closedAt,
     })
+    .eq("workspace_id", workspaceId)
     .eq("id", ticket.id)
     .select("*")
     .maybeSingle();
@@ -1051,6 +1134,7 @@ export async function updateTicket(input: {
 
   if (changes.length > 0) {
     await addActivity(client, {
+      workspaceId,
       ticketId: ticket.id,
       requestId: ticket.requestId,
       action: "Ticket updated",
@@ -1063,15 +1147,15 @@ export async function updateTicket(input: {
   return ticketFromRow(updatedData as SupabaseRow);
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
+export async function getDashboardData(workspaceId = DEMO_WORKSPACE_ID): Promise<DashboardData> {
   const client = getSupabaseAdminClient();
   if (!client) return emptyDashboardData();
 
   const [tickets, reviewItem, activityResult, requestsResult] = await Promise.all([
-    fetchTicketRows(client, "all"),
-    getLatestNeedsReview(client),
-    client.from("ticket_activity").select("*").order("created_at", { ascending: false }).limit(20),
-    client.from("requests").select("*").order("created_at", { ascending: false }),
+    fetchTicketRows(client, "all", undefined, workspaceId),
+    getLatestNeedsReview(client, workspaceId),
+    client.from("ticket_activity").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).limit(20),
+    client.from("requests").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending: false }),
   ]);
   requireNoError(activityResult.error, "List recent activity");
   requireNoError(requestsResult.error, "List requests");
@@ -1132,7 +1216,8 @@ async function getSimilarTicketsFromClient(
   client: SupabaseClient,
   text: string,
   excludeId?: string,
-  preferredDepartment?: Department
+  preferredDepartment?: Department,
+  workspaceId = DEMO_WORKSPACE_ID
 ): Promise<SimilarTicket[]> {
   const tokens = new Set(
     text
@@ -1140,7 +1225,7 @@ async function getSimilarTicketsFromClient(
       .split(/[^a-z0-9]+/)
       .filter((token) => token.length > 2)
   );
-  const tickets = await fetchTicketRows(client, "all");
+  const tickets = await fetchTicketRows(client, "all", undefined, workspaceId);
 
   return tickets
     .filter((ticket) => ticket.id !== excludeId && ticket.requestId !== excludeId)
