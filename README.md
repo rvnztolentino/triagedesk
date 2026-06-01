@@ -1,8 +1,18 @@
 # TriageDesk
 
-TriageDesk is an internal operations triage app for schools, clinics, offices, and facilities teams. Requesters submit plain-language issues, Groq generates structured triage suggestions, and admins review the result before it becomes a trackable ticket.
+TriageDesk is an AI operations triage system for schools, clinics, offices, and facilities teams. It turns messy internal requests into structured Groq triage suggestions, keeps admins in the review loop, and converts approved requests into tracked tickets.
 
-The app includes Supabase authentication, requester/admin/owner roles, request image uploads, ticket history, workspace seeding, and responsive workspace controls for mobile layout, light/dark theme, profile sign-out, and accent color selection.
+The product includes Supabase authentication, requester/admin roles, requester-scoped data visibility, admin review flows, request image uploads, ticket history, and activity history.
+
+![Dashboard](public/docs/dashboard.png)
+
+## Product Focus
+
+...
+
+## Features
+
+...
 
 ## Tech Stack
 
@@ -107,11 +117,12 @@ pnpm test
 
 ## Useful Routes
 
-- `/signup` - create an account
 - `/login` - sign in
+- `/preview` - read-only sample workspace
+- `/signup` - create an account
 - `/submit` - submit an operations request
-- `/tickets` - view requester or admin ticket lists
 - `/review` - admin triage review queue
+- `/tickets` - view requester or admin ticket lists
 - `/users` - owner-only role management
 - `/settings` - system status and appearance settings
 - `/api/health` - setup health check
