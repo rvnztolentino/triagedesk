@@ -1,7 +1,7 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { Moon, Sun } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Check, Moon, Paintbrush, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const THEME_KEY = "triagedesk-theme";
@@ -65,81 +65,109 @@ function usePreferences() {
   };
 }
 
-export function ThemeToggle({ label = "Toggle color theme" }: { label?: string }) {
+export function ThemeToggle({ label = "Customize appearance" }: { label?: string }) {
   const { theme, accent } = usePreferences();
+  const [open, setOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
-  const isLight = theme === "light";
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!popoverRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
 
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={() => {
-        const nextTheme = isLight ? "dark" : "light";
-        applyPreferences(nextTheme, accent);
-      }}
-      className="h-9 w-9 shrink-0 rounded-lg border border-neutral-800 bg-[#111111] text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
-    >
-      <span className="flex h-full w-full items-center justify-center">
-        {isLight ? <Moon size={17} /> : <Sun size={17} />}
-      </span>
-    </button>
-  );
-}
+    <div ref={popoverRef} className="relative">
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        title={label}
+        onClick={() => setOpen((current) => !current)}
+        className={cn(
+          "h-10 w-10 shrink-0 rounded-full border transition-colors inline-flex items-center justify-center",
+          open
+            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+            : "border-neutral-800 bg-[#111111] text-neutral-400 hover:bg-neutral-800 hover:text-white"
+        )}
+      >
+        <Paintbrush size={17} />
+      </button>
 
-export function ThemeSettingsPanel() {
-  const { theme, accent } = usePreferences();
-
-  return (
-    <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
-      <div className="mb-5">
-        <h2 className="font-semibold text-white">Appearance</h2>
-        <p className="text-sm text-neutral-500 mt-1">Choose the workspace theme and accent color.</p>
-      </div>
-
-      <div className="space-y-6">
-        <div>
-          <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Theme</div>
-          <div className="inline-flex rounded-xl border border-neutral-800 bg-[#0a0a0a] p-1">
-            {(["dark", "light"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => applyPreferences(mode, accent)}
-                className={cn(
-                  "h-9 px-4 rounded-lg text-sm font-bold capitalize transition-colors",
-                  theme === mode ? "bg-emerald-500 text-black" : "text-neutral-500 hover:text-white"
-                )}
-              >
-                {mode}
-              </button>
-            ))}
+      {open ? (
+        <div
+          role="dialog"
+          aria-label="Appearance"
+          className="absolute right-0 top-12 z-50 w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-neutral-800 bg-[#111111] p-4 shadow-2xl"
+        >
+          <div className="mb-4">
+            <div className="text-sm font-semibold text-white">Appearance</div>
+            <div className="text-xs text-neutral-500 mt-0.5">Theme and accent color</div>
           </div>
-        </div>
 
-        <div>
-          <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Accent Color</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {accentOptions.map((option) => (
+          <div className="mb-4 rounded-full border border-neutral-800 bg-[#0a0a0a] p-1 grid grid-cols-2 gap-1">
+            {([
+              { value: "dark", label: "Dark", icon: Moon },
+              { value: "light", label: "Light", icon: Sun },
+            ] as const).map((option) => {
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => applyPreferences(option.value, accent)}
+                  className={cn(
+                    "h-10 rounded-full text-sm font-semibold transition-colors inline-flex items-center justify-center gap-2",
+                    theme === option.value ? "bg-emerald-500 text-black" : "text-neutral-500 hover:text-white"
+                  )}
+                >
+                  <Icon size={15} />
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-1 gap-2">
+            {accentOptions.map((option) => {
+              const selected = accent === option.value;
+              return (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => applyPreferences(theme, option.value)}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl border p-3 text-left text-sm font-semibold transition-colors",
-                  accent === option.value
+                  "h-11 rounded-full border px-3 text-left text-sm font-semibold transition-colors flex items-center gap-3",
+                  selected
                     ? "border-emerald-500 bg-emerald-500/10 text-white"
                     : "border-neutral-800 bg-[#0a0a0a] text-neutral-400 hover:text-white"
                 )}
               >
-                <span className="h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: option.swatch }} />
-                {option.label}
+                <span className="h-5 w-5 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: option.swatch }} />
+                <span className="flex-1">{option.label}</span>
+                {selected ? <Check size={15} className="text-emerald-400" /> : null}
               </button>
-            ))}
+              );
+            })}
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

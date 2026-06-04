@@ -17,7 +17,7 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
 
   if (isSetupRequired && !isPreview) {
     return (
-      <div className="max-w-2xl mx-auto py-8">
+      <div className="max-w-2xl mx-auto w-full">
         <div className="bg-[#111111] rounded-2xl p-8 md:p-10 shadow-xl border border-amber-500/30">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 bg-amber-500/10 text-amber-400 rounded-xl flex items-center justify-center border border-amber-500/20">
@@ -46,8 +46,8 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
-      <div className="mb-8 text-center">
+    <div className="max-w-2xl mx-auto w-full">
+      <div className="mb-6 text-center">
         <h1 className="text-3xl font-bold tracking-tight text-white font-space mb-2">New Request</h1>
         <p className="text-neutral-500">Describe the issue and AI triage will structure it immediately.</p>
       </div>

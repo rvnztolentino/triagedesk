@@ -3,7 +3,6 @@ import { createWorkspaceDepartmentAction, deleteWorkspaceDepartmentAction } from
 import { requireWorkspaceContext } from "@/lib/auth";
 import { listDepartments } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
-import { ThemeSettingsPanel } from "@/components/theme-controls";
 import { defaultDepartmentIds } from "@/lib/schema";
 import { isWorkspacePreview } from "@/lib/workspaces";
 
@@ -142,8 +141,6 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
           ) : null}
         </div>
       ) : null}
-
-      <ThemeSettingsPanel />
 
       {missing.length > 0 ? (
         <div className="bg-[#111111] border border-amber-500/30 rounded-2xl p-6">
