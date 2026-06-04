@@ -1,19 +1,22 @@
-import { ShieldCheck, UserCog } from "lucide-react";
-import { updateUserRoleAction } from "@/app/actions";
-import { requireOwner, listUserProfiles } from "@/lib/auth";
+import { ShieldCheck, UserCog, UserMinus } from "lucide-react";
+import { removeWorkspaceMemberAction, updateUserRoleAction } from "@/app/actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { requireAdmin } from "@/lib/auth";
+import { listWorkspaceMembers, canRemoveWorkspaceMember } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
-  const currentUser = await requireOwner();
-  const users = await listUserProfiles();
+  const { user: currentUser, workspace, membership } = await requireAdmin();
+  const users = await listWorkspaceMembers(workspace.id, currentUser.id);
+  const canEditRoles = membership.role === "owner";
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white font-space">User Management</h1>
-          <p className="text-neutral-500 mt-1">Review account roles and control admin access. Owner access is protected.</p>
+          <p className="text-neutral-500 mt-1">Manage active members and workspace roles for {workspace.name}.</p>
         </div>
       </div>
 
@@ -32,9 +35,10 @@ export default async function UsersPage() {
             </div>
           ) : (
             users.map((user) => {
-              const isSelf = user.id === currentUser.id;
+              const isSelf = user.userId === currentUser.id;
               const isOwner = user.role === "owner";
-              const roleLocked = isSelf || isOwner;
+              const roleLocked = !canEditRoles || isSelf || isOwner;
+              const canRemove = !isSelf && canRemoveWorkspaceMember(membership.role, user.role);
               return (
                 <div key={user.id} className="p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
@@ -58,25 +62,36 @@ export default async function UsersPage() {
                     <p className="text-xs text-neutral-600 mt-1">Joined {new Date(user.createdAt).toLocaleDateString()}</p>
                   </div>
 
-                  <form action={updateUserRoleAction} className="flex items-center gap-3">
-                    <input type="hidden" name="userId" value={user.id} />
-                    <select
-                      name="role"
-                      defaultValue={user.role}
-                      disabled={roleLocked}
-                      className="h-10 bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:text-neutral-600"
-                    >
-                      <option value="requester">Requester</option>
-                      <option value="admin">Admin</option>
-                      {isOwner ? <option value="owner">Owner</option> : null}
-                    </select>
-                    <button
-                      disabled={roleLocked}
-                      className="h-10 px-4 bg-neutral-800 border border-neutral-700 rounded-xl text-sm font-bold text-white hover:bg-neutral-700 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
-                    >
-                      Save Role
-                    </button>
-                  </form>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <form action={updateUserRoleAction} className="flex items-center gap-3">
+                      <input type="hidden" name="userId" value={user.userId} />
+                      <select
+                        name="role"
+                        defaultValue={user.role}
+                        disabled={roleLocked}
+                        className="h-10 bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:text-neutral-600"
+                      >
+                        <option value="requester">Requester</option>
+                        <option value="admin">Admin</option>
+                        {isOwner ? <option value="owner">Owner</option> : null}
+                      </select>
+                      <button
+                        disabled={roleLocked}
+                        className="h-10 px-4 bg-neutral-800 border border-neutral-700 rounded-xl text-sm font-bold text-white hover:bg-neutral-700 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
+                      >
+                        Save Role
+                      </button>
+                    </form>
+                    {canRemove ? (
+                      <form action={removeWorkspaceMemberAction}>
+                        <input type="hidden" name="workspaceId" value={workspace.id} />
+                        <input type="hidden" name="memberUserId" value={user.userId} />
+                        <ConfirmSubmitButton confirmation={`Remove ${user.displayName || user.email || "this member"} from ${workspace.name}?`} className="h-10 px-4 rounded-xl border border-rose-500/30 text-sm font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2">
+                          <UserMinus size={15} /> Remove
+                        </ConfirmSubmitButton>
+                      </form>
+                    ) : null}
+                  </div>
                 </div>
               );
             })
@@ -89,7 +104,7 @@ export default async function UsersPage() {
         <div>
           <h2 className="font-semibold text-white">Role policy</h2>
           <p className="text-sm text-neutral-500 mt-1">
-            Signup never exposes role selection. The configured seed email receives protected owner access at account creation. Only the owner can assign requester/admin roles; owner access cannot be changed here.
+            Workspace owners can assign requester/admin roles. Admins can remove requester members. Owner access cannot be changed here.
           </p>
         </div>
       </div>

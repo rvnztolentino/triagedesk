@@ -1,15 +1,19 @@
-import { AlertTriangle, ArrowRight, Camera, MapPin, User } from "lucide-react";
+import { AlertTriangle, ArrowRight, LockKeyhole, MapPin, User } from "lucide-react";
 import Link from "next/link";
 import { submitRequestAction } from "@/app/actions";
-import { requireUser } from "@/lib/auth";
+import { RequestAttachmentsInput } from "@/components/request-attachments-input";
+import { SubmitButton } from "@/components/submit-button";
+import { requireOperationalWorkspace } from "@/lib/auth";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
+import { isWorkspacePreview } from "@/lib/workspaces";
 
 export default async function SubmitRequest() {
-  await requireUser();
+  const { workspace } = await requireOperationalWorkspace();
+  const isPreview = isWorkspacePreview(workspace.id);
   const setup = getRuntimeSetupStatus();
   const isSetupRequired = setup.missing.length > 0;
 
-  if (isSetupRequired) {
+  if (isSetupRequired && !isPreview) {
     return (
       <div className="max-w-2xl mx-auto py-8">
         <div className="bg-[#111111] rounded-2xl p-8 md:p-10 shadow-xl border border-amber-500/30">
@@ -48,6 +52,13 @@ export default async function SubmitRequest() {
 
       <div className="bg-[#111111] rounded-2xl p-8 md:p-10 shadow-xl border border-neutral-800">
         <form action={submitRequestAction} className="space-y-6">
+          {isPreview ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-start gap-2">
+              <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
+              <p><span className="font-bold text-amber-300">Preview locked.</span> This sample form is visible for evaluation. Create your own workspace to submit a request.</p>
+            </div>
+          ) : null}
+          <fieldset disabled={isPreview} className="space-y-6 disabled:opacity-60">
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-semibold text-neutral-300">What&apos;s the issue?</label>
             <textarea
@@ -103,29 +114,17 @@ export default async function SubmitRequest() {
             />
           </div>
 
-          <div className="pt-2">
-            <label htmlFor="image" className="text-sm font-semibold text-neutral-300 block mb-2">Photo (Optional)</label>
-            <label htmlFor="image" className="w-full border-2 border-dashed border-neutral-800 bg-[#0a0a0a] rounded-xl p-8 flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-600 transition-all cursor-pointer">
-              <div className="w-12 h-12 bg-neutral-900 rounded-full flex items-center justify-center mb-3 border border-neutral-800">
-                <Camera size={20} className="text-neutral-400" />
-              </div>
-              <span className="text-sm font-medium">Click to attach a photo</span>
-              <span className="text-xs mt-1 text-neutral-600">JPG, PNG, GIF, or WebP up to 5MB</span>
-            </label>
-            <input id="image" name="image" type="file" accept="image/*" className="sr-only" />
-          </div>
+          <RequestAttachmentsInput />
 
           <div className="pt-6 border-t border-neutral-800 flex items-center justify-between">
             <Link href="/tickets" className="text-sm font-medium text-neutral-500 hover:text-white px-4 py-2">
               Cancel
             </Link>
-            <button
-              type="submit"
-              className="bg-emerald-500 text-black rounded-xl px-8 py-3 text-sm font-bold hover:bg-emerald-600 transition-all flex items-center gap-2"
-            >
-              Submit Request <ArrowRight size={16} />
-            </button>
+            <SubmitButton pendingText="Uploading..." className="w-auto h-auto px-8 py-3">
+              {isPreview ? <><LockKeyhole size={16} /> Preview locked</> : <>Submit Request <ArrowRight size={16} /></>}
+            </SubmitButton>
           </div>
+          </fieldset>
         </form>
       </div>
     </div>

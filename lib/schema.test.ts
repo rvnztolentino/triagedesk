@@ -40,13 +40,13 @@ describe("schemas", () => {
   });
 
   it("accepts centralized workspace slugs and rejects URL-unsafe values", () => {
-    expect(workspaceSlugSchema.safeParse("demo-school").success).toBe(true);
-    expect(workspaceSlugSchema.safeParse("Demo School").success).toBe(false);
+    expect(workspaceSlugSchema.safeParse("demo-clinic").success).toBe(true);
+    expect(workspaceSlugSchema.safeParse("Demo Clinic").success).toBe(false);
     expect(workspaceSlugSchema.safeParse("demo--school").success).toBe(false);
   });
 
   it("accepts invite codes but rejects malformed input", () => {
-    expect(workspaceInviteCodeSchema.safeParse("DEMO-SCHOOL-2026").success).toBe(true);
+    expect(workspaceInviteCodeSchema.safeParse("DEMO-CLINIC-2026").success).toBe(true);
     expect(workspaceInviteCodeSchema.safeParse("demo school").success).toBe(false);
     expect(workspaceInviteCodeSchema.safeParse("demo--school").success).toBe(false);
   });

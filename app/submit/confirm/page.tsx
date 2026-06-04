@@ -1,15 +1,18 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Building2, CheckCircle2, Home, Sparkles } from "lucide-react";
-import { requireUser } from "@/lib/auth";
+import { AlertTriangle, ArrowRight, Building2, CheckCircle2, FileText, Home, Paperclip, Sparkles } from "lucide-react";
+import { AttachmentFileName } from "@/components/attachment-file-name";
+import { requireOperationalWorkspace } from "@/lib/auth";
 import { getLatestRequestBundle, getRequestBundle } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function SubmitConfirm({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
-  const user = await requireUser();
-  const isAdmin = user.role === "admin" || user.role === "owner";
+  const { user, workspace, membership } = await requireOperationalWorkspace();
+  const isAdmin = membership.role === "admin" || membership.role === "owner";
   const params = await searchParams;
-  const result = params.id ? await getRequestBundle(params.id, isAdmin ? undefined : user.id) : await getLatestRequestBundle(isAdmin ? undefined : user.id);
+  const result = params.id
+    ? await getRequestBundle(params.id, isAdmin ? undefined : user.id, workspace.id)
+    : await getLatestRequestBundle(isAdmin ? undefined : user.id, workspace.id);
 
   if (!result) {
     return (
@@ -22,7 +25,7 @@ export default async function SubmitConfirm({ searchParams }: { searchParams: Pr
     );
   }
 
-  const { request, triage } = result;
+  const { request, triage, attachments } = result;
 
   return (
     <div className="max-w-2xl mx-auto py-8">
@@ -80,6 +83,28 @@ export default async function SubmitConfirm({ searchParams }: { searchParams: Pr
                 {triage.priorityReasoning}
               </p>
             </div>
+
+            {attachments.length > 0 ? (
+              <div>
+                <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+                  <Paperclip size={12} /> Attachments
+                </h3>
+                <div className="rounded-xl border border-neutral-800 bg-[#111111] divide-y divide-neutral-800">
+                  {attachments.map((attachment) => (
+                    <a key={attachment.id} href={`/attachments/${attachment.id}`} className="px-4 py-3 flex min-w-0 items-center gap-3 text-sm text-neutral-300 hover:text-white">
+                      <FileText size={15} className="text-neutral-500 shrink-0" />
+                      <AttachmentFileName fileName={attachment.fileName} className="flex-1" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {request.status === "duplicate" && request.duplicateOfTicketId ? (
+              <div className="rounded-xl border border-neutral-800 bg-[#111111] p-4 text-sm font-semibold text-neutral-300">
+                Duplicate · Linked to {request.duplicateOfTicketId}
+              </div>
+            ) : null}
           </div>
         </div>
 

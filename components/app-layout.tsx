@@ -5,8 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ChevronDown,
+  Building2,
   Inbox,
   LayoutDashboard,
+  LockKeyhole,
   LogOut,
   Menu,
   PlusCircle,
@@ -18,7 +20,7 @@ import {
 import { signOutAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
 import { ThemeToggle } from "@/components/theme-controls";
-import type { AppUser } from "@/lib/schema";
+import type { AppUser, UserRole } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 
 const ownerNavItems = [
@@ -30,13 +32,16 @@ const ownerNavItems = [
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
-const adminNavItems = ownerNavItems.filter((item) => item.href !== "/users");
+const adminNavItems = ownerNavItems;
+const previewNavItems = ownerNavItems.filter((item) => item.href !== "/users");
 
 const requesterNavItems = [
   { href: "/submit", icon: PlusCircle, label: "New Request" },
   { href: "/tickets", icon: Ticket, label: "My Tickets" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
+
+const workspaceNavItem = { href: "/onboarding", icon: Building2, label: "Workspace" };
 
 function initials(user: AppUser | null) {
   if (!user) return "TD";
@@ -49,12 +54,27 @@ function initials(user: AppUser | null) {
     .join("");
 }
 
-export function AppLayout({ children, currentUser }: { children: React.ReactNode; currentUser: AppUser | null }) {
+export function AppLayout({
+  children,
+  currentUser,
+  activeWorkspace,
+}: {
+  children: React.ReactNode;
+  currentUser: AppUser | null;
+  activeWorkspace: { name: string; role: UserRole; isPreview: boolean } | null;
+}) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
   const isAuthPage = pathname === "/login" || pathname.startsWith("/signup") || pathname.startsWith("/auth");
-  const navItems = currentUser?.role === "owner" ? ownerNavItems : currentUser?.role === "admin" ? adminNavItems : requesterNavItems;
+  const operationalNavItems = activeWorkspace?.isPreview
+    ? previewNavItems
+    : activeWorkspace?.role === "owner"
+      ? ownerNavItems
+      : activeWorkspace?.role === "admin"
+        ? adminNavItems
+        : requesterNavItems;
+  const navItems = activeWorkspace ? [...operationalNavItems, workspaceNavItem] : [workspaceNavItem];
 
   React.useEffect(() => {
     React.startTransition(() => {
@@ -130,7 +150,10 @@ export function AppLayout({ children, currentUser }: { children: React.ReactNode
         </nav>
 
         <div className="p-6 border-t border-neutral-800 mt-auto">
-          <div className="px-3 py-2 text-xs uppercase tracking-wider text-neutral-600 font-bold">Operations Workspace</div>
+          <div className="px-3 py-2 text-center text-xs uppercase tracking-wider text-neutral-600 font-bold">
+            <div>{activeWorkspace?.name ?? "Choose Workspace"}</div>
+            {activeWorkspace?.isPreview ? <div className="mt-1 text-[9px] text-amber-400">Preview locked</div> : null}
+          </div>
         </div>
       </aside>
 
@@ -150,6 +173,21 @@ export function AppLayout({ children, currentUser }: { children: React.ReactNode
           <div className="hidden md:block flex-1" />
 
           <div className="flex items-center gap-2 md:gap-3">
+            {currentUser ? (
+              <Link
+                href="/onboarding"
+                aria-label={activeWorkspace ? `Current ${activeWorkspace.isPreview ? "preview " : ""}workspace: ${activeWorkspace.name}` : "Choose a workspace"}
+                className="h-10 max-w-52 rounded-lg border border-neutral-800 bg-[#111111] px-2.5 text-left hover:border-neutral-700 hover:bg-neutral-900 transition-colors inline-flex items-center gap-2"
+              >
+                <Building2 size={16} className={activeWorkspace ? "text-emerald-400 shrink-0" : "text-neutral-500 shrink-0"} />
+                <span className="hidden sm:flex min-w-0 flex-col">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-600 leading-none">{activeWorkspace?.isPreview ? "Preview workspace" : "Workspace"}</span>
+                  <span className="mt-1 truncate text-xs font-semibold text-neutral-200 leading-none">
+                    {activeWorkspace?.name ?? "Choose workspace"}
+                  </span>
+                </span>
+              </Link>
+            ) : null}
             <ThemeToggle />
             {currentUser ? (
               <div className="relative">
@@ -165,7 +203,7 @@ export function AppLayout({ children, currentUser }: { children: React.ReactNode
                   </div>
                   <div className="hidden sm:flex flex-col pr-1 text-left">
                     <span className="text-sm font-medium text-white leading-tight max-w-36 truncate">{currentUser.displayName}</span>
-                    <span className="text-xs text-neutral-500 capitalize">{currentUser.role}</span>
+                    <span className="text-xs text-neutral-500 capitalize">{activeWorkspace?.isPreview ? "preview locked" : activeWorkspace?.role ?? currentUser.role}</span>
                   </div>
                   <ChevronDown size={15} className={cn("text-neutral-500 transition-transform", profileOpen ? "rotate-180" : "")} />
                 </button>
@@ -189,6 +227,18 @@ export function AppLayout({ children, currentUser }: { children: React.ReactNode
             )}
           </div>
         </header>
+
+        {activeWorkspace?.isPreview ? (
+          <div className="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-4 py-3 md:px-8">
+            <div className="flex items-start gap-2 text-sm">
+              <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
+              <p className="text-amber-100">
+                <span className="font-bold text-amber-300">Preview locked.</span>{" "}
+                Demo Clinic is read-only. Explore the sample workflow, then create your own workspace to use actions.
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8">
           {children}

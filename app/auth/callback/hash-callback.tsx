@@ -38,6 +38,8 @@ export function AuthHashCallback() {
     const formData = new FormData();
     formData.set("accessToken", accessToken);
     formData.set("refreshToken", refreshToken);
+    const next = queryParams.get("next");
+    if (next) formData.set("next", next);
 
     startTransition(async () => {
       const timeout = new Promise<{ redirectTo?: string; error: string }>((resolve) => {

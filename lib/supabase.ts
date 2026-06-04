@@ -42,7 +42,7 @@ export function getRuntimeSetupStatus() {
     aiProvider,
     supabaseConfigured: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY),
     groqConfigured: aiProvider === "groq" && Boolean(process.env.GROQ_API_KEY),
-    storageBucket: process.env.SUPABASE_REQUEST_IMAGES_BUCKET || "request-images",
+    storageBucket: process.env.SUPABASE_REQUEST_ATTACHMENTS_BUCKET || process.env.SUPABASE_REQUEST_IMAGES_BUCKET || "request-attachments",
     missing,
   };
 }

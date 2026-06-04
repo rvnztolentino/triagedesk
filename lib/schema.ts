@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const priorities = ["low", "medium", "high", "critical"] as const;
-export const departments = ["it", "maintenance", "admin", "security", "clinic", "facilities"] as const;
+export const defaultDepartmentIds = ["it", "facilities", "maintenance", "security", "admin", "clinic"] as const;
 export const requestStatuses = ["needs-review", "approved", "rejected", "duplicate"] as const;
 export const ticketStatuses = ["new", "needs-review", "open", "in-progress", "resolved", "closed"] as const;
 export const triageSources = ["rules", "groq"] as const;
@@ -9,7 +9,7 @@ export const userRoles = ["requester", "admin", "owner"] as const;
 export const assignableUserRoles = ["requester", "admin"] as const;
 
 export const prioritySchema = z.enum(priorities);
-export const departmentSchema = z.enum(departments);
+export const departmentSchema = z.string().trim().min(1);
 export const requestStatusSchema = z.enum(requestStatuses);
 export const ticketStatusSchema = z.enum(ticketStatuses);
 export const triageSourceSchema = z.enum(triageSources);
@@ -76,6 +76,68 @@ export const workspaceInviteCodeSchema = z
   .min(6)
   .max(80)
   .regex(/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/, "Use letters, numbers, and single hyphens.");
+
+export const workspaceInviteInputSchema = z.string().trim().min(6).max(500);
+
+export const workspaceNameSchema = z.string().trim().min(2, "Workspace name is required.").max(80);
+
+export const workspaceCreateSchema = z.object({
+  name: workspaceNameSchema,
+});
+
+export const workspaceJoinSchema = z.object({
+  workspaceSlug: workspaceSlugSchema,
+  code: workspaceInviteInputSchema,
+});
+
+export const workspaceInviteCreateSchema = z.object({
+  workspaceId: z.string().uuid(),
+  role: assignableUserRoleSchema,
+});
+
+export const workspaceInviteRevokeSchema = z.object({
+  workspaceId: z.string().uuid(),
+  inviteId: z.string().uuid(),
+});
+
+export const workspaceMemberLeaveSchema = z.object({
+  workspaceId: z.string().uuid(),
+});
+
+export const workspaceMemberRemoveSchema = z.object({
+  workspaceId: z.string().uuid(),
+  memberUserId: z.string().uuid(),
+});
+
+export const workspaceMemberRoleUpdateSchema = z.object({
+  workspaceId: z.string().uuid(),
+  memberUserId: z.string().uuid(),
+  role: assignableUserRoleSchema,
+});
+
+export const workspaceDeleteSchema = z.object({
+  workspaceId: z.string().uuid(),
+  confirmation: workspaceSlugSchema,
+});
+
+export const departmentIdSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(40)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and single hyphens.");
+
+export const workspaceDepartmentCreateSchema = z.object({
+  workspaceId: z.string().uuid(),
+  id: departmentIdSchema,
+  name: z.string().trim().min(2, "Department name is required.").max(80),
+  description: z.string().trim().max(200).default(""),
+});
+
+export const workspaceDepartmentDeleteSchema = z.object({
+  workspaceId: z.string().uuid(),
+  id: departmentIdSchema,
+});
 
 export type Priority = z.infer<typeof prioritySchema>;
 export type Department = z.infer<typeof departmentSchema>;
@@ -197,6 +259,11 @@ export interface WorkspaceMemberRecord {
   createdAt: string;
 }
 
+export interface WorkspaceMemberSummary extends WorkspaceMemberRecord {
+  email: string;
+  displayName: string;
+}
+
 export interface WorkspaceInviteRecord {
   id: string;
   workspaceId: string;
@@ -214,6 +281,7 @@ export interface RequestAttachmentRecord {
   id: string;
   workspaceId: string;
   requestId: string;
+  fileName: string;
   storagePath: string;
   publicUrl?: string;
   contentType: string;

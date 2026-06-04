@@ -1,8 +1,9 @@
-import { departments, type SimilarTicket, triageDraftSchema, type TriageDraft, type RequestSubmission } from "@/lib/schema";
+import { type DepartmentRecord, type SimilarTicket, triageDraftSchema, type TriageDraft, type RequestSubmission } from "@/lib/schema";
 import { SetupRequiredError, getRuntimeSetupStatus } from "@/lib/supabase";
 
 type TriageInput = RequestSubmission & {
   similarTickets?: SimilarTicket[];
+  departments?: DepartmentRecord[];
 };
 
 const TEXT_LIMITS = {
@@ -13,12 +14,12 @@ const TEXT_LIMITS = {
   similarReason: 180,
 };
 
-const departmentLabels: Record<(typeof departments)[number], string> = {
+const fallbackDepartmentLabels: Record<string, string> = {
   it: "IT",
   maintenance: "Maintenance",
   admin: "Admin",
   security: "Security",
-  clinic: "Clinic",
+  clinic: "Clinic / Health",
   facilities: "Facilities",
 };
 
@@ -48,6 +49,19 @@ function pickDepartment(text: string): { department: TriageDraft["department"]; 
   }
 
   return { department: "facilities", category: "Facilities", issue: "Operations support" };
+}
+
+function normalizeDepartment(department: string, availableDepartments: DepartmentRecord[] = []) {
+  if (availableDepartments.length === 0) return department;
+  const exactMatch = availableDepartments.find((item) => item.id === department);
+  if (exactMatch) return exactMatch.id;
+
+  const labelMatch = availableDepartments.find((item) => item.name.toLowerCase().includes(department.toLowerCase()) || department.toLowerCase().includes(item.name.toLowerCase()));
+  return labelMatch?.id ?? availableDepartments[0].id;
+}
+
+function departmentName(department: string, availableDepartments: DepartmentRecord[] = []) {
+  return availableDepartments.find((item) => item.id === department)?.name ?? fallbackDepartmentLabels[department] ?? department;
 }
 
 function pickPriority(text: string): { priority: TriageDraft["priority"]; reason: string } {
@@ -126,18 +140,19 @@ export function buildTriagePromptPayload(input: TriageInput) {
 export function rulesTriage(input: TriageInput): TriageDraft {
   const combinedText = `${input.description} ${input.location} ${input.urgencyNote}`.toLowerCase();
   const classification = pickDepartment(combinedText);
+  const department = normalizeDepartment(classification.department, input.departments);
   const priority = pickPriority(combinedText);
   const similarTicketIds = (input.similarTickets ?? []).slice(0, 3).map((ticket) => ticket.id);
   const title = createTitle(classification.issue, input.location, combinedText);
-  const departmentName = departmentLabels[classification.department];
+  const label = departmentName(department, input.departments);
 
   return triageDraftSchema.parse({
     source: "rules",
     title,
     category: classification.category,
     priority: priority.priority,
-    department: classification.department,
-    summary: `${departmentName} should review ${input.location}. ${input.description.trim()}`,
+    department,
+    summary: `${label} should review ${input.location}. ${input.description.trim()}`,
     priorityReasoning: priority.reason,
     similarTicketIds,
   });
@@ -150,6 +165,11 @@ async function groqTriage(input: TriageInput): Promise<TriageDraft> {
   if (!apiKey) {
     throw new Error("GROQ_API_KEY is not configured.");
   }
+
+  const availableDepartments = input.departments ?? [];
+  const departmentOptions = availableDepartments.length > 0
+    ? availableDepartments.map((department) => `${department.id} (${department.name})`).join(", ")
+    : "it, facilities, maintenance, security, admin, clinic";
 
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -169,7 +189,7 @@ async function groqTriage(input: TriageInput): Promise<TriageDraft> {
             "You triage internal operations requests for a small organization.",
             "Return only JSON with source, title, category, priority, department, summary, priorityReasoning, and similarTicketIds.",
             "priority must be low, medium, high, or critical.",
-            "department must be one of it, maintenance, admin, security, clinic, facilities.",
+            `department must be one of these workspace department IDs: ${departmentOptions}.`,
             "Keep summary and priorityReasoning concise.",
             "Use only the provided similar ticket IDs in similarTicketIds.",
           ].join(" "),
@@ -193,10 +213,14 @@ async function groqTriage(input: TriageInput): Promise<TriageDraft> {
     throw new Error("AI triage returned an empty response.");
   }
 
-  return triageDraftSchema.parse({
+  const parsed = triageDraftSchema.parse({
     ...JSON.parse(content),
     source: "groq",
   });
+  return {
+    ...parsed,
+    department: normalizeDepartment(parsed.department, availableDepartments),
+  };
 }
 
 export async function runTriage(input: TriageInput): Promise<TriageDraft> {

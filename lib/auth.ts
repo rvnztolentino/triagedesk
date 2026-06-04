@@ -1,14 +1,15 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { EmailOtpType } from "@supabase/supabase-js";
-import { authCredentialsSchema, loginCredentialsSchema, type AppUser, type AuthCredentials, type UserProfileRecord, type UserRole } from "@/lib/schema";
+import { authCredentialsSchema, loginCredentialsSchema, workspaceSlugSchema, type AppUser, type AuthCredentials, type UserProfileRecord, type UserRole } from "@/lib/schema";
 import { getSupabaseAdminClient, getSupabaseAuthClient, getRuntimeSetupStatus, requireSupabaseAdminClient, requireSupabaseAuthClient, SetupRequiredError } from "@/lib/supabase";
-import { isWorkspaceAdmin, requireWorkspaceMembership } from "@/lib/workspaces";
+import { getPostAuthWorkspacePath, isWorkspaceAdmin, isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
 
 const ACCESS_COOKIE = "triagedesk_access_token";
 const REFRESH_COOKIE = "triagedesk_refresh_token";
 const COOKIE_MAX_AGE = 60 * 60 * 8;
 const PASSWORD_RESET_COOKIE = "triagedesk_pending_auth";
+const ACTIVE_WORKSPACE_COOKIE = "triagedesk_active_workspace";
 
 type ProfileRow = Record<string, unknown>;
 
@@ -54,14 +55,6 @@ function toAppUser(profile: UserProfileRecord): AppUser {
     displayName: profile.displayName || profile.email.split("@")[0],
     role: profile.role,
   };
-}
-
-function verificationRedirectFor(user: AppUser) {
-  return user.role === "admin" || user.role === "owner" ? "/" : "/submit";
-}
-
-function isPrivilegedRole(role: UserRole) {
-  return role === "admin" || role === "owner";
 }
 
 function isSeedOwnerEmail(email: string) {
@@ -119,6 +112,7 @@ export async function clearSessionCookies() {
   cookieStore.delete(ACCESS_COOKIE);
   cookieStore.delete(REFRESH_COOKIE);
   cookieStore.delete(PASSWORD_RESET_COOKIE);
+  cookieStore.delete(ACTIVE_WORKSPACE_COOKIE);
 }
 
 export function validateSignupInput(input: unknown) {
@@ -200,16 +194,56 @@ export async function requireUser() {
   return user;
 }
 
-export async function requireAdmin() {
+export async function setActiveWorkspaceCookie(workspaceSlug: string) {
+  const slug = workspaceSlugSchema.parse(workspaceSlug);
+  const cookieStore = await cookies();
+  cookieStore.set(ACTIVE_WORKSPACE_COOKIE, slug, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: COOKIE_MAX_AGE,
+  });
+}
+
+export async function clearActiveWorkspaceCookie() {
+  const cookieStore = await cookies();
+  cookieStore.delete(ACTIVE_WORKSPACE_COOKIE);
+}
+
+export async function getActiveWorkspaceAccess(userId: string) {
+  const cookieStore = await cookies();
+  const parsedSlug = workspaceSlugSchema.safeParse(cookieStore.get(ACTIVE_WORKSPACE_COOKIE)?.value);
+  if (!parsedSlug.success) return undefined;
+
+  try {
+    return await requireWorkspaceMembership(parsedSlug.data, userId);
+  } catch {
+    return undefined;
+  }
+}
+
+export async function requireOperationalWorkspace() {
   const user = await requireUser();
-  if (!isPrivilegedRole(user.role)) redirect("/tickets");
-  return user;
+  const access = await getActiveWorkspaceAccess(user.id);
+  if (!access) redirect("/onboarding");
+  return { user, ...access };
+}
+
+export async function requireOperationalWorkspaceUser() {
+  return (await requireOperationalWorkspace()).user;
+}
+
+export async function requireAdmin() {
+  const access = await requireOperationalWorkspace();
+  if (!isWorkspaceAdmin(access.membership.role) && !isWorkspacePreview(access.workspace.id)) redirect("/tickets");
+  return access;
 }
 
 export async function requireOwner() {
-  const user = await requireUser();
-  if (user.role !== "owner") redirect("/tickets");
-  return user;
+  const access = await requireOperationalWorkspace();
+  if (access.membership.role !== "owner" || isWorkspacePreview(access.workspace.id)) redirect("/tickets");
+  return access;
 }
 
 export async function requireWorkspaceUser(workspaceSlug: string) {
@@ -239,9 +273,14 @@ export function getSiteUrl() {
   return "http://localhost:3000";
 }
 
-export async function signUpWithEmail(input: AuthCredentials) {
+export function sanitizeInternalRedirect(value?: string) {
+  return value?.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : undefined;
+}
+
+export async function signUpWithEmail(input: AuthCredentials, next?: string) {
   const credentials = validateSignupInput(input);
   const authClient = requireSupabaseAuthClient();
+  const safeNext = sanitizeInternalRedirect(next);
   if (!getSeedAdminEmail()) {
     throw new SetupRequiredError("Seed owner email is required before signup.", ["SEED_ADMIN_EMAIL"]);
   }
@@ -250,7 +289,7 @@ export async function signUpWithEmail(input: AuthCredentials) {
     email: credentials.email,
     password: credentials.password,
     options: {
-      emailRedirectTo: `${getSiteUrl()}/auth/callback`,
+      emailRedirectTo: `${getSiteUrl()}/auth/callback${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`,
       data: {
         display_name: credentials.displayName || credentials.email.split("@")[0],
       },
@@ -321,8 +360,8 @@ export async function completeEmailVerificationFromTokens(input: { accessToken: 
   });
 }
 
-export function getPostVerificationRedirect(user: AppUser) {
-  return verificationRedirectFor(user);
+export function getPostVerificationRedirect(next?: string) {
+  return sanitizeInternalRedirect(next) ?? getPostAuthWorkspacePath();
 }
 
 export async function signInWithEmail(input: { email: string; password: string }) {
