@@ -1,9 +1,3 @@
-create table if not exists departments (
-  id text primary key,
-  name text not null,
-  description text not null default ''
-);
-
 create table if not exists user_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
@@ -27,8 +21,16 @@ create table if not exists workspaces (
   created_at timestamptz not null default now()
 );
 
+create table if not exists departments (
+  workspace_id uuid not null references workspaces(id) on delete cascade,
+  id text not null,
+  name text not null,
+  description text not null default '',
+  primary key (workspace_id, id)
+);
+
 insert into workspaces (id, name, slug, created_by)
-values ('00000000-0000-4000-8000-000000000001', 'Demo School', 'demo-school', null)
+values ('00000000-0000-4000-8000-000000000001', 'Demo Clinic', 'demo-clinic', null)
 on conflict (id) do update set
   name = excluded.name,
   slug = excluded.slug;
@@ -78,7 +80,7 @@ create table if not exists ai_triage_results (
   title text not null,
   category text not null,
   priority text not null check (priority in ('low', 'medium', 'high', 'critical')),
-  department text not null references departments(id),
+  department text not null,
   summary text not null,
   priority_reasoning text not null,
   similar_ticket_ids text[] not null default '{}',
@@ -98,7 +100,7 @@ create table if not exists tickets (
   urgency_note text not null default '',
   status text not null check (status in ('new', 'needs-review', 'open', 'in-progress', 'resolved', 'closed')),
   priority text not null check (priority in ('low', 'medium', 'high', 'critical')),
-  department text not null references departments(id),
+  department text not null,
   category text not null,
   triage_summary text not null,
   priority_reasoning text not null,
@@ -141,10 +143,11 @@ create table if not exists request_attachments (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references workspaces(id) on delete cascade,
   request_id text not null references requests(id) on delete cascade,
+  file_name text not null default 'Attachment',
   storage_path text not null,
   public_url text,
   content_type text not null,
-  size_bytes bigint not null check (size_bytes >= 0 and size_bytes <= 5242880),
+  size_bytes bigint not null check (size_bytes >= 0 and size_bytes <= 10485760),
   created_at timestamptz not null default now()
 );
 
@@ -159,6 +162,24 @@ alter table workspace_metadata add column if not exists workspace_id uuid refere
 alter table workspace_invites add column if not exists revoked_at timestamptz;
 alter table workspace_invites add column if not exists is_reusable boolean not null default false;
 alter table workspace_invites alter column created_by drop not null;
+alter table departments add column if not exists workspace_id uuid references workspaces(id) on delete cascade;
+alter table request_attachments add column if not exists file_name text not null default 'Attachment';
+
+update departments set workspace_id = '00000000-0000-4000-8000-000000000001' where workspace_id is null;
+
+alter table departments alter column workspace_id set not null;
+
+do $$
+begin
+  alter table ai_triage_results drop constraint if exists ai_triage_results_department_fkey;
+  alter table tickets drop constraint if exists tickets_department_fkey;
+  alter table departments drop constraint if exists departments_pkey;
+  alter table departments add primary key (workspace_id, id);
+end $$;
+
+delete from workspace_invites
+where id = '00000000-0000-4000-8000-000000000002'
+  or code = 'DEMO-SCHOOL-2026';
 
 insert into workspace_invites (
   id,
@@ -173,7 +194,7 @@ insert into workspace_invites (
 ) values (
   '00000000-0000-4000-8000-000000000002',
   '00000000-0000-4000-8000-000000000001',
-  'DEMO-SCHOOL-2026',
+  'DEMO-CLINIC-2026',
   'requester',
   null,
   null,
@@ -210,6 +231,36 @@ begin
   alter table workspace_metadata add primary key (workspace_id, key);
 end $$;
 
+insert into departments (workspace_id, id, name, description)
+select w.id, seed.id, seed.name, seed.description
+from workspaces w
+cross join (
+  values
+    ('it', 'IT', 'Network, devices, software, projectors, printers, accounts.'),
+    ('facilities', 'Facilities', 'General building operations and space coordination.'),
+    ('maintenance', 'Maintenance', 'HVAC, leaks, electrical, plumbing, repairs.'),
+    ('security', 'Security', 'Access control, doors, gates, badges, incidents.'),
+    ('admin', 'Admin', 'Records, scheduling, office supplies, front desk operations.'),
+    ('clinic', 'Clinic / Health', 'Patient areas, health concerns, medical rooms, clinical workflow support.')
+) as seed(id, name, description)
+on conflict (workspace_id, id) do update set
+  name = excluded.name,
+  description = excluded.description;
+
+with used_departments as (
+  select workspace_id, department from ai_triage_results where nullif(trim(department), '') is not null
+  union
+  select workspace_id, department from tickets where nullif(trim(department), '') is not null
+)
+insert into departments (workspace_id, id, name, description)
+select
+  workspace_id,
+  department,
+  initcap(replace(department, '-', ' ')),
+  'Imported from existing workspace records.'
+from used_departments
+on conflict (workspace_id, id) do nothing;
+
 create index if not exists requests_status_created_at_idx on requests (status, created_at desc);
 create unique index if not exists requests_workspace_id_id_idx on requests (workspace_id, id);
 create index if not exists requests_workspace_status_created_at_idx on requests (workspace_id, status, created_at desc);
@@ -226,6 +277,7 @@ create index if not exists ticket_notes_workspace_ticket_created_at_idx on ticke
 create index if not exists user_profiles_role_created_at_idx on user_profiles (role, created_at desc);
 create index if not exists workspace_members_user_created_at_idx on workspace_members (user_id, created_at);
 create index if not exists workspace_invites_workspace_created_at_idx on workspace_invites (workspace_id, created_at desc);
+create index if not exists departments_workspace_name_idx on departments (workspace_id, name);
 create index if not exists request_attachments_workspace_request_created_at_idx on request_attachments (workspace_id, request_id, created_at desc);
 
 do $$
@@ -239,6 +291,16 @@ begin
     alter table tickets
       add constraint tickets_workspace_request_fkey
       foreign key (workspace_id, request_id) references requests(workspace_id, id);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'ai_triage_results_workspace_department_fkey') then
+    alter table ai_triage_results
+      add constraint ai_triage_results_workspace_department_fkey
+      foreign key (workspace_id, department) references departments(workspace_id, id);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'tickets_workspace_department_fkey') then
+    alter table tickets
+      add constraint tickets_workspace_department_fkey
+      foreign key (workspace_id, department) references departments(workspace_id, id);
   end if;
   if not exists (select 1 from pg_constraint where conname = 'ticket_activity_workspace_ticket_fkey') then
     alter table ticket_activity
@@ -262,17 +324,6 @@ begin
   end if;
 end $$;
 
-insert into departments (id, name, description) values
-  ('it', 'IT', 'Network, devices, software, projectors, printers, accounts.'),
-  ('maintenance', 'Maintenance', 'HVAC, leaks, electrical, plumbing, repairs.'),
-  ('admin', 'Admin', 'Records, scheduling, office supplies, front desk operations.'),
-  ('security', 'Security', 'Access control, doors, gates, badges, incidents.'),
-  ('clinic', 'Clinic', 'Patient areas, medical rooms, clinical workflow support.'),
-  ('facilities', 'Facilities', 'General building operations and space coordination.')
-on conflict (id) do update set
-  name = excluded.name,
-  description = excluded.description;
-
 create or replace function is_workspace_member(target_workspace_id uuid)
 returns boolean
 language sql
@@ -282,9 +333,9 @@ set search_path = public
 as $$
   select exists (
     select 1
-    from workspace_members
-    where workspace_id = target_workspace_id
-      and user_id = auth.uid()
+    from workspace_members wm
+    where wm.workspace_id = target_workspace_id
+      and wm.user_id = auth.uid()
   );
 $$;
 
@@ -297,10 +348,10 @@ set search_path = public
 as $$
   select exists (
     select 1
-    from workspace_members
-    where workspace_id = target_workspace_id
-      and user_id = auth.uid()
-      and role = any(allowed_roles)
+    from workspace_members wm
+    where wm.workspace_id = target_workspace_id
+      and wm.user_id = auth.uid()
+      and wm.role = any(allowed_roles)
   );
 $$;
 
@@ -322,6 +373,150 @@ as $$
     );
 $$;
 
+create or replace function can_remove_workspace_member(target_workspace_id uuid, target_member_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from workspace_members actor
+    join workspace_members target on target.workspace_id = actor.workspace_id
+    where actor.workspace_id = target_workspace_id
+      and actor.user_id = auth.uid()
+      and target.user_id = target_member_user_id
+      and target.user_id <> actor.user_id
+      and (
+        actor.role = 'owner'
+        or (actor.role = 'admin' and target.role = 'requester')
+      )
+  );
+$$;
+
+create or replace function create_workspace_with_owner(target_name text, target_slug text, target_user_id uuid)
+returns table (workspace_id uuid, workspace_name text, workspace_slug text, membership_role text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  created_workspace workspaces%rowtype;
+begin
+  if nullif(trim(target_name), '') is null then
+    raise exception 'Workspace name is required.';
+  end if;
+
+  if target_slug !~ '^[a-z0-9]+(-[a-z0-9]+)*$' then
+    raise exception 'Workspace slug is invalid.';
+  end if;
+
+  insert into workspaces (name, slug, created_by)
+  values (trim(target_name), target_slug, target_user_id)
+  returning * into created_workspace;
+
+  insert into workspace_members (workspace_id, user_id, role)
+  values (created_workspace.id, target_user_id, 'owner');
+
+  insert into departments (workspace_id, id, name, description) values
+    (created_workspace.id, 'it', 'IT', 'Network, devices, software, projectors, printers, accounts.'),
+    (created_workspace.id, 'facilities', 'Facilities', 'General building operations and space coordination.'),
+    (created_workspace.id, 'maintenance', 'Maintenance', 'HVAC, leaks, electrical, plumbing, repairs.'),
+    (created_workspace.id, 'security', 'Security', 'Access control, doors, gates, badges, incidents.'),
+    (created_workspace.id, 'admin', 'Admin', 'Records, scheduling, office supplies, front desk operations.'),
+    (created_workspace.id, 'clinic', 'Clinic / Health', 'Patient areas, health concerns, medical rooms, clinical workflow support.');
+
+  return query
+    select created_workspace.id, created_workspace.name, created_workspace.slug, 'owner'::text;
+end;
+$$;
+
+create or replace function join_workspace_by_invite(target_workspace_slug text, target_invite_code text, target_user_id uuid)
+returns table (workspace_id uuid, workspace_name text, workspace_slug text, membership_role text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  matched_workspace_id uuid;
+  matched_workspace_name text;
+  matched_workspace_slug text;
+  matched_invite_id uuid;
+  matched_invite_role text;
+begin
+  select w.id, w.name, w.slug, i.id, i.role
+  into matched_workspace_id, matched_workspace_name, matched_workspace_slug, matched_invite_id, matched_invite_role
+  from workspaces w
+  join workspace_invites i on i.workspace_id = w.id
+  where w.slug = target_workspace_slug
+    and i.code = upper(trim(target_invite_code))
+    and i.revoked_at is null
+    and (i.expires_at is null or i.expires_at > now())
+    and (i.is_reusable or i.used_at is null)
+  limit 1;
+
+  if not found then
+    raise exception 'Workspace invite is invalid or expired.';
+  end if;
+
+  if exists (
+    select 1
+    from workspace_members wm
+    where wm.workspace_id = matched_workspace_id
+      and wm.user_id = target_user_id
+  ) then
+    raise exception 'You are already a member of this workspace.';
+  end if;
+
+  insert into workspace_members (workspace_id, user_id, role)
+  values (matched_workspace_id, target_user_id, matched_invite_role);
+
+  update workspace_invites
+  set used_at = now()
+  where id = matched_invite_id;
+
+  return query
+    select matched_workspace_id, matched_workspace_name, matched_workspace_slug, matched_invite_role;
+exception
+  when unique_violation then
+    raise exception 'You are already a member of this workspace.';
+end;
+$$;
+
+create or replace function delete_workspace_as_owner(target_workspace_id uuid, target_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1
+    from workspace_members wm
+    where wm.workspace_id = target_workspace_id
+      and wm.user_id = target_user_id
+      and wm.role = 'owner'
+  ) then
+    raise exception 'Workspace owner access is required.';
+  end if;
+
+  delete from workspaces w
+  where w.id = target_workspace_id;
+
+  if not found then
+    raise exception 'Workspace not found.';
+  end if;
+end;
+$$;
+
+revoke all on function create_workspace_with_owner(text, text, uuid) from public;
+revoke all on function join_workspace_by_invite(text, text, uuid) from public;
+revoke all on function delete_workspace_as_owner(uuid, uuid) from public;
+grant execute on function create_workspace_with_owner(text, text, uuid) to service_role;
+grant execute on function join_workspace_by_invite(text, text, uuid) to service_role;
+grant execute on function delete_workspace_as_owner(uuid, uuid) to service_role;
+
 create or replace function can_view_workspace_request(target_workspace_id uuid, target_request_id text)
 returns boolean
 language sql
@@ -331,12 +526,12 @@ set search_path = public
 as $$
   select exists (
     select 1
-    from requests
-    where workspace_id = target_workspace_id
-      and id = target_request_id
+    from requests r
+    where r.workspace_id = target_workspace_id
+      and r.id = target_request_id
       and is_workspace_member(target_workspace_id)
       and (
-        requester_user_id = auth.uid()
+        r.requester_user_id = auth.uid()
         or has_workspace_role(target_workspace_id, array['admin', 'owner'])
       )
   );
@@ -351,12 +546,12 @@ set search_path = public
 as $$
   select exists (
     select 1
-    from tickets
-    where workspace_id = target_workspace_id
-      and id = target_ticket_id
+    from tickets t
+    where t.workspace_id = target_workspace_id
+      and t.id = target_ticket_id
       and is_workspace_member(target_workspace_id)
       and (
-        requester_user_id = auth.uid()
+        t.requester_user_id = auth.uid()
         or has_workspace_role(target_workspace_id, array['admin', 'owner'])
       )
   );
@@ -376,7 +571,14 @@ alter table request_attachments enable row level security;
 alter table workspace_metadata enable row level security;
 
 drop policy if exists departments_select_all on departments;
-create policy departments_select_all on departments for select using (true);
+drop policy if exists departments_select_member on departments;
+create policy departments_select_member on departments for select using (is_workspace_member(workspace_id));
+drop policy if exists departments_insert_admin on departments;
+create policy departments_insert_admin on departments for insert with check (has_workspace_role(workspace_id, array['admin', 'owner']));
+drop policy if exists departments_update_admin on departments;
+create policy departments_update_admin on departments for update using (has_workspace_role(workspace_id, array['admin', 'owner'])) with check (has_workspace_role(workspace_id, array['admin', 'owner']));
+drop policy if exists departments_delete_admin on departments;
+create policy departments_delete_admin on departments for delete using (has_workspace_role(workspace_id, array['admin', 'owner']));
 
 drop policy if exists user_profiles_select_self on user_profiles;
 create policy user_profiles_select_self on user_profiles for select using (id = auth.uid());
@@ -397,7 +599,11 @@ create policy workspace_members_insert_owner on workspace_members for insert wit
 drop policy if exists workspace_members_update_owner on workspace_members;
 create policy workspace_members_update_owner on workspace_members for update using (has_workspace_role(workspace_id, array['owner'])) with check (has_workspace_role(workspace_id, array['owner']));
 drop policy if exists workspace_members_delete_owner on workspace_members;
-create policy workspace_members_delete_owner on workspace_members for delete using (has_workspace_role(workspace_id, array['owner']));
+drop policy if exists workspace_members_delete_allowed on workspace_members;
+create policy workspace_members_delete_allowed on workspace_members for delete using (
+  (user_id = auth.uid() and role <> 'owner')
+  or can_remove_workspace_member(workspace_id, user_id)
+);
 
 drop policy if exists workspace_invites_select_owner on workspace_invites;
 drop policy if exists workspace_invites_select_admin on workspace_invites;
@@ -484,16 +690,37 @@ create policy workspace_metadata_delete_owner on workspace_metadata for delete u
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
-  'request-images',
-  'request-images',
-  true,
-  5242880,
-  array['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+  'request-attachments',
+  'request-attachments',
+  false,
+  10485760,
+  array[
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
+    'text/csv',
+    'application/json'
+  ]
 )
 on conflict (id) do update set
   public = excluded.public,
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
--- The request-images bucket is public for a product showcase. Do not use this
--- bucket policy for sensitive production requester images.
+update storage.buckets
+set public = false,
+    file_size_limit = 10485760,
+    allowed_mime_types = array[
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'text/csv',
+      'application/json'
+    ]
+where id = 'request-images';

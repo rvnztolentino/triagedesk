@@ -7,11 +7,9 @@ import {
   Clock,
   Database,
   Inbox,
-  RefreshCcw,
   Sparkles,
   Ticket,
 } from "lucide-react";
-import { resetWorkspaceDataAction } from "@/app/actions";
 import { requireAdmin } from "@/lib/auth";
 import { getDashboardData } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -40,8 +38,8 @@ function setupRequirementLabel(value: string) {
 }
 
 export default async function Dashboard() {
-  const user = await requireAdmin();
-  const data = await getDashboardData();
+  const { workspace } = await requireAdmin();
+  const data = await getDashboardData(workspace.id);
   const { counts, recentActivity, featuredReview, priorityDistribution, departmentWorkload, resolutionTrend } = data;
   const featured = featuredReview;
   const setupMissing = data.setupRequired ?? [];
@@ -58,19 +56,6 @@ export default async function Dashboard() {
           <p className="text-neutral-500 mt-1">AI operations triage with review workflows, ticket tracking, and resolution analytics.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {user.role === "owner" && (
-            isSetupRequired ? (
-              <button disabled className="h-10 px-4 border border-neutral-800 rounded-lg text-sm font-medium text-neutral-600 inline-flex items-center justify-center gap-2 cursor-not-allowed">
-                <RefreshCcw size={15} /> Reset Workspace
-              </button>
-            ) : (
-              <form action={resetWorkspaceDataAction} className="flex">
-                <button className="h-10 px-4 border border-neutral-800 rounded-lg text-sm font-medium text-neutral-300 hover:bg-neutral-800 transition-colors inline-flex items-center justify-center gap-2">
-                  <RefreshCcw size={15} /> Reset Workspace
-                </button>
-              </form>
-            )
-          )}
           <Link href="/submit" className="h-10 px-4 bg-emerald-500 hover:bg-emerald-600 text-black rounded-lg text-sm font-bold transition-colors inline-flex items-center justify-center">
             + New Request
           </Link>

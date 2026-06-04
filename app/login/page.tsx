@@ -4,7 +4,7 @@ import { signInAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
 import { SubmitButton } from "@/components/submit-button";
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
   const params = await searchParams;
 
   return (
@@ -22,6 +22,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           ) : null}
 
           <form action={signInAction} className="space-y-5">
+            {params.next ? <input type="hidden" name="next" value={params.next} /> : null}
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-semibold text-neutral-300">Email</label>
               <input id="email" name="email" type="email" required className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500" />
@@ -35,7 +36,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </SubmitButton>
           </form>
           <p className="text-sm text-neutral-500 mt-6 text-center">
-            Need an account? <Link href="/signup" className="text-emerald-400 hover:text-emerald-300 font-medium">Create one</Link>
+            Need an account? <Link href={params.next ? `/signup?next=${encodeURIComponent(params.next)}` : "/signup"} className="text-emerald-400 hover:text-emerald-300 font-medium">Create one</Link>
           </p>
         </div>
       </div>

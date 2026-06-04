@@ -1,21 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Building2, Clock, FileText, MapPin, MessageSquare, User } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Building2, Clock, FileText, LockKeyhole, MapPin, MessageSquare, User } from "lucide-react";
 import { updateTicketAction } from "@/app/actions";
-import { requireUser } from "@/lib/auth";
+import { requireOperationalWorkspace } from "@/lib/auth";
 import { getTicketDetail, listDepartments } from "@/lib/store";
 import { ticketStatuses } from "@/lib/schema";
 import { ticketStatusBadgeClass } from "@/lib/ticket-status";
 import { cn } from "@/lib/utils";
+import { isWorkspacePreview } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
 export default async function TicketDetail({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireUser();
-  const isAdmin = user.role === "admin" || user.role === "owner";
+  const { user, workspace, membership } = await requireOperationalWorkspace();
+  const isPreview = isWorkspacePreview(workspace.id);
+  const isAdmin = isPreview || membership.role === "admin" || membership.role === "owner";
   const { id } = await params;
-  const detail = await getTicketDetail(id, isAdmin ? undefined : user.id);
-  const departments = await listDepartments();
+  const detail = await getTicketDetail(id, isAdmin ? undefined : user.id, workspace.id);
+  const departments = await listDepartments(workspace.id);
 
   if (!detail) {
     notFound();
@@ -63,6 +65,13 @@ export default async function TicketDetail({ params }: { params: Promise<{ id: s
 
             {isAdmin ? (
             <form action={updateTicketAction} className="mt-8 pt-8 border-t border-neutral-800 space-y-5">
+              {isPreview ? (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-start gap-2">
+                  <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
+                  <p><span className="font-bold text-amber-300">Preview locked.</span> Ticket update controls are visible for evaluation, but changes cannot be saved.</p>
+                </div>
+              ) : null}
+              <fieldset disabled={isPreview} className="space-y-5 disabled:opacity-60">
               <input type="hidden" name="ticketId" value={ticket.id} />
               <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-white">
                 <MessageSquare size={18} className="text-neutral-400" /> Update Ticket
@@ -98,8 +107,11 @@ export default async function TicketDetail({ params }: { params: Promise<{ id: s
               </div>
 
               <div className="flex justify-end">
-                <button className="bg-emerald-500 text-black px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-600">Save Update</button>
+                <button className="bg-emerald-500 text-black px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-600 inline-flex items-center gap-2">
+                  {isPreview ? <><LockKeyhole size={15} /> Preview locked</> : "Save Update"}
+                </button>
               </div>
+              </fieldset>
             </form>
             ) : null}
           </div>

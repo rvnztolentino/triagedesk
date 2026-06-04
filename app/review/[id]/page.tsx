@@ -1,24 +1,29 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Building2, Check, Copy, Sparkles, X } from "lucide-react";
-import { approveRequestAction, markDuplicateAction, rejectRequestAction } from "@/app/actions";
+import { AlertTriangle, ArrowLeft, Building2, Check, FileText, LockKeyhole, Paperclip, Sparkles, X } from "lucide-react";
+import { approveRequestAction, rejectRequestAction } from "@/app/actions";
+import { AttachmentFileName } from "@/components/attachment-file-name";
+import { DuplicateReviewForm } from "@/components/duplicate-review-form";
 import { requireAdmin } from "@/lib/auth";
 import { getRequestBundle, listDepartments, listTickets } from "@/lib/store";
+import { isWorkspacePreview } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReviewDetail({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  const { workspace } = await requireAdmin();
   const { id } = await params;
-  const bundle = await getRequestBundle(id);
-  const departments = await listDepartments();
-  const tickets = await listTickets("all");
+  const bundle = await getRequestBundle(id, undefined, workspace.id);
+  const departments = await listDepartments(workspace.id);
+  const tickets = await listTickets("all", undefined, workspace.id);
+  const isPreview = isWorkspacePreview(workspace.id);
 
   if (!bundle) {
     notFound();
   }
 
-  const { request, triage, similarTickets } = bundle;
+  const { request, triage, similarTickets, attachments } = bundle;
+  const approveFormId = `approve-${request.id}`;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-4">
@@ -64,6 +69,27 @@ export default async function ReviewDetail({ params }: { params: Promise<{ id: s
                   </a>
                 </div>
               ) : null}
+
+              {attachments.length > 0 ? (
+                <div>
+                  <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <Paperclip size={12} /> Attachments
+                  </div>
+                  <div className="space-y-2">
+                    {attachments.map((attachment) => (
+                      <a key={attachment.id} href={`/attachments/${attachment.id}`} className="flex min-w-0 items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300">
+                        <FileText size={14} className="shrink-0" /> <AttachmentFileName fileName={attachment.fileName} className="flex-1" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {request.status === "duplicate" && request.duplicateOfTicketId ? (
+                <div className="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-3 text-sm font-semibold text-neutral-300">
+                  Duplicate · Linked to {request.duplicateOfTicketId}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -94,7 +120,14 @@ export default async function ReviewDetail({ params }: { params: Promise<{ id: s
             <h2 className="text-xl font-bold font-space text-white">AI Triage Output</h2>
           </div>
 
-          <form action={approveRequestAction} className="space-y-6 relative">
+          <form id={approveFormId} action={approveRequestAction} className="space-y-6 relative">
+            {isPreview ? (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-start gap-2">
+                <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
+                <p><span className="font-bold text-amber-300">Preview locked.</span> Review fields are visible for evaluation, but approval actions are disabled.</p>
+              </div>
+            ) : null}
+            <fieldset disabled={isPreview} className="space-y-6 disabled:opacity-60">
             <input type="hidden" name="requestId" value={request.id} />
 
             <div className="space-y-2">
@@ -163,36 +196,18 @@ export default async function ReviewDetail({ params }: { params: Promise<{ id: s
 
             <div className="pt-6 border-t border-neutral-800 flex flex-wrap items-center gap-4">
               <button className="bg-emerald-500 text-black rounded-xl px-8 py-3 text-sm font-bold hover:bg-emerald-600 transition-all flex items-center gap-2 flex-1 justify-center">
-                <Check size={18} /> Approve & Dispatch
+                {isPreview ? <><LockKeyhole size={18} /> Preview locked</> : <><Check size={18} /> Approve & Dispatch</>}
               </button>
             </div>
+            </fieldset>
           </form>
 
+          <DuplicateReviewForm requestId={request.id} tickets={tickets} isPreview={isPreview} approveFormId={approveFormId} />
+
           <div className="mt-4 flex flex-wrap items-center gap-4">
-            <form action={markDuplicateAction} className="flex flex-1 min-w-[260px] flex-col gap-2 sm:flex-row">
-              <input type="hidden" name="requestId" value={request.id} />
-              <select
-                name="duplicateOfTicketId"
-                required
-                defaultValue=""
-                aria-label="Existing ticket to mark as duplicate"
-                className="min-w-0 flex-1 appearance-none bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500"
-              >
-                <option value="" disabled>Duplicate of existing ticket</option>
-                {tickets.map((ticket) => (
-                  <option key={ticket.id} value={ticket.id}>{ticket.id} - {ticket.title}</option>
-                ))}
-              </select>
-              <button
-                disabled={tickets.length === 0}
-                className="bg-neutral-800 text-white border border-neutral-700 rounded-xl px-5 py-3 text-sm font-bold hover:bg-neutral-700 transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
-              >
-                <Copy size={18} /> Duplicate
-              </button>
-            </form>
             <form action={rejectRequestAction}>
               <input type="hidden" name="requestId" value={request.id} />
-              <button className="bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl px-6 py-3 text-sm font-bold hover:bg-rose-500/20 transition-all flex items-center gap-2">
+              <button disabled={isPreview} className="bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl px-6 py-3 text-sm font-bold hover:bg-rose-500/20 transition-all flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60">
                 <X size={18} /> Reject
               </button>
             </form>

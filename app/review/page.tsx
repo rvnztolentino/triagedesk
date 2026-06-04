@@ -21,8 +21,8 @@ function getPriorityColor(priority: string) {
 }
 
 export default async function ReviewQueue() {
-  await requireAdmin();
-  const queue = await listReviewItems();
+  const { workspace } = await requireAdmin();
+  const queue = await listReviewItems(workspace.id);
   const setup = getRuntimeSetupStatus();
   const isSetupRequired = setup.missing.length > 0;
 

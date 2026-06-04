@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpRight, CheckCircle2, Clock } from "lucide-react";
-import { requireUser } from "@/lib/auth";
+import { requireOperationalWorkspace } from "@/lib/auth";
 import { listTickets } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
 import { ticketStatusIndicatorClass } from "@/lib/ticket-status";
 import { cn } from "@/lib/utils";
+import { isWorkspacePreview } from "@/lib/workspaces";
 import { TicketSearch } from "./ticket-search";
 
 export const dynamic = "force-dynamic";
@@ -88,14 +89,16 @@ async function TicketTable({
   requestedPage,
   isAdmin,
   userId,
+  workspaceId,
 }: {
   filter: string;
   query: string;
   requestedPage: number;
   isAdmin: boolean;
   userId: string;
+  workspaceId: string;
 }) {
-  const tickets = await listTickets(filter, isAdmin ? undefined : userId);
+  const tickets = await listTickets(filter, isAdmin ? undefined : userId, workspaceId);
   const normalizedQuery = query.toLowerCase();
   const filteredTickets = normalizedQuery
     ? tickets.filter((ticket) =>
@@ -230,12 +233,12 @@ async function TicketTable({
 }
 
 export default async function TicketList({ searchParams }: { searchParams: Promise<TicketParams> }) {
-  const user = await requireUser();
+  const { user, workspace, membership } = await requireOperationalWorkspace();
   const params = await searchParams;
   const filter = params.filter || "all";
   const query = normalizeSearch(params.q);
   const requestedPage = pageNumber(params.page);
-  const isAdmin = user.role === "admin" || user.role === "owner";
+  const isAdmin = isWorkspacePreview(workspace.id) || membership.role === "admin" || membership.role === "owner";
   const current = { filter, q: query, page: requestedPage };
 
   return (
@@ -272,7 +275,7 @@ export default async function TicketList({ searchParams }: { searchParams: Promi
         </div>
 
         <Suspense key={`${filter}:${query}:${requestedPage}`} fallback={<TicketsTableSkeleton />}>
-          <TicketTable filter={filter} query={query} requestedPage={requestedPage} isAdmin={isAdmin} userId={user.id} />
+          <TicketTable filter={filter} query={query} requestedPage={requestedPage} isAdmin={isAdmin} userId={user.id} workspaceId={workspace.id} />
         </Suspense>
       </div>
     </div>

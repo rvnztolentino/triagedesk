@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assertEmailVerificationRequired, roleForEmail, validateLoginInput, validateSignupInput } from "./auth";
+import { assertEmailVerificationRequired, getPostVerificationRedirect, roleForEmail, sanitizeInternalRedirect, validateLoginInput, validateSignupInput } from "./auth";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -45,5 +45,17 @@ describe("auth role policy", () => {
   it("rejects signup setups that return an immediate session", () => {
     expect(() => assertEmailVerificationRequired(true)).toThrow("Email confirmation must be enabled");
     expect(() => assertEmailVerificationRequired(false)).not.toThrow();
+  });
+
+  it("accepts internal next paths but rejects external redirect values", () => {
+    expect(sanitizeInternalRedirect("/join/demo-clinic?code=DEMO-CLINIC-2026")).toBe("/join/demo-clinic?code=DEMO-CLINIC-2026");
+    expect(sanitizeInternalRedirect("https://example.com")).toBeUndefined();
+    expect(sanitizeInternalRedirect("//example.com")).toBeUndefined();
+    expect(sanitizeInternalRedirect("/\\example.com")).toBeUndefined();
+  });
+
+  it("lands ordinary verification on the workspace dashboard while preserving explicit invite handoffs", () => {
+    expect(getPostVerificationRedirect()).toBe("/onboarding");
+    expect(getPostVerificationRedirect("/join/demo-clinic?code=DEMO-CLINIC-2026")).toBe("/join/demo-clinic?code=DEMO-CLINIC-2026");
   });
 });

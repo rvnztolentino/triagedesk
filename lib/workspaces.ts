@@ -1,11 +1,40 @@
 import { requireSupabaseAdminClient } from "@/lib/supabase";
-import { workspaceInviteCodeSchema, type AssignableUserRole, type UserRole, type WorkspaceInviteRecord, type WorkspaceMemberRecord, type WorkspaceRecord } from "@/lib/schema";
+import {
+  workspaceCreateSchema,
+  workspaceDeleteSchema,
+  workspaceInviteCodeSchema,
+  workspaceInviteCreateSchema,
+  workspaceInviteRevokeSchema,
+  workspaceJoinSchema,
+  workspaceMemberLeaveSchema,
+  workspaceMemberRemoveSchema,
+  workspaceMemberRoleUpdateSchema,
+  workspaceSlugSchema,
+  type AssignableUserRole,
+  type UserRole,
+  type WorkspaceInviteRecord,
+  type WorkspaceMemberRecord,
+  type WorkspaceMemberSummary,
+  type WorkspaceRecord,
+} from "@/lib/schema";
 
 export const DEMO_WORKSPACE_ID = "00000000-0000-4000-8000-000000000001";
-export const DEMO_WORKSPACE_SLUG = "demo-school";
-export const DEMO_WORKSPACE_INVITE_CODE = "DEMO-SCHOOL-2026";
+export const DEMO_WORKSPACE_SLUG = "demo-clinic";
+export const DEMO_WORKSPACE_INVITE_CODE = "DEMO-CLINIC-2026";
+export const DEMO_PREVIEW_LOCK_MESSAGE = "Demo Clinic is a read-only preview workspace. Create your own workspace to use actions.";
 
 type SupabaseRow = Record<string, unknown>;
+type WorkspaceAccess = { workspace: WorkspaceRecord; membership: WorkspaceMemberRecord };
+
+export function isWorkspacePreview(workspaceId: string) {
+  return workspaceId === DEMO_WORKSPACE_ID;
+}
+
+export function assertWorkspaceMutable(workspaceId: string) {
+  if (isWorkspacePreview(workspaceId)) {
+    throw new Error(DEMO_PREVIEW_LOCK_MESSAGE);
+  }
+}
 
 function asString(value: unknown) {
   return typeof value === "string" ? value : "";
@@ -54,6 +83,24 @@ function inviteFromRow(row: SupabaseRow): WorkspaceInviteRecord {
   };
 }
 
+function workspaceAccessFromRow(row: SupabaseRow, userId: string): WorkspaceAccess {
+  return {
+    workspace: {
+      id: asString(row.workspace_id),
+      name: asString(row.workspace_name),
+      slug: asString(row.workspace_slug),
+      createdAt: "",
+    },
+    membership: {
+      id: "",
+      workspaceId: asString(row.workspace_id),
+      userId,
+      role: asUserRole(row.membership_role),
+      createdAt: "",
+    },
+  };
+}
+
 export async function getWorkspaceById(workspaceId: string) {
   const client = requireSupabaseAdminClient();
   const { data, error } = await client.from("workspaces").select("*").eq("id", workspaceId).maybeSingle();
@@ -97,7 +144,14 @@ export async function getWorkspaceMembership(workspaceId: string, userId: string
 }
 
 export function normalizeWorkspaceInviteCode(code: string) {
-  return workspaceInviteCodeSchema.parse(code).toUpperCase();
+  const value = code.trim();
+  const queryMatch = value.match(/[?&]code=([^&#]+)/);
+  const extracted = queryMatch ? decodeURIComponent(queryMatch[1].replace(/\+/g, " ")) : value;
+  const parsed = workspaceInviteCodeSchema.safeParse(extracted);
+  if (!parsed.success) {
+    throw new Error("Enter a valid invite code or invite link.");
+  }
+  return parsed.data.toUpperCase();
 }
 
 export async function getWorkspaceInviteByCode(workspaceId: string, code: string) {
@@ -113,6 +167,43 @@ export async function getWorkspaceInviteByCode(workspaceId: string, code: string
   return data ? inviteFromRow(data as SupabaseRow) : undefined;
 }
 
+export async function listWorkspaceInvites(workspaceId: string, userId: string) {
+  const client = requireSupabaseAdminClient();
+  const membership = await getWorkspaceMembership(workspaceId, userId);
+  if (!membership || !isWorkspaceAdmin(membership.role)) {
+    throw new Error("Workspace admin access is required.");
+  }
+
+  const { data, error } = await client.from("workspace_invites").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending: false });
+  if (error) throw new Error(`List workspace invites failed: ${error.message}`);
+  return ((data ?? []) as SupabaseRow[]).map(inviteFromRow);
+}
+
+export async function listWorkspaceMembers(workspaceId: string, userId: string) {
+  const client = requireSupabaseAdminClient();
+  const membership = await getWorkspaceMembership(workspaceId, userId);
+  if (!membership) {
+    throw new Error("Workspace access is required.");
+  }
+
+  const { data, error } = await client
+    .from("workspace_members")
+    .select("*, user_profiles(id, email, display_name)")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(`List workspace members failed: ${error.message}`);
+
+  return ((data ?? []) as SupabaseRow[]).map((row): WorkspaceMemberSummary => {
+    const profile = row.user_profiles;
+    const profileRow = profile && !Array.isArray(profile) && typeof profile === "object" ? profile as SupabaseRow : {};
+    return {
+      ...memberFromRow(row),
+      email: asString(profileRow.email),
+      displayName: asString(profileRow.display_name),
+    };
+  });
+}
+
 export function isWorkspaceInviteActive(invite: WorkspaceInviteRecord, at = new Date()) {
   if (invite.revokedAt) return false;
   if (invite.expiresAt && new Date(invite.expiresAt).getTime() <= at.getTime()) return false;
@@ -125,6 +216,270 @@ export async function requireActiveWorkspaceInvite(workspaceId: string, code: st
     throw new Error("Workspace invite is invalid or expired.");
   }
   return invite;
+}
+
+export function workspaceSlugFromName(name: string) {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 54)
+    .replace(/-+$/g, "");
+  const slug = normalized.length >= 3 ? normalized : `${normalized || "workspace"}-workspace`;
+  return workspaceSlugSchema.parse(slug || "workspace");
+}
+
+function isDuplicateSlugError(message: string) {
+  return message.includes("workspaces_slug_key") || message.includes("duplicate key");
+}
+
+export async function createWorkspace(name: string, userId: string) {
+  const client = requireSupabaseAdminClient();
+  const input = workspaceCreateSchema.parse({ name });
+  const baseSlug = workspaceSlugFromName(input.name);
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`;
+    const { data, error } = await client.rpc("create_workspace_with_owner", {
+      target_name: input.name,
+      target_slug: slug,
+      target_user_id: userId,
+    });
+
+    if (!error) {
+      const row = (data as SupabaseRow[] | null)?.[0];
+      if (!row) throw new Error("Create workspace failed.");
+      return workspaceAccessFromRow(row, userId);
+    }
+
+    if (!isDuplicateSlugError(error.message)) {
+      throw new Error(`Create workspace failed: ${error.message}`);
+    }
+  }
+
+  throw new Error("Create workspace failed: choose a more specific workspace name.");
+}
+
+export async function joinWorkspaceWithInvite(workspaceSlug: string, code: string, userId: string) {
+  const client = requireSupabaseAdminClient();
+  const input = workspaceJoinSchema.parse({ workspaceSlug, code });
+  const normalizedCode = normalizeWorkspaceInviteCode(input.code);
+  const { data, error } = await client.rpc("join_workspace_by_invite", {
+    target_workspace_slug: input.workspaceSlug,
+    target_invite_code: normalizedCode,
+    target_user_id: userId,
+  });
+
+  if (error) throw new Error(error.message || "Join workspace failed.");
+  const row = (data as SupabaseRow[] | null)?.[0];
+  if (!row) throw new Error("Join workspace failed.");
+  return workspaceAccessFromRow(row, userId);
+}
+
+export async function joinWorkspaceWithInviteCode(code: string, userId: string) {
+  const client = requireSupabaseAdminClient();
+  const normalizedCode = normalizeWorkspaceInviteCode(code);
+  const { data, error } = await client.from("workspace_invites").select("workspace_id").eq("code", normalizedCode).maybeSingle();
+  if (error) throw new Error(`Find workspace invite failed: ${error.message}`);
+  if (!data) throw new Error("Workspace invite is invalid or expired.");
+
+  const workspace = await getWorkspaceById(asString((data as SupabaseRow).workspace_id));
+  if (!workspace) throw new Error("Workspace invite is invalid or expired.");
+  return joinWorkspaceWithInvite(workspace.slug, normalizedCode, userId);
+}
+
+export async function createWorkspaceInvite(workspaceId: string, role: AssignableUserRole, userId: string) {
+  const client = requireSupabaseAdminClient();
+  const input = workspaceInviteCreateSchema.parse({ workspaceId, role });
+  assertWorkspaceMutable(input.workspaceId);
+  const membership = await getWorkspaceMembership(input.workspaceId, userId);
+  if (!membership || !canCreateWorkspaceInvite(membership.role, input.role)) {
+    throw new Error("You cannot create this workspace invite.");
+  }
+
+  const invite: WorkspaceInviteRecord = {
+    id: crypto.randomUUID(),
+    workspaceId: input.workspaceId,
+    code: `TD-${crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`,
+    role: input.role,
+    createdBy: userId,
+    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+    isReusable: false,
+    createdAt: new Date().toISOString(),
+  };
+  const { error } = await client.from("workspace_invites").insert({
+    id: invite.id,
+    workspace_id: invite.workspaceId,
+    code: invite.code,
+    role: invite.role,
+    created_by: invite.createdBy,
+    expires_at: invite.expiresAt,
+    is_reusable: invite.isReusable,
+    created_at: invite.createdAt,
+  });
+  if (error) throw new Error(`Create workspace invite failed: ${error.message}`);
+  return invite;
+}
+
+export async function revokeWorkspaceInvite(workspaceId: string, inviteId: string, userId: string) {
+  const client = requireSupabaseAdminClient();
+  const input = workspaceInviteRevokeSchema.parse({ workspaceId, inviteId });
+  assertWorkspaceMutable(input.workspaceId);
+  const membership = await getWorkspaceMembership(input.workspaceId, userId);
+  if (membership?.role !== "owner") {
+    throw new Error("Workspace owner access is required.");
+  }
+
+  const revokedAt = new Date().toISOString();
+  const { data, error } = await client
+    .from("workspace_invites")
+    .update({ revoked_at: revokedAt })
+    .eq("workspace_id", input.workspaceId)
+    .eq("id", input.inviteId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(`Revoke workspace invite failed: ${error.message}`);
+  if (!data) throw new Error("Workspace invite not found.");
+}
+
+export async function deleteWorkspaceInvite(workspaceId: string, inviteId: string, userId: string) {
+  const client = requireSupabaseAdminClient();
+  const input = workspaceInviteRevokeSchema.parse({ workspaceId, inviteId });
+  assertWorkspaceMutable(input.workspaceId);
+  const membership = await getWorkspaceMembership(input.workspaceId, userId);
+  if (membership?.role !== "owner") {
+    throw new Error("Workspace owner access is required.");
+  }
+
+  const { data, error } = await client
+    .from("workspace_invites")
+    .delete()
+    .eq("workspace_id", input.workspaceId)
+    .eq("id", input.inviteId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(`Remove workspace invite failed: ${error.message}`);
+  if (!data) throw new Error("Workspace invite not found.");
+}
+
+export async function leaveWorkspace(workspaceId: string, userId: string) {
+  const client = requireSupabaseAdminClient();
+  const input = workspaceMemberLeaveSchema.parse({ workspaceId });
+  const membership = await getWorkspaceMembership(input.workspaceId, userId);
+  if (!membership) {
+    throw new Error("Workspace membership not found.");
+  }
+  if (membership.role === "owner") {
+    throw new Error("Workspace owners cannot leave. Delete the workspace instead.");
+  }
+
+  const { data, error } = await client
+    .from("workspace_members")
+    .delete()
+    .eq("workspace_id", input.workspaceId)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(`Leave workspace failed: ${error.message}`);
+  if (!data) throw new Error("Workspace membership not found.");
+}
+
+export async function removeWorkspaceMember(workspaceId: string, memberUserId: string, userId: string) {
+  const client = requireSupabaseAdminClient();
+  const input = workspaceMemberRemoveSchema.parse({ workspaceId, memberUserId });
+  assertWorkspaceMutable(input.workspaceId);
+  if (input.memberUserId === userId) {
+    throw new Error("Use Leave workspace to remove your own membership.");
+  }
+
+  const [membership, member] = await Promise.all([
+    getWorkspaceMembership(input.workspaceId, userId),
+    getWorkspaceMembership(input.workspaceId, input.memberUserId),
+  ]);
+  if (!membership || !member || !canRemoveWorkspaceMember(membership.role, member.role)) {
+    throw new Error("You cannot remove this workspace member.");
+  }
+
+  const { data, error } = await client
+    .from("workspace_members")
+    .delete()
+    .eq("workspace_id", input.workspaceId)
+    .eq("user_id", input.memberUserId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(`Remove workspace member failed: ${error.message}`);
+  if (!data) throw new Error("Workspace membership not found.");
+}
+
+export async function updateWorkspaceMemberRole(workspaceId: string, memberUserId: string, role: "requester" | "admin", userId: string) {
+  const client = requireSupabaseAdminClient();
+  const input = workspaceMemberRoleUpdateSchema.parse({ workspaceId, memberUserId, role });
+  assertWorkspaceMutable(input.workspaceId);
+  if (input.memberUserId === userId) {
+    throw new Error("You cannot change your own workspace role.");
+  }
+
+  const [membership, member] = await Promise.all([
+    getWorkspaceMembership(input.workspaceId, userId),
+    getWorkspaceMembership(input.workspaceId, input.memberUserId),
+  ]);
+  if (membership?.role !== "owner" || !member || member.role === "owner") {
+    throw new Error("Workspace owner access is required.");
+  }
+
+  const { data, error } = await client
+    .from("workspace_members")
+    .update({ role: input.role })
+    .eq("workspace_id", input.workspaceId)
+    .eq("user_id", input.memberUserId)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(`Update workspace member failed: ${error.message}`);
+  if (!data) throw new Error("Workspace membership not found.");
+}
+
+export async function deleteWorkspace(workspaceId: string, confirmation: string, userId: string) {
+  const client = requireSupabaseAdminClient();
+  const input = workspaceDeleteSchema.parse({ workspaceId, confirmation });
+  assertWorkspaceMutable(input.workspaceId);
+  const workspace = await getWorkspaceById(input.workspaceId);
+  if (!workspace) throw new Error("Workspace not found.");
+  if (input.confirmation !== workspace.slug) {
+    throw new Error(`Enter ${workspace.slug} to confirm permanent deletion.`);
+  }
+
+  const membership = await getWorkspaceMembership(input.workspaceId, userId);
+  if (membership?.role !== "owner") {
+    throw new Error("Workspace owner access is required.");
+  }
+
+  const { data: attachments, error: attachmentError } = await client
+    .from("request_attachments")
+    .select("storage_path")
+    .eq("workspace_id", input.workspaceId);
+  if (attachmentError) throw new Error(`List workspace attachments failed: ${attachmentError.message}`);
+
+  const storagePaths = ((attachments ?? []) as SupabaseRow[]).map((row) => asString(row.storage_path)).filter(Boolean);
+  if (storagePaths.length > 0) {
+    const bucket = process.env.SUPABASE_REQUEST_ATTACHMENTS_BUCKET || process.env.SUPABASE_REQUEST_IMAGES_BUCKET || "request-attachments";
+    const { error } = await client.storage.from(bucket).remove(storagePaths);
+    if (error) throw new Error(`Delete workspace attachments failed: ${error.message}`);
+  }
+
+  const { error } = await client.rpc("delete_workspace_as_owner", {
+    target_workspace_id: input.workspaceId,
+    target_user_id: userId,
+  });
+  if (error) throw new Error(error.message || "Delete workspace failed.");
+}
+
+export function getPostAuthWorkspacePath() {
+  return "/onboarding";
+}
+
+export function workspaceInviteLink(workspaceSlug: string, code: string) {
+  return `/join/${workspaceSlug}?code=${encodeURIComponent(code)}`;
 }
 
 export async function requireWorkspaceMembership(workspaceSlug: string, userId: string) {
@@ -143,4 +498,8 @@ export function isWorkspaceAdmin(role: UserRole) {
 
 export function canCreateWorkspaceInvite(actorRole: UserRole, inviteRole: AssignableUserRole) {
   return actorRole === "owner" || (actorRole === "admin" && inviteRole === "requester");
+}
+
+export function canRemoveWorkspaceMember(actorRole: UserRole, memberRole: UserRole) {
+  return actorRole === "owner" || (actorRole === "admin" && memberRole === "requester");
 }

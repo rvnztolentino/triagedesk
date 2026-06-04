@@ -52,7 +52,7 @@ http://localhost:3000/auth/callback
 
 6. Run the SQL in `supabase/schema.sql` in the Supabase SQL editor.
 
-7. Confirm the `request-images` storage bucket exists. The schema attempts to create it automatically.
+7. Confirm the `request-attachments` storage bucket exists. The schema attempts to create it automatically.
 
 8. Create a Groq API key and add it to `.env.local`.
 
@@ -85,7 +85,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 SEED_ADMIN_EMAIL=admin@example.com
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
-SUPABASE_REQUEST_IMAGES_BUCKET=request-images
+SUPABASE_REQUEST_ATTACHMENTS_BUCKET=request-attachments
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` is server-only. Do not expose it in client code or commit real keys.
@@ -123,7 +123,7 @@ pnpm test
 - `/submit` - submit an operations request
 - `/review` - admin triage review queue
 - `/tickets` - view requester or admin ticket lists
-- `/users` - owner-only role management
+- `/users` - workspace user management
 - `/settings` - system status and appearance settings
 - `/api/health` - setup health check
 
@@ -131,5 +131,5 @@ pnpm test
 
 - Runtime request submission requires `AI_PROVIDER=groq` and `GROQ_API_KEY`.
 - Supabase email confirmation must stay enabled; the app rejects immediate signup sessions.
-- Request images are limited to image files up to 5 MB.
-- The `request-images` bucket is public for this prototype and should not be used for sensitive production files.
+- Request attachments support common image and document files up to 10 MB each.
+- The `request-attachments` bucket is private; attachment links are served through workspace access checks.

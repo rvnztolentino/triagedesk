@@ -5,6 +5,9 @@ import {
   requireSupabaseAdminClient,
 } from "@/lib/supabase";
 import {
+  defaultDepartmentIds,
+  workspaceDepartmentCreateSchema,
+  workspaceDepartmentDeleteSchema,
   type Department,
   type DepartmentRecord,
   type AppUser,
@@ -20,12 +23,13 @@ import {
   type TriageDraft,
   type TriageResultRecord,
 } from "@/lib/schema";
-import { DEMO_WORKSPACE_ID } from "@/lib/workspaces";
+import { assertWorkspaceMutable, DEMO_WORKSPACE_ID } from "@/lib/workspaces";
 
 export interface ReviewItem {
   request: RequestRecord;
   triage: TriageResultRecord;
   similarTickets: SimilarTicket[];
+  attachments: RequestAttachmentRecord[];
 }
 
 export interface DashboardData {
@@ -53,20 +57,20 @@ type SeedRecord<T extends { workspaceId: string }> = Omit<T, "workspaceId">;
 
 const defaultDepartments: DepartmentRecord[] = [
   { id: "it", name: "IT", description: "Network, devices, software, projectors, printers, accounts." },
-  { id: "maintenance", name: "Maintenance", description: "HVAC, leaks, electrical, plumbing, repairs." },
-  { id: "admin", name: "Admin", description: "Admin records, scheduling, office supplies, front desk operations." },
-  { id: "security", name: "Security", description: "Access control, doors, gates, badges, incidents." },
-  { id: "clinic", name: "Clinic", description: "Patient areas, medical rooms, clinical workflow support." },
   { id: "facilities", name: "Facilities", description: "General building operations and space coordination." },
+  { id: "maintenance", name: "Maintenance", description: "HVAC, leaks, electrical, plumbing, repairs." },
+  { id: "security", name: "Security", description: "Access control, doors, gates, badges, incidents." },
+  { id: "admin", name: "Admin", description: "Admin records, scheduling, office supplies, front desk operations." },
+  { id: "clinic", name: "Clinic / Health", description: "Patient areas, health concerns, medical rooms, clinical workflow support." },
 ];
 
 const seededRequests: SeedRecord<RequestRecord>[] = [
   {
     id: "REQ-1001",
     description: "There is a significant water leak coming from the ceiling near the back emergency exit. Water is pooling on the floor.",
-    location: "Building A, Main Exam Hall",
+    location: "Outpatient Wing, Main Corridor",
     contactName: "Sarah Jenkins",
-    urgencyNote: "Exams start in 2 hours.",
+    urgencyNote: "Morning patient intake starts in 2 hours.",
     status: "needs-review",
     createdAt: "2026-05-24T05:10:00.000Z",
   },
@@ -81,10 +85,10 @@ const seededRequests: SeedRecord<RequestRecord>[] = [
   },
   {
     id: "REQ-1003",
-    description: "Aircon in Room 304 is leaking again. Floor is wet near the outlet.",
-    location: "Building A, Room 304",
-    contactName: "Room 304 Faculty",
-    urgencyNote: "Wet floor near students.",
+    description: "Aircon in Recovery Room 304 is leaking again. Floor is wet near the outlet.",
+    location: "Recovery Wing, Room 304",
+    contactName: "Nurse Station",
+    urgencyNote: "Wet floor near patients and staff.",
     status: "needs-review",
     duplicateOfTicketId: "TRG-1038",
     createdAt: "2026-05-24T05:30:00.000Z",
@@ -115,12 +119,12 @@ const seededTriageResults: SeedRecord<TriageResultRecord>[] = [
     id: "TRI-1001",
     requestId: "REQ-1001",
     source: "groq",
-    title: "Water leak at Building A, Main Exam Hall",
+    title: "Water leak at Outpatient Wing, Main Corridor",
     category: "Maintenance",
     priority: "critical",
     department: "maintenance",
-    summary: "Maintenance should dispatch immediately to the Main Exam Hall. Water is pooling near an emergency exit before scheduled exams.",
-    priorityReasoning: "Pooling water creates slip risk, potential property damage, and direct disruption to scheduled exams.",
+    summary: "Maintenance should dispatch immediately to the outpatient corridor. Water is pooling near an emergency exit before morning patient intake.",
+    priorityReasoning: "Pooling water creates slip risk, potential property damage, and direct disruption to patient intake.",
     similarTicketIds: ["TRG-1038"],
     createdAt: "2026-05-24T05:11:00.000Z",
   },
@@ -141,12 +145,12 @@ const seededTriageResults: SeedRecord<TriageResultRecord>[] = [
     id: "TRI-1003",
     requestId: "REQ-1003",
     source: "groq",
-    title: "HVAC issue at Building A, Room 304",
+    title: "HVAC issue at Recovery Wing, Room 304",
     category: "Maintenance",
     priority: "high",
     department: "maintenance",
-    summary: "Maintenance should inspect Room 304 because the AC leak is recurring and creating a wet floor hazard.",
-    priorityReasoning: "Recurring leak and wet flooring create a safety risk for students and staff.",
+    summary: "Maintenance should inspect Recovery Room 304 because the AC leak is recurring and creating a wet floor hazard.",
+    priorityReasoning: "Recurring leak and wet flooring create a safety risk for patients and staff.",
     similarTicketIds: ["TRG-1038"],
     createdAt: "2026-05-24T05:31:00.000Z",
   },
@@ -168,17 +172,17 @@ const seededTriageResults: SeedRecord<TriageResultRecord>[] = [
 const seededTickets: SeedRecord<TicketRecord>[] = [
   {
     id: "TRG-1043",
-    title: "Projector bulb burnt out",
-    description: "The projector in the conference room is displaying a replace lamp error and the image is very dim.",
-    location: "Admin Block, Conf Room B",
+    title: "Telehealth display unavailable",
+    description: "The telehealth display in Consultation Room B is showing a hardware error and the image is very dim.",
+    location: "Outpatient Wing, Consultation Room B",
     contactName: "Mark Chen",
-    urgencyNote: "Leadership briefing at 3 PM.",
+    urgencyNote: "Remote consultation at 3 PM.",
     status: "open",
     priority: "medium",
     department: "it",
     category: "IT",
-    triageSummary: "Routine AV hardware replacement. Assign to IT before afternoon briefing.",
-    priorityReasoning: "Meeting room equipment is impaired but does not block core operations yet.",
+    triageSummary: "Routine telehealth display inspection. Assign to IT before the afternoon consultation.",
+    priorityReasoning: "Consultation room equipment is impaired but does not block core operations yet.",
     resolutionNotes: "",
     createdAt: "2026-05-23T14:30:00.000Z",
     updatedAt: "2026-05-23T15:00:00.000Z",
@@ -254,9 +258,9 @@ const seededTickets: SeedRecord<TicketRecord>[] = [
   },
   {
     id: "TRG-1038",
-    title: "AC drain leak near Room 304",
-    description: "AC drain line leaked near Room 304 and made the tile slippery.",
-    location: "Building A, Room 304",
+    title: "AC drain leak near Recovery Room 304",
+    description: "AC drain line leaked near Recovery Room 304 and made the tile slippery.",
+    location: "Recovery Wing, Room 304",
     contactName: "Facilities Desk",
     urgencyNote: "",
     status: "closed",
@@ -278,19 +282,19 @@ const seededActivity: SeedRecord<TicketActivityRecord>[] = [
   { id: "ACT-1002", ticketId: "TRG-1047", action: "Status changed", actor: "IT Lead", details: "Moved to in progress; checking switch uplink.", createdAt: "2026-05-24T03:15:00.000Z" },
   { id: "ACT-1003", ticketId: "TRG-1044", action: "Ticket approved", actor: "System", details: "Assigned to Security.", createdAt: "2026-05-24T04:50:00.000Z" },
   { id: "ACT-1004", ticketId: "TRG-1044", action: "Status changed", actor: "Security Desk", details: "Badge sync check started.", createdAt: "2026-05-24T04:55:00.000Z" },
-  { id: "ACT-1005", requestId: "REQ-1001", action: "AI triage completed", actor: "System", details: "Critical maintenance request with exam impact.", createdAt: "2026-05-24T05:11:00.000Z" },
+  { id: "ACT-1005", requestId: "REQ-1001", action: "AI triage completed", actor: "System", details: "Critical maintenance request with patient intake impact.", createdAt: "2026-05-24T05:11:00.000Z" },
   { id: "ACT-1006", requestId: "REQ-1002", action: "AI triage completed", actor: "System", details: "High-priority clinic HVAC request.", createdAt: "2026-05-24T05:21:00.000Z" },
   { id: "ACT-1007", requestId: "REQ-1003", action: "AI triage completed", actor: "System", details: "Similar Room 304 AC drain leak found.", createdAt: "2026-05-24T05:31:00.000Z" },
   { id: "ACT-1008", requestId: "REQ-1004", action: "AI triage completed", actor: "System", details: "Critical IT request with electrical risk language.", createdAt: "2026-05-24T05:43:00.000Z" },
   { id: "ACT-1009", ticketId: "TRG-1030", action: "Resolved", actor: "Admin", details: "Supplies restocked.", createdAt: "2026-05-22T10:15:00.000Z" },
   { id: "ACT-1010", ticketId: "TRG-1038", action: "Closed", actor: "Maintenance", details: "Drain line cleared and monitored.", createdAt: "2026-05-20T06:00:00.000Z" },
   { id: "ACT-1011", ticketId: "TRG-1048", action: "Assigned", actor: "Maintenance Lead", details: "HVAC technician assigned for clinic waiting area inspection.", createdAt: "2026-05-24T05:50:00.000Z" },
-  { id: "ACT-1012", ticketId: "TRG-1043", action: "Note added", actor: "IT Support", details: "Replacement projector lamp pulled from storage.", createdAt: "2026-05-24T06:05:00.000Z" },
+  { id: "ACT-1012", ticketId: "TRG-1043", action: "Note added", actor: "IT Support", details: "Replacement telehealth display cable pulled from storage.", createdAt: "2026-05-24T06:05:00.000Z" },
   { id: "ACT-1013", ticketId: "TRG-1044", action: "Vendor contacted", actor: "Security Desk", details: "Access controller vendor asked to review East Gate sync logs.", createdAt: "2026-05-24T06:18:00.000Z" },
   { id: "ACT-1014", ticketId: "TRG-1047", action: "Escalated", actor: "IT Lead", details: "Network outage escalated to infrastructure team.", createdAt: "2026-05-24T06:32:00.000Z" },
   { id: "ACT-1015", requestId: "REQ-1002", action: "Review pending", actor: "Admin", details: "Clinic HVAC request kept in review for technician availability.", createdAt: "2026-05-24T06:45:00.000Z" },
   { id: "ACT-1016", ticketId: "TRG-1048", action: "Status changed", actor: "Maintenance Lead", details: "Clinic waiting area ticket moved to in progress.", createdAt: "2026-05-24T07:00:00.000Z" },
-  { id: "ACT-1017", ticketId: "TRG-1043", action: "Scheduled", actor: "IT Support", details: "Projector lamp replacement scheduled before leadership briefing.", createdAt: "2026-05-24T07:15:00.000Z" },
+  { id: "ACT-1017", ticketId: "TRG-1043", action: "Scheduled", actor: "IT Support", details: "Telehealth display inspection scheduled before remote consultation.", createdAt: "2026-05-24T07:15:00.000Z" },
   { id: "ACT-1018", requestId: "REQ-1004", action: "Safety check requested", actor: "Admin", details: "Maintenance asked to inspect outlet and smoke smell near server closet.", createdAt: "2026-05-24T07:28:00.000Z" },
   { id: "ACT-1019", ticketId: "TRG-1044", action: "Controller restarted", actor: "Security Desk", details: "East Gate controller restart completed; monitoring badge scans.", createdAt: "2026-05-24T07:42:00.000Z" },
   { id: "ACT-1020", ticketId: "TRG-1047", action: "Service restored", actor: "IT Lead", details: "Admin wing wired network restored after uplink replacement.", createdAt: "2026-05-24T07:55:00.000Z" },
@@ -536,6 +540,20 @@ function noteFromRow(row: SupabaseRow): TicketNoteRecord {
   };
 }
 
+function attachmentFromRow(row: SupabaseRow): RequestAttachmentRecord {
+  return {
+    id: asString(row.id),
+    workspaceId: asString(row.workspace_id),
+    requestId: asString(row.request_id),
+    fileName: asString(row.file_name) || asString(row.storage_path).split("/").pop() || "Attachment",
+    storagePath: asString(row.storage_path),
+    publicUrl: row.public_url ? asString(row.public_url) : undefined,
+    contentType: asString(row.content_type),
+    sizeBytes: Number(row.size_bytes ?? 0),
+    createdAt: asString(row.created_at),
+  };
+}
+
 function emptyDashboardData(): DashboardData {
   const status = getRuntimeSetupStatus();
 
@@ -652,6 +670,17 @@ async function requireWorkspaceTicket(client: SupabaseClient, ticketId: string, 
   if (!data) throw new Error("Ticket not found.");
 }
 
+async function listRequestAttachmentsFromClient(client: SupabaseClient, requestId: string, workspaceId: string) {
+  const { data, error } = await client
+    .from("request_attachments")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("request_id", requestId)
+    .order("created_at", { ascending: true });
+  requireNoError(error, "List request attachments");
+  return ((data ?? []) as SupabaseRow[]).map(attachmentFromRow);
+}
+
 async function getLatestNeedsReview(client: SupabaseClient, workspaceId = DEMO_WORKSPACE_ID): Promise<ReviewItem | undefined> {
   const { data, error } = await client
     .from("requests")
@@ -673,6 +702,7 @@ async function getLatestNeedsReview(client: SupabaseClient, workspaceId = DEMO_W
     request,
     triage,
     similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department, workspaceId),
+    attachments: await listRequestAttachmentsFromClient(client, request.id, workspaceId),
   };
 }
 
@@ -690,25 +720,43 @@ export async function resetWorkspaceData(workspaceId = DEMO_WORKSPACE_ID) {
   await clearWorkspaceTable(client, "request_attachments", workspaceId);
   await clearWorkspaceTable(client, "requests", workspaceId);
   await clearWorkspaceTable(client, "workspace_metadata", workspaceId);
+  await clearWorkspaceTable(client, "departments", workspaceId);
 
+  await insertRows(client, "departments", defaultDepartments.map((department) => ({
+    workspace_id: workspaceId,
+    id: department.id,
+    name: department.name,
+    description: department.description,
+  })));
   await insertRows(client, "requests", seededRequests.map(withDemoWorkspace).map(requestToRow));
   await insertRows(client, "ai_triage_results", seededTriageResults.map(withDemoWorkspace).map(triageToRow));
   await insertRows(client, "tickets", seededTickets.map(withDemoWorkspace).map(ticketToRow));
   await insertRows(client, "ticket_activity", seededActivity.map(withDemoWorkspace).map(activityToRow));
   await insertRows(client, "ticket_notes", seededNotes.map(withDemoWorkspace).map(noteToRow));
   await insertRows(client, "workspace_metadata", [
-    { workspace_id: workspaceId, key: "seeded", value: "triagedesk-demo-school-seed-v3" },
+    { workspace_id: workspaceId, key: "seeded", value: "triagedesk-demo-clinic-seed-v4" },
     { workspace_id: workspaceId, key: "seeded_at", value: now() },
   ]);
 
   return { ok: true };
 }
 
-export async function listDepartments() {
+export async function listDepartments(workspaceId = DEMO_WORKSPACE_ID) {
   const client = getSupabaseAdminClient();
   if (!client) return defaultDepartments;
 
-  const { data, error } = await client.from("departments").select("id, name, description").order("name");
+  let { data, error } = await client
+    .from("departments")
+    .select("id, name, description")
+    .eq("workspace_id", workspaceId)
+    .order("name");
+
+  if (error?.message.includes("departments.workspace_id")) {
+    const fallback = await client.from("departments").select("id, name, description").order("name");
+    data = fallback.data;
+    error = fallback.error;
+  }
+
   requireNoError(error, "List departments");
 
   const departments = ((data ?? []) as SupabaseRow[]).map((row) => ({
@@ -720,7 +768,47 @@ export async function listDepartments() {
   return departments.length > 0 ? departments : defaultDepartments;
 }
 
-export async function createRequest(input: RequestSubmission, imageUrl: string | undefined, requester: AppUser, workspaceId = DEMO_WORKSPACE_ID) {
+export async function createWorkspaceDepartment(input: unknown, actorRole: "admin" | "owner" | "requester") {
+  const parsed = workspaceDepartmentCreateSchema.parse(input);
+  assertWorkspaceMutable(parsed.workspaceId);
+  if (actorRole !== "admin" && actorRole !== "owner") {
+    throw new Error("Workspace admin access is required.");
+  }
+
+  const client = requireSupabaseAdminClient();
+  const { error } = await client.from("departments").insert({
+    workspace_id: parsed.workspaceId,
+    id: parsed.id,
+    name: parsed.name,
+    description: parsed.description,
+  });
+  requireNoError(error, "Create department");
+}
+
+export async function deleteWorkspaceDepartment(input: unknown, actorRole: "admin" | "owner" | "requester") {
+  const parsed = workspaceDepartmentDeleteSchema.parse(input);
+  assertWorkspaceMutable(parsed.workspaceId);
+  if (actorRole !== "admin" && actorRole !== "owner") {
+    throw new Error("Workspace admin access is required.");
+  }
+  if ((defaultDepartmentIds as readonly string[]).includes(parsed.id)) {
+    throw new Error("Default departments cannot be removed.");
+  }
+
+  const client = requireSupabaseAdminClient();
+  const { data, error } = await client
+    .from("departments")
+    .delete()
+    .eq("workspace_id", parsed.workspaceId)
+    .eq("id", parsed.id)
+    .select("id")
+    .maybeSingle();
+  requireNoError(error, "Delete department");
+  if (!data) throw new Error("Department not found.");
+}
+
+export async function createRequest(input: RequestSubmission, requester: AppUser, workspaceId = DEMO_WORKSPACE_ID) {
+  assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
   const timestamp = now();
   const request: RequestRecord = {
@@ -729,7 +817,6 @@ export async function createRequest(input: RequestSubmission, imageUrl: string |
     requesterUserId: requester.id,
     ...input,
     contactName: input.contactName || requester.displayName,
-    imageUrl,
     status: "needs-review",
     createdAt: timestamp,
   };
@@ -751,9 +838,10 @@ export async function createRequest(input: RequestSubmission, imageUrl: string |
 
 export async function createRequestAttachment(
   requestId: string,
-  input: Pick<RequestAttachmentRecord, "storagePath" | "publicUrl" | "contentType" | "sizeBytes">,
+  input: Pick<RequestAttachmentRecord, "fileName" | "storagePath" | "publicUrl" | "contentType" | "sizeBytes">,
   workspaceId = DEMO_WORKSPACE_ID
 ) {
+  assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
   await requireWorkspaceRequest(client, requestId, workspaceId);
   const attachment: RequestAttachmentRecord = {
@@ -767,6 +855,7 @@ export async function createRequestAttachment(
     id: attachment.id,
     workspace_id: attachment.workspaceId,
     request_id: attachment.requestId,
+    file_name: attachment.fileName,
     storage_path: attachment.storagePath,
     public_url: attachment.publicUrl ?? null,
     content_type: attachment.contentType,
@@ -778,6 +867,7 @@ export async function createRequestAttachment(
 }
 
 export async function saveTriageResult(requestId: string, triage: TriageDraft, workspaceId = DEMO_WORKSPACE_ID) {
+  assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
   await requireWorkspaceRequest(client, requestId, workspaceId);
   const record: TriageResultRecord = {
@@ -824,6 +914,7 @@ export async function listReviewItems(workspaceId = DEMO_WORKSPACE_ID): Promise<
         request,
         triage,
         similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department, workspaceId),
+        attachments: await listRequestAttachmentsFromClient(client, request.id, workspaceId),
       };
     })
   );
@@ -852,7 +943,36 @@ export async function getRequestBundle(requestId: string, requesterUserId?: stri
     request,
     triage,
     similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department, workspaceId),
+    attachments: await listRequestAttachmentsFromClient(client, request.id, workspaceId),
   };
+}
+
+export async function getVisibleRequestAttachment(attachmentId: string, requesterUserId: string | undefined, workspaceId = DEMO_WORKSPACE_ID) {
+  const client = getSupabaseAdminClient();
+  if (!client) return undefined;
+
+  const { data, error } = await client
+    .from("request_attachments")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("id", attachmentId)
+    .maybeSingle();
+  requireNoError(error, "Get request attachment");
+  if (!data) return undefined;
+
+  const attachment = attachmentFromRow(data as SupabaseRow);
+  if (requesterUserId) {
+    const { data: requestData, error: requestError } = await client
+      .from("requests")
+      .select("requester_user_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", attachment.requestId)
+      .maybeSingle();
+    requireNoError(requestError, "Get attachment request");
+    if (!requestData || asString((requestData as SupabaseRow).requester_user_id) !== requesterUserId) return undefined;
+  }
+
+  return attachment;
 }
 
 export async function getLatestRequestBundle(requesterUserId?: string, workspaceId = DEMO_WORKSPACE_ID) {
@@ -949,6 +1069,7 @@ export async function approveRequest(input: {
   department: Department;
   summary: string;
 }, workspaceId = DEMO_WORKSPACE_ID) {
+  assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
 
   const { data: requestData, error: requestError } = await client
@@ -1021,6 +1142,7 @@ export async function approveRequest(input: {
 }
 
 export async function rejectRequest(requestId: string, workspaceId = DEMO_WORKSPACE_ID) {
+  assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
   const timestamp = now();
 
@@ -1045,6 +1167,7 @@ export async function rejectRequest(requestId: string, workspaceId = DEMO_WORKSP
 }
 
 export async function markDuplicate(requestId: string, duplicateOfTicketId: string, workspaceId = DEMO_WORKSPACE_ID) {
+  assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
   const timestamp = now();
   await requireWorkspaceTicket(client, duplicateOfTicketId, workspaceId);
@@ -1076,6 +1199,7 @@ export async function updateTicket(input: {
   resolutionNotes: string;
   note: string;
 }, workspaceId = DEMO_WORKSPACE_ID) {
+  assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
   const { data, error } = await client.from("tickets").select("*").eq("workspace_id", workspaceId).eq("id", input.ticketId).maybeSingle();
   requireNoError(error, "Get ticket for update");
@@ -1195,9 +1319,14 @@ function countByPriority(tickets: TicketRecord[]) {
 }
 
 function countByDepartment(tickets: TicketRecord[]) {
-  return defaultDepartments.map((department) => ({
-    department: department.id,
-    count: tickets.filter((ticket) => ticket.department === department.id).length,
+  const ids = new Set<Department>(defaultDepartments.map((department) => department.id));
+  for (const ticket of tickets) {
+    ids.add(ticket.department);
+  }
+
+  return [...ids].map((department) => ({
+    department,
+    count: tickets.filter((ticket) => ticket.department === department).length,
   }));
 }
 
