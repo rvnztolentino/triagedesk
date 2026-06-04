@@ -19,6 +19,7 @@ import { runTriage } from "@/lib/triage";
 import {
   approveRequest,
   createRequest,
+  createRequestAttachment,
   findReusableTriageDraft,
   getSimilarTickets,
   markDuplicate,
@@ -27,6 +28,7 @@ import {
   saveTriageResult,
   updateTicket,
 } from "@/lib/store";
+import { DEMO_WORKSPACE_ID } from "@/lib/workspaces";
 
 function formText(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -59,14 +61,14 @@ function validateRequestImage(file: File | null) {
   return file;
 }
 
-async function saveRequestImage(file: File | null) {
+async function saveRequestImage(file: File | null, workspaceId = DEMO_WORKSPACE_ID) {
   if (!file) {
     return undefined;
   }
 
   const client = requireSupabaseAdminClient();
   const bucket = process.env.SUPABASE_REQUEST_IMAGES_BUCKET || "request-images";
-  const storagePath = `requests/${Date.now()}-${crypto.randomUUID()}${fileExtension(file.name)}`;
+  const storagePath = `${workspaceId}/requests/${Date.now()}-${crypto.randomUUID()}${fileExtension(file.name)}`;
   const { error } = await client.storage.from(bucket).upload(storagePath, await file.arrayBuffer(), {
     contentType: file.type,
     upsert: false,
@@ -77,7 +79,12 @@ async function saveRequestImage(file: File | null) {
   }
 
   const { data } = client.storage.from(bucket).getPublicUrl(storagePath);
-  return data.publicUrl;
+  return {
+    storagePath,
+    publicUrl: data.publicUrl,
+    contentType: file.type,
+    sizeBytes: file.size,
+  };
 }
 
 export async function submitRequestAction(formData: FormData) {
@@ -99,8 +106,11 @@ export async function submitRequestAction(formData: FormData) {
         similarTicketIds: similarTickets.slice(0, 3).map((ticket) => ticket.id),
       }
     : await runTriage({ ...input, similarTickets });
-  const imageUrl = await saveRequestImage(imageFile);
-  const request = await createRequest(input, imageUrl, user);
+  const imageUpload = await saveRequestImage(imageFile);
+  const request = await createRequest(input, imageUpload?.publicUrl, user);
+  if (imageUpload) {
+    await createRequestAttachment(request.id, imageUpload);
+  }
   await saveTriageResult(request.id, triage);
 
   revalidatePath("/");

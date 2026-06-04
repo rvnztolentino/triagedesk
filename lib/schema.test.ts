@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { requestSubmissionSchema, triageDraftSchema, userRoleSchema, userRoleUpdateSchema } from "./schema";
+import { requestSubmissionSchema, triageDraftSchema, userRoleSchema, userRoleUpdateSchema, workspaceInviteCodeSchema, workspaceSlugSchema } from "./schema";
 
 describe("schemas", () => {
   it("rejects empty request details", () => {
@@ -37,5 +37,17 @@ describe("schemas", () => {
 
     expect(storedRole.success).toBe(true);
     expect(manualUpdate.success).toBe(false);
+  });
+
+  it("accepts centralized workspace slugs and rejects URL-unsafe values", () => {
+    expect(workspaceSlugSchema.safeParse("demo-school").success).toBe(true);
+    expect(workspaceSlugSchema.safeParse("Demo School").success).toBe(false);
+    expect(workspaceSlugSchema.safeParse("demo--school").success).toBe(false);
+  });
+
+  it("accepts invite codes but rejects malformed input", () => {
+    expect(workspaceInviteCodeSchema.safeParse("DEMO-SCHOOL-2026").success).toBe(true);
+    expect(workspaceInviteCodeSchema.safeParse("demo school").success).toBe(false);
+    expect(workspaceInviteCodeSchema.safeParse("demo--school").success).toBe(false);
   });
 });

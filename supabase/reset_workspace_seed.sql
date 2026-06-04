@@ -1,10 +1,55 @@
 begin;
 
-delete from ticket_notes;
-delete from ticket_activity;
-delete from ai_triage_results;
-delete from tickets;
-delete from requests;
+insert into workspaces (id, name, slug, created_by)
+values ('00000000-0000-4000-8000-000000000001', 'Demo School', 'demo-school', null)
+on conflict (id) do update set
+  name = excluded.name,
+  slug = excluded.slug;
+
+insert into workspace_invites (
+  id,
+  workspace_id,
+  code,
+  role,
+  created_by,
+  expires_at,
+  used_at,
+  revoked_at,
+  is_reusable
+) values (
+  '00000000-0000-4000-8000-000000000002',
+  '00000000-0000-4000-8000-000000000001',
+  'DEMO-SCHOOL-2026',
+  'requester',
+  null,
+  null,
+  null,
+  null,
+  true
+)
+on conflict (code) do update set
+  workspace_id = excluded.workspace_id,
+  role = excluded.role,
+  created_by = excluded.created_by,
+  expires_at = excluded.expires_at,
+  used_at = excluded.used_at,
+  revoked_at = excluded.revoked_at,
+  is_reusable = excluded.is_reusable;
+
+alter table requests alter column workspace_id set default '00000000-0000-4000-8000-000000000001';
+alter table ai_triage_results alter column workspace_id set default '00000000-0000-4000-8000-000000000001';
+alter table tickets alter column workspace_id set default '00000000-0000-4000-8000-000000000001';
+alter table ticket_activity alter column workspace_id set default '00000000-0000-4000-8000-000000000001';
+alter table ticket_notes alter column workspace_id set default '00000000-0000-4000-8000-000000000001';
+alter table workspace_metadata alter column workspace_id set default '00000000-0000-4000-8000-000000000001';
+
+delete from ticket_notes where workspace_id = '00000000-0000-4000-8000-000000000001';
+delete from ticket_activity where workspace_id = '00000000-0000-4000-8000-000000000001';
+delete from ai_triage_results where workspace_id = '00000000-0000-4000-8000-000000000001';
+delete from tickets where workspace_id = '00000000-0000-4000-8000-000000000001';
+delete from request_attachments where workspace_id = '00000000-0000-4000-8000-000000000001';
+delete from requests where workspace_id = '00000000-0000-4000-8000-000000000001';
+delete from workspace_metadata where workspace_id = '00000000-0000-4000-8000-000000000001';
 
 insert into departments (id, name, description) values
   ('it', 'IT', 'Network, devices, software, projectors, printers, accounts.'),
@@ -125,9 +170,16 @@ insert into ticket_notes (
   ('NOTE-1002', 'TRG-1044', 'Security Desk', 'Badge failures are isolated to the east gate controller.', '2026-05-24T05:05:00.000Z');
 
 insert into workspace_metadata (key, value) values
-  ('seeded', 'triagedesk-seed-v2'),
+  ('seeded', 'triagedesk-demo-school-seed-v3'),
   ('seeded_at', now()::text)
-on conflict (key) do update set
+on conflict (workspace_id, key) do update set
   value = excluded.value;
+
+alter table requests alter column workspace_id drop default;
+alter table ai_triage_results alter column workspace_id drop default;
+alter table tickets alter column workspace_id drop default;
+alter table ticket_activity alter column workspace_id drop default;
+alter table ticket_notes alter column workspace_id drop default;
+alter table workspace_metadata alter column workspace_id drop default;
 
 commit;
