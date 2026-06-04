@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpRight, CheckCircle2, Clock } from "lucide-react";
-import { requireOperationalWorkspace } from "@/lib/auth";
+import { requireWorkspaceContext } from "@/lib/auth";
 import { listTickets } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
 import { ticketStatusIndicatorClass } from "@/lib/ticket-status";
 import { cn } from "@/lib/utils";
+import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { isWorkspacePreview } from "@/lib/workspaces";
 import { TicketSearch } from "./ticket-search";
 
@@ -28,13 +29,13 @@ function pageNumber(value: string | undefined) {
   return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
 }
 
-function ticketsHref(current: { filter: string; q: string; page: number }, next: { filter?: string; q?: string; page?: number }) {
+function ticketsHref(workspaceSlug: string | undefined, current: { filter: string; q: string; page: number }, next: { filter?: string; q?: string; page?: number }) {
   const nextParams = new URLSearchParams();
   nextParams.set("filter", next.filter ?? current.filter);
   const nextQuery = next.q ?? current.q;
   if (nextQuery) nextParams.set("q", nextQuery);
   nextParams.set("page", String(next.page ?? current.page));
-  return `/tickets?${nextParams.toString()}`;
+  return scopedWorkspaceHref(workspaceSlug, `/tickets?${nextParams.toString()}`);
 }
 
 function TicketsTableSkeleton() {
@@ -90,6 +91,7 @@ async function TicketTable({
   isAdmin,
   userId,
   workspaceId,
+  workspaceSlug,
 }: {
   filter: string;
   query: string;
@@ -97,6 +99,7 @@ async function TicketTable({
   isAdmin: boolean;
   userId: string;
   workspaceId: string;
+  workspaceSlug?: string;
 }) {
   const tickets = await listTickets(filter, isAdmin ? undefined : userId, workspaceId);
   const normalizedQuery = query.toLowerCase();
@@ -160,7 +163,7 @@ async function TicketTable({
                     <span className="text-sm font-mono font-medium text-neutral-500">{ticket.id}</span>
                   </td>
                   <td className="p-6">
-                    <Link href={`/tickets/${ticket.id}`} className="block">
+                    <Link href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="block">
                       <div className="font-semibold text-white mb-1 group-hover:text-emerald-400 transition-colors">{ticket.title}</div>
                       <div className="text-sm text-neutral-500 flex items-center gap-3">
                         <span>{ticket.location}</span>
@@ -187,7 +190,7 @@ async function TicketTable({
                     </span>
                   </td>
                   <td className="p-6 text-right">
-                    <Link href={`/tickets/${ticket.id}`} className="inline-flex p-2 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors">
+                    <Link href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="inline-flex p-2 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors">
                       <ArrowUpRight size={18} />
                     </Link>
                   </td>
@@ -205,7 +208,7 @@ async function TicketTable({
         <div className="flex items-center gap-3">
           <Link
             aria-disabled={currentPage <= 1}
-            href={currentPage <= 1 ? ticketsHref(current, { page: 1 }) : ticketsHref(current, { page: currentPage - 1 })}
+            href={currentPage <= 1 ? ticketsHref(workspaceSlug, current, { page: 1 }) : ticketsHref(workspaceSlug, current, { page: currentPage - 1 })}
             className={cn(
               "h-9 px-3 rounded-lg border border-neutral-800 text-xs font-bold inline-flex items-center gap-2 transition-colors",
               currentPage <= 1 ? "pointer-events-none text-neutral-700" : "text-neutral-400 hover:bg-neutral-800 hover:text-white"
@@ -218,7 +221,7 @@ async function TicketTable({
           </span>
           <Link
             aria-disabled={currentPage >= totalPages}
-            href={currentPage >= totalPages ? ticketsHref(current, { page: totalPages }) : ticketsHref(current, { page: currentPage + 1 })}
+            href={currentPage >= totalPages ? ticketsHref(workspaceSlug, current, { page: totalPages }) : ticketsHref(workspaceSlug, current, { page: currentPage + 1 })}
             className={cn(
               "h-9 px-3 rounded-lg border border-neutral-800 text-xs font-bold inline-flex items-center gap-2 transition-colors",
               currentPage >= totalPages ? "pointer-events-none text-neutral-700" : "text-neutral-400 hover:bg-neutral-800 hover:text-white"
@@ -232,8 +235,8 @@ async function TicketTable({
   );
 }
 
-export default async function TicketList({ searchParams }: { searchParams: Promise<TicketParams> }) {
-  const { user, workspace, membership } = await requireOperationalWorkspace();
+export async function TicketListView({ searchParams, workspaceSlug }: { searchParams: Promise<TicketParams>; workspaceSlug?: string }) {
+  const { user, workspace, membership } = await requireWorkspaceContext(workspaceSlug);
   const params = await searchParams;
   const filter = params.filter || "all";
   const query = normalizeSearch(params.q);
@@ -260,7 +263,7 @@ export default async function TicketList({ searchParams }: { searchParams: Promi
             ].map(([value, label]) => (
               <Link
                 key={value}
-                href={ticketsHref(current, { filter: value, page: 1 })}
+                href={ticketsHref(workspaceSlug, current, { filter: value, page: 1 })}
                 className={cn(
                   "px-4 py-1.5 text-sm font-medium rounded-lg transition-all",
                   filter === value ? "bg-neutral-800 text-white shadow-sm" : "text-neutral-500 hover:text-neutral-300"
@@ -275,9 +278,13 @@ export default async function TicketList({ searchParams }: { searchParams: Promi
         </div>
 
         <Suspense key={`${filter}:${query}:${requestedPage}`} fallback={<TicketsTableSkeleton />}>
-          <TicketTable filter={filter} query={query} requestedPage={requestedPage} isAdmin={isAdmin} userId={user.id} workspaceId={workspace.id} />
+          <TicketTable filter={filter} query={query} requestedPage={requestedPage} isAdmin={isAdmin} userId={user.id} workspaceId={workspace.id} workspaceSlug={workspaceSlug} />
         </Suspense>
       </div>
     </div>
   );
+}
+
+export default async function TicketList({ searchParams }: { searchParams: Promise<TicketParams> }) {
+  return <TicketListView searchParams={searchParams} />;
 }

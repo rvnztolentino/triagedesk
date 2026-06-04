@@ -4,14 +4,16 @@ import { AlertTriangle, ArrowLeft, Building2, Check, FileText, LockKeyhole, Pape
 import { approveRequestAction, rejectRequestAction } from "@/app/actions";
 import { AttachmentFileName } from "@/components/attachment-file-name";
 import { DuplicateReviewForm } from "@/components/duplicate-review-form";
-import { requireAdmin } from "@/lib/auth";
+import { requireWorkspaceAdminContext } from "@/lib/auth";
 import { getRequestBundle, listDepartments, listTickets } from "@/lib/store";
+import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { isWorkspacePreview } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReviewDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { workspace } = await requireAdmin();
+export async function ReviewDetailView({ params, workspaceSlug }: { params: Promise<{ id: string }>; workspaceSlug?: string }) {
+  const { workspace } = await requireWorkspaceAdminContext(workspaceSlug);
+  const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
   const { id } = await params;
   const bundle = await getRequestBundle(id, undefined, workspace.id);
   const departments = await listDepartments(workspace.id);
@@ -27,7 +29,7 @@ export default async function ReviewDetail({ params }: { params: Promise<{ id: s
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-4">
-      <Link href="/review" className="text-sm font-medium text-neutral-500 hover:text-white flex items-center gap-2 mb-6 w-fit">
+      <Link href={href("/review")} className="text-sm font-medium text-neutral-500 hover:text-white flex items-center gap-2 mb-6 w-fit">
         <ArrowLeft size={16} /> Back to Queue
       </Link>
 
@@ -77,7 +79,7 @@ export default async function ReviewDetail({ params }: { params: Promise<{ id: s
                   </div>
                   <div className="space-y-2">
                     {attachments.map((attachment) => (
-                      <a key={attachment.id} href={`/attachments/${attachment.id}`} className="flex min-w-0 items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300">
+                      <a key={attachment.id} href={href(`/attachments/${attachment.id}`)} className="flex min-w-0 items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300">
                         <FileText size={14} className="shrink-0" /> <AttachmentFileName fileName={attachment.fileName} className="flex-1" />
                       </a>
                     ))}
@@ -100,7 +102,7 @@ export default async function ReviewDetail({ params }: { params: Promise<{ id: s
                 <p className="text-sm text-neutral-500">No close matches found.</p>
               ) : (
                 similarTickets.map((ticket) => (
-                  <Link key={ticket.id} href={`/tickets/${ticket.id}`} className="block bg-[#0a0a0a] border border-neutral-800 p-3 rounded-xl hover:border-neutral-700">
+                  <Link key={ticket.id} href={href(`/tickets/${ticket.id}`)} className="block bg-[#0a0a0a] border border-neutral-800 p-3 rounded-xl hover:border-neutral-700">
                     <div className="text-sm font-semibold text-white">{ticket.title}</div>
                     <div className="text-xs text-neutral-500 mt-1">{ticket.id} &middot; {ticket.reason}</div>
                   </Link>
@@ -128,6 +130,7 @@ export default async function ReviewDetail({ params }: { params: Promise<{ id: s
               </div>
             ) : null}
             <fieldset disabled={isPreview} className="space-y-6 disabled:opacity-60">
+            {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
             <input type="hidden" name="requestId" value={request.id} />
 
             <div className="space-y-2">
@@ -202,10 +205,11 @@ export default async function ReviewDetail({ params }: { params: Promise<{ id: s
             </fieldset>
           </form>
 
-          <DuplicateReviewForm requestId={request.id} tickets={tickets} isPreview={isPreview} approveFormId={approveFormId} />
+          <DuplicateReviewForm requestId={request.id} tickets={tickets} isPreview={isPreview} approveFormId={approveFormId} workspaceSlug={workspaceSlug} />
 
           <div className="mt-4 flex flex-wrap items-center gap-4">
             <form action={rejectRequestAction}>
+              {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
               <input type="hidden" name="requestId" value={request.id} />
               <button disabled={isPreview} className="bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl px-6 py-3 text-sm font-bold hover:bg-rose-500/20 transition-all flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60">
                 <X size={18} /> Reject
@@ -216,4 +220,8 @@ export default async function ReviewDetail({ params }: { params: Promise<{ id: s
       </div>
     </div>
   );
+}
+
+export default async function ReviewDetail({ params }: { params: Promise<{ id: string }> }) {
+  return <ReviewDetailView params={params} />;
 }
