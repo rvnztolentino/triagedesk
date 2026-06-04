@@ -114,7 +114,7 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
         <div
           role="dialog"
           aria-label="Appearance"
-          className="absolute right-0 top-12 z-50 w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-neutral-800 bg-[#111111] p-4 shadow-2xl"
+          className="fixed left-4 right-4 top-[4.5rem] z-50 rounded-2xl border border-neutral-800 bg-[#111111] p-4 shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-[min(21rem,calc(100vw-2rem))]"
         >
           <div className="mb-4">
             <div className="text-sm font-semibold text-white">Appearance</div>

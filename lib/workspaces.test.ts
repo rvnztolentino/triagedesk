@@ -25,6 +25,7 @@ const actionsSource = readFileSync(new URL("../app/actions.ts", import.meta.url)
 const storeSource = readFileSync(new URL("./store.ts", import.meta.url), "utf8");
 const ticketsSource = readFileSync(new URL("../app/tickets/page.tsx", import.meta.url), "utf8");
 const workspaceDashboardSource = readFileSync(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8");
+const workspaceOpenLinkSource = readFileSync(new URL("../components/workspace-open-link.tsx", import.meta.url), "utf8");
 const appLayoutSource = readFileSync(new URL("../components/app-layout.tsx", import.meta.url), "utf8");
 const settingsSource = readFileSync(new URL("../app/settings/page.tsx", import.meta.url), "utf8");
 const globalStylesSource = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
@@ -193,7 +194,8 @@ describe("workspace foundation", () => {
     expect(appLayoutSource).toContain("px-3 py-2 text-center text-xs uppercase");
     expect(workspaceDashboardSource).toContain("Currently open workspace");
     expect(workspaceDashboardSource).toContain("Requests, tickets, and settings are scoped to this workspace.");
-    expect(workspaceDashboardSource).toContain("<CheckCircle2 size={13} /> Open");
+    expect(workspaceOpenLinkSource).toContain("<CheckCircle2 size={13} /> Open");
+    expect(workspaceOpenLinkSource).toContain("<LoaderCircle size={13} className=\"animate-spin\" /> Opening");
   });
 
   it("shows workspace access policy without exposing seed configuration and keeps amber light-mode states readable", () => {

@@ -1,9 +1,8 @@
-import Link from "next/link";
-import { ArrowRight, Building2, CheckCircle2, Link2, PlusCircle } from "lucide-react";
+import { Building2, Link2, PlusCircle } from "lucide-react";
 import { createWorkspaceAction, joinWorkspaceAction } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
+import { WorkspaceOpenLink } from "@/components/workspace-open-link";
 import { getActiveWorkspaceAccess, requireUser } from "@/lib/auth";
-import { cn } from "@/lib/utils";
 import { DEMO_WORKSPACE_INVITE_CODE, isWorkspacePreview, listUserWorkspaces } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
@@ -53,30 +52,15 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
               const isActive = activeWorkspace?.workspace.id === workspace.id;
               const isPreview = isWorkspacePreview(workspace.id);
               return (
-                <Link
+                <WorkspaceOpenLink
                   key={workspace.id}
                   href={`/w/${workspace.slug}/activate`}
-                  className={cn(
-                    "p-5 flex items-center justify-between gap-4 transition-colors border-l-2",
-                    isActive ? "border-emerald-500 bg-emerald-500/5" : "border-transparent hover:bg-[#151515]"
-                  )}
-                >
-                  <div>
-                    <h3 className="font-semibold text-white">{workspace.name}</h3>
-                    <p className="text-xs text-neutral-500 font-mono mt-1">{workspace.slug}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {isActive ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                        <CheckCircle2 size={13} /> Open
-                      </span>
-                    ) : null}
-                    <span className={isPreview ? "text-[10px] font-bold uppercase tracking-wider text-amber-400" : "text-[10px] font-bold uppercase tracking-wider text-neutral-500"}>
-                      {isPreview ? "Preview locked" : membership.role}
-                    </span>
-                    <ArrowRight size={16} className="text-neutral-500" />
-                  </div>
-                </Link>
+                  name={workspace.name}
+                  slug={workspace.slug}
+                  role={membership.role}
+                  isActive={isActive}
+                  isPreview={isPreview}
+                />
               );
             })}
           </div>

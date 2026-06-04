@@ -65,9 +65,9 @@ export default async function WorkspaceLandingPage({
             </span>
             <form action={activateWorkspaceAction}>
               <input type="hidden" name="workspaceSlug" value={workspace.slug} />
-              <button className="h-10 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-black text-sm font-bold inline-flex items-center gap-2">
+              <SubmitButton pendingText={isPreview ? "Opening preview..." : "Opening operations..."} className="w-auto h-10 px-4 rounded-lg">
                 {isPreview ? "Open preview" : "Open operations"} <ArrowRight size={15} />
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </div>
