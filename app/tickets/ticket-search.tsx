@@ -6,9 +6,10 @@ import { useEffect, useState, useTransition } from "react";
 
 interface TicketSearchProps {
   query: string;
+  onNavigate?: (href: string) => void;
 }
 
-export function TicketSearch({ query }: TicketSearchProps) {
+export function TicketSearch({ query, onNavigate }: TicketSearchProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,6 +31,7 @@ export function TicketSearch({ query }: TicketSearchProps) {
 
       nextParams.set("page", "1");
       const nextUrl = `${pathname}?${nextParams.toString()}`;
+      onNavigate?.(nextUrl);
 
       startTransition(() => {
         router.replace(nextUrl, { scroll: false });
@@ -37,7 +39,7 @@ export function TicketSearch({ query }: TicketSearchProps) {
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [pathname, query, router, searchParams, value]);
+  }, [onNavigate, pathname, query, router, searchParams, value]);
 
   return (
     <div className="relative min-w-full flex-1 sm:min-w-[320px]">

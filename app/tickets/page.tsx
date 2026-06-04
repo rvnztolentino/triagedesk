@@ -8,7 +8,8 @@ import { ticketStatusIndicatorClass } from "@/lib/ticket-status";
 import { cn } from "@/lib/utils";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { isWorkspacePreview } from "@/lib/workspaces";
-import { TicketSearch } from "./ticket-search";
+import { ticketsHref } from "@/lib/ticket-links";
+import { TicketsTableShell, TicketsTableSkeleton } from "./tickets-table-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -27,61 +28,6 @@ function normalizeSearch(value: string | undefined) {
 function pageNumber(value: string | undefined) {
   const page = Number(value);
   return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
-}
-
-function ticketsHref(workspaceSlug: string | undefined, current: { filter: string; q: string; page: number }, next: { filter?: string; q?: string; page?: number }) {
-  const nextParams = new URLSearchParams();
-  nextParams.set("filter", next.filter ?? current.filter);
-  const nextQuery = next.q ?? current.q;
-  if (nextQuery) nextParams.set("q", nextQuery);
-  nextParams.set("page", String(next.page ?? current.page));
-  return scopedWorkspaceHref(workspaceSlug, `/tickets?${nextParams.toString()}`);
-}
-
-function TicketsTableSkeleton() {
-  return (
-    <>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#0d0d0d] border-b border-neutral-800 text-xs uppercase tracking-wider text-neutral-500">
-              <th className="font-semibold p-6 w-28">ID</th>
-              <th className="font-semibold p-6">Details</th>
-              <th className="font-semibold p-6">Status</th>
-              <th className="font-semibold p-6">Department</th>
-              <th className="font-semibold p-6 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-800">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <tr key={index}>
-                <td className="p-6">
-                  <div className="h-4 w-20 animate-pulse rounded bg-neutral-800" />
-                </td>
-                <td className="p-6">
-                  <div className="h-4 w-56 animate-pulse rounded bg-neutral-800" />
-                  <div className="mt-3 h-3 w-72 animate-pulse rounded bg-neutral-800/70" />
-                </td>
-                <td className="p-6">
-                  <div className="h-4 w-28 animate-pulse rounded bg-neutral-800" />
-                </td>
-                <td className="p-6">
-                  <div className="h-6 w-24 animate-pulse rounded-md bg-neutral-800" />
-                </td>
-                <td className="p-6">
-                  <div className="ml-auto h-8 w-8 animate-pulse rounded-lg bg-neutral-800" />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="p-6 border-t border-neutral-800 flex flex-col gap-4 text-sm md:flex-row md:items-center md:justify-between">
-        <div className="h-4 w-40 animate-pulse rounded bg-neutral-800" />
-        <div className="h-9 w-64 animate-pulse rounded-lg bg-neutral-800" />
-      </div>
-    </>
-  );
 }
 
 async function TicketTable({
@@ -242,7 +188,6 @@ export async function TicketListView({ searchParams, workspaceSlug }: { searchPa
   const query = normalizeSearch(params.q);
   const requestedPage = pageNumber(params.page);
   const isAdmin = isWorkspacePreview(workspace.id) || membership.role === "admin" || membership.role === "owner";
-  const current = { filter, q: query, page: requestedPage };
 
   return (
     <div className="space-y-6">
@@ -253,34 +198,11 @@ export async function TicketListView({ searchParams, workspaceSlug }: { searchPa
         </div>
       </div>
 
-      <div className="bg-[#111111] rounded-2xl shadow-xl border border-neutral-800 overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-neutral-800 gap-4 flex-wrap bg-[#151515]">
-          <div className="flex items-center gap-2 bg-[#0a0a0a] p-1 rounded-xl border border-neutral-800">
-            {[
-              ["all", "All"],
-              ["active", "Active"],
-              ["resolved", "Resolved"],
-            ].map(([value, label]) => (
-              <Link
-                key={value}
-                href={ticketsHref(workspaceSlug, current, { filter: value, page: 1 })}
-                className={cn(
-                  "px-4 py-1.5 text-sm font-medium rounded-lg transition-all",
-                  filter === value ? "bg-neutral-800 text-white shadow-sm" : "text-neutral-500 hover:text-neutral-300"
-                )}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-
-          <TicketSearch query={query} />
-        </div>
-
+      <TicketsTableShell key={`${filter}:${query}:${requestedPage}`} filter={filter} query={query} requestedPage={requestedPage} workspaceSlug={workspaceSlug}>
         <Suspense key={`${filter}:${query}:${requestedPage}`} fallback={<TicketsTableSkeleton />}>
           <TicketTable filter={filter} query={query} requestedPage={requestedPage} isAdmin={isAdmin} userId={user.id} workspaceId={workspace.id} workspaceSlug={workspaceSlug} />
         </Suspense>
-      </div>
+      </TicketsTableShell>
     </div>
   );
 }
