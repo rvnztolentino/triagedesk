@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { signOutAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
+import { PageLoadingSkeleton } from "@/components/page-loading-skeleton";
 import { ThemeToggle } from "@/components/theme-controls";
 import type { AppUser, UserRole } from "@/lib/schema";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,10 @@ function initials(user: AppUser | null) {
     .join("");
 }
 
+function isModifiedClick(event: React.MouseEvent<HTMLAnchorElement>) {
+  return event.metaKey || event.altKey || event.ctrlKey || event.shiftKey || event.button !== 0;
+}
+
 export function AppLayout({
   children,
   currentUser,
@@ -67,6 +72,7 @@ export function AppLayout({
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
+  const [pendingPath, setPendingPath] = React.useState<string | null>(null);
   const isAuthPage = pathname === "/login" || pathname.startsWith("/signup") || pathname.startsWith("/auth");
   const operationalNavItems = activeWorkspace?.isPreview
     ? previewNavItems
@@ -81,8 +87,25 @@ export function AppLayout({
     React.startTransition(() => {
       setSidebarOpen(false);
       setProfileOpen(false);
+      setPendingPath(null);
     });
   }, [pathname]);
+
+  React.useEffect(() => {
+    if (!pendingPath) return;
+    const timeout = window.setTimeout(() => setPendingPath(null), 10000);
+    return () => window.clearTimeout(timeout);
+  }, [pendingPath]);
+
+  function handleSidebarNavigate(event: React.MouseEvent<HTMLAnchorElement>, href: string) {
+    setSidebarOpen(false);
+    if (event.defaultPrevented || isModifiedClick(event) || event.currentTarget.target === "_blank") return;
+
+    const nextPath = new URL(href, window.location.origin).pathname;
+    if (nextPath !== pathname) {
+      setPendingPath(nextPath);
+    }
+  }
 
   if (isAuthPage) {
     return (
@@ -137,7 +160,8 @@ export function AppLayout({
                   <Link
                     key={item.href}
                     href={href}
-                    onClick={() => setSidebarOpen(false)}
+                    prefetch={false}
+                    onClick={(event) => handleSidebarNavigate(event, href)}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",
                       active ? "bg-neutral-800 text-white" : "text-neutral-400 hover:text-white hover:bg-neutral-800"
@@ -242,8 +266,8 @@ export function AppLayout({
           </div>
         ) : null}
 
-        <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 md:p-8">
-          {children}
+        <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 md:p-8" aria-busy={pendingPath ? true : undefined}>
+          {pendingPath ? <PageLoadingSkeleton /> : children}
         </main>
       </div>
     </div>
