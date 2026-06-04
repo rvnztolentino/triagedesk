@@ -20,6 +20,7 @@ import {
 import { signOutAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
 import { PageLoadingSkeleton } from "@/components/page-loading-skeleton";
+import { PageLoadingSpinner } from "@/components/page-loading-spinner";
 import { ThemeToggle } from "@/components/theme-controls";
 import type { AppUser, UserRole } from "@/lib/schema";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,10 @@ function initials(user: AppUser | null) {
 
 function isModifiedClick(event: React.MouseEvent<HTMLAnchorElement>) {
   return event.metaKey || event.altKey || event.ctrlKey || event.shiftKey || event.button !== 0;
+}
+
+function isNewRequestPath(path: string) {
+  return path === "/submit" || path === "/requests/new" || /^\/w\/[^/]+\/requests\/new$/.test(path);
 }
 
 export function AppLayout({
@@ -267,7 +272,7 @@ export function AppLayout({
         ) : null}
 
         <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 md:p-8" aria-busy={pendingPath ? true : undefined}>
-          {pendingPath ? <PageLoadingSkeleton /> : children}
+          {pendingPath ? (isNewRequestPath(pendingPath) ? <PageLoadingSpinner /> : <PageLoadingSkeleton />) : children}
         </main>
       </div>
     </div>
