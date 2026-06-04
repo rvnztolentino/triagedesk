@@ -170,9 +170,25 @@ update departments set workspace_id = '00000000-0000-4000-8000-000000000001' whe
 alter table departments alter column workspace_id set not null;
 
 do $$
+declare
+  dependent_constraint record;
 begin
   alter table ai_triage_results drop constraint if exists ai_triage_results_department_fkey;
   alter table tickets drop constraint if exists tickets_department_fkey;
+
+  for dependent_constraint in
+    select conrelid::regclass as table_name, conname
+    from pg_constraint
+    where contype = 'f'
+      and confrelid = 'departments'::regclass
+  loop
+    execute format(
+      'alter table %s drop constraint if exists %I',
+      dependent_constraint.table_name,
+      dependent_constraint.conname
+    );
+  end loop;
+
   alter table departments drop constraint if exists departments_pkey;
   alter table departments add primary key (workspace_id, id);
 end $$;
@@ -323,6 +339,39 @@ begin
       foreign key (workspace_id, request_id) references requests(workspace_id, id) on delete cascade;
   end if;
 end $$;
+
+-- Supabase no longer exposes new public tables to PostgREST/GraphQL by default.
+-- Keep these grants in sync when adding app tables above.
+grant usage on schema public to authenticated, service_role;
+
+grant select on table user_profiles to authenticated;
+
+grant select, insert, update, delete on table departments to authenticated;
+grant select, insert, update, delete on table workspaces to authenticated;
+grant select, insert, update, delete on table workspace_members to authenticated;
+grant select, insert, update, delete on table workspace_invites to authenticated;
+grant select, insert, update, delete on table requests to authenticated;
+grant select, insert, update, delete on table ai_triage_results to authenticated;
+grant select, insert, update, delete on table tickets to authenticated;
+grant select, insert, delete on table ticket_activity to authenticated;
+grant select, insert, update, delete on table ticket_notes to authenticated;
+grant select, insert, delete on table request_attachments to authenticated;
+grant select, insert, update, delete on table workspace_metadata to authenticated;
+
+grant select, insert, update, delete on table
+  user_profiles,
+  workspaces,
+  departments,
+  workspace_members,
+  workspace_invites,
+  requests,
+  ai_triage_results,
+  tickets,
+  ticket_activity,
+  ticket_notes,
+  workspace_metadata,
+  request_attachments
+to service_role;
 
 create or replace function is_workspace_member(target_workspace_id uuid)
 returns boolean
@@ -513,6 +562,14 @@ $$;
 revoke all on function create_workspace_with_owner(text, text, uuid) from public;
 revoke all on function join_workspace_by_invite(text, text, uuid) from public;
 revoke all on function delete_workspace_as_owner(uuid, uuid) from public;
+revoke all on function is_workspace_member(uuid) from public;
+revoke all on function has_workspace_role(uuid, text[]) from public;
+revoke all on function can_create_workspace_invite(uuid, text) from public;
+revoke all on function can_remove_workspace_member(uuid, uuid) from public;
+grant execute on function is_workspace_member(uuid) to authenticated, service_role;
+grant execute on function has_workspace_role(uuid, text[]) to authenticated, service_role;
+grant execute on function can_create_workspace_invite(uuid, text) to authenticated, service_role;
+grant execute on function can_remove_workspace_member(uuid, uuid) to authenticated, service_role;
 grant execute on function create_workspace_with_owner(text, text, uuid) to service_role;
 grant execute on function join_workspace_by_invite(text, text, uuid) to service_role;
 grant execute on function delete_workspace_as_owner(uuid, uuid) to service_role;
@@ -556,6 +613,11 @@ as $$
       )
   );
 $$;
+
+revoke all on function can_view_workspace_request(uuid, text) from public;
+revoke all on function can_view_workspace_ticket(uuid, text) from public;
+grant execute on function can_view_workspace_request(uuid, text) to authenticated, service_role;
+grant execute on function can_view_workspace_ticket(uuid, text) to authenticated, service_role;
 
 alter table departments enable row level security;
 alter table user_profiles enable row level security;
