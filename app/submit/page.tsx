@@ -3,12 +3,14 @@ import Link from "next/link";
 import { submitRequestAction } from "@/app/actions";
 import { RequestAttachmentsInput } from "@/components/request-attachments-input";
 import { SubmitButton } from "@/components/submit-button";
-import { requireOperationalWorkspace } from "@/lib/auth";
+import { requireWorkspaceContext } from "@/lib/auth";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
+import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { isWorkspacePreview } from "@/lib/workspaces";
 
-export default async function SubmitRequest() {
-  const { workspace } = await requireOperationalWorkspace();
+export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: string } = {}) {
+  const { workspace } = await requireWorkspaceContext(workspaceSlug);
+  const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
   const isPreview = isWorkspacePreview(workspace.id);
   const setup = getRuntimeSetupStatus();
   const isSetupRequired = setup.missing.length > 0;
@@ -31,7 +33,7 @@ export default async function SubmitRequest() {
             <span className="font-mono text-neutral-200">.codex/setup.md</span>, then restart the dev server.
           </div>
           <div className="pt-6 flex items-center justify-between">
-            <Link href="/tickets" className="text-sm font-medium text-neutral-500 hover:text-white px-4 py-2">
+            <Link href={href("/tickets")} className="text-sm font-medium text-neutral-500 hover:text-white px-4 py-2">
               My Tickets
             </Link>
             <Link href="/api/health" className="bg-neutral-800 text-white rounded-xl px-6 py-3 text-sm font-bold hover:bg-neutral-700 transition-all border border-neutral-700">
@@ -52,6 +54,7 @@ export default async function SubmitRequest() {
 
       <div className="bg-[#111111] rounded-2xl p-8 md:p-10 shadow-xl border border-neutral-800">
         <form action={submitRequestAction} className="space-y-6">
+          {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
           {isPreview ? (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-start gap-2">
               <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
@@ -117,7 +120,7 @@ export default async function SubmitRequest() {
           <RequestAttachmentsInput />
 
           <div className="pt-6 border-t border-neutral-800 flex items-center justify-between">
-            <Link href="/tickets" className="text-sm font-medium text-neutral-500 hover:text-white px-4 py-2">
+            <Link href={href("/tickets")} className="text-sm font-medium text-neutral-500 hover:text-white px-4 py-2">
               Cancel
             </Link>
             <SubmitButton pendingText="Uploading..." className="w-auto h-auto px-8 py-3">
@@ -129,4 +132,8 @@ export default async function SubmitRequest() {
       </div>
     </div>
   );
+}
+
+export default async function SubmitRequest() {
+  return <SubmitRequestView />;
 }

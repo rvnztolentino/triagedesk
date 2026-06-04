@@ -1,6 +1,6 @@
 import { Building2, CheckCircle2, Settings, Trash2 } from "lucide-react";
 import { createWorkspaceDepartmentAction, deleteWorkspaceDepartmentAction } from "@/app/actions";
-import { requireOperationalWorkspace } from "@/lib/auth";
+import { requireWorkspaceContext } from "@/lib/auth";
 import { listDepartments } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
 import { ThemeSettingsPanel } from "@/components/theme-controls";
@@ -21,8 +21,8 @@ function setupLabel(value: string) {
   return labels[value] ?? value;
 }
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { membership, workspace } = await requireOperationalWorkspace();
+export async function SettingsPageView({ searchParams, workspaceSlug }: { searchParams: Promise<{ error?: string }>; workspaceSlug?: string }) {
+  const { membership, workspace } = await requireWorkspaceContext(workspaceSlug);
   const isPreview = isWorkspacePreview(workspace.id);
   const isAdmin = isPreview || membership.role === "admin" || membership.role === "owner";
   const setup = isAdmin ? getRuntimeSetupStatus() : null;
@@ -109,6 +109,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 </div>
                 {!isPreview && !(defaultDepartmentIds as readonly string[]).includes(department.id) ? (
                   <form action={deleteWorkspaceDepartmentAction}>
+                    {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
                     <input type="hidden" name="id" value={department.id} />
                     <button className="h-9 px-3 rounded-lg border border-rose-500/30 text-xs font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2">
                       <Trash2 size={14} /> Remove
@@ -121,6 +122,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
           {!isPreview ? (
             <form action={createWorkspaceDepartmentAction} className="p-6 border-t border-neutral-800 grid grid-cols-1 gap-3 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+              {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
               <div className="space-y-2">
                 <label htmlFor="department-id" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">ID</label>
                 <input id="department-id" name="id" required placeholder="transport" className="h-11 w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-emerald-500 placeholder:text-neutral-700" />
@@ -151,4 +153,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       ) : null}
     </div>
   );
+}
+
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  return <SettingsPageView searchParams={searchParams} />;
 }

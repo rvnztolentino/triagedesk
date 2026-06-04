@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { authCredentialsSchema, loginCredentialsSchema, workspaceSlugSchema, type AppUser, type AuthCredentials, type UserProfileRecord, type UserRole } from "@/lib/schema";
 import { getSupabaseAdminClient, getSupabaseAuthClient, getRuntimeSetupStatus, requireSupabaseAdminClient, requireSupabaseAuthClient, SetupRequiredError } from "@/lib/supabase";
+import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { getPostAuthWorkspacePath, isWorkspaceAdmin, isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
 
 const ACCESS_COOKIE = "triagedesk_access_token";
@@ -230,6 +231,11 @@ export async function requireOperationalWorkspace() {
   return { user, ...access };
 }
 
+export async function requireWorkspaceContext(workspaceSlug?: string) {
+  if (!workspaceSlug) return requireOperationalWorkspace();
+  return requireWorkspaceUser(workspaceSlug);
+}
+
 export async function requireOperationalWorkspaceUser() {
   return (await requireOperationalWorkspace()).user;
 }
@@ -240,9 +246,25 @@ export async function requireAdmin() {
   return access;
 }
 
+export async function requireWorkspaceAdminContext(workspaceSlug?: string) {
+  const access = await requireWorkspaceContext(workspaceSlug);
+  if (!isWorkspaceAdmin(access.membership.role) && !isWorkspacePreview(access.workspace.id)) {
+    redirect(scopedWorkspaceHref(workspaceSlug, "/tickets"));
+  }
+  return access;
+}
+
 export async function requireOwner() {
   const access = await requireOperationalWorkspace();
   if (access.membership.role !== "owner" || isWorkspacePreview(access.workspace.id)) redirect("/tickets");
+  return access;
+}
+
+export async function requireWorkspaceOwnerContext(workspaceSlug?: string) {
+  const access = await requireWorkspaceContext(workspaceSlug);
+  if (access.membership.role !== "owner" || isWorkspacePreview(access.workspace.id)) {
+    redirect(scopedWorkspaceHref(workspaceSlug, "/tickets"));
+  }
   return access;
 }
 

@@ -47,6 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           currentUser={currentUser}
           activeWorkspace={activeWorkspace ? {
             name: activeWorkspace.workspace.name,
+            slug: activeWorkspace.workspace.slug,
             role: activeWorkspace.membership.role,
             isPreview: isWorkspacePreview(activeWorkspace.workspace.id),
           } : null}

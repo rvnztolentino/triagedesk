@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { AlertCircle, ChevronRight, Clock, Sparkles } from "lucide-react";
-import { requireAdmin } from "@/lib/auth";
+import { requireWorkspaceAdminContext } from "@/lib/auth";
 import { listReviewItems } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +21,9 @@ function getPriorityColor(priority: string) {
   }
 }
 
-export default async function ReviewQueue() {
-  const { workspace } = await requireAdmin();
+export async function ReviewQueueView({ workspaceSlug }: { workspaceSlug?: string } = {}) {
+  const { workspace } = await requireWorkspaceAdminContext(workspaceSlug);
+  const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
   const queue = await listReviewItems(workspace.id);
   const setup = getRuntimeSetupStatus();
   const isSetupRequired = setup.missing.length > 0;
@@ -54,14 +56,14 @@ export default async function ReviewQueue() {
                   Check Health
                 </Link>
               ) : (
-                <Link href="/submit" className="mt-5 inline-flex bg-emerald-500 text-black rounded-xl px-5 py-2 text-sm font-bold">
+                <Link href={href("/submit")} className="mt-5 inline-flex bg-emerald-500 text-black rounded-xl px-5 py-2 text-sm font-bold">
                   Submit Request
                 </Link>
               )}
             </div>
           ) : (
             queue.map(({ request, triage }) => (
-              <Link key={request.id} href={`/review/${request.id}`} className="block hover:bg-[#151515] transition-colors group">
+              <Link key={request.id} href={href(`/review/${request.id}`)} className="block hover:bg-[#151515] transition-colors group">
                 <div className="p-6 flex items-center gap-6">
                   <div className="flex-shrink-0 flex flex-col items-center gap-2 w-16">
                     <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", getPriorityColor(triage.priority))}>
@@ -108,4 +110,8 @@ export default async function ReviewQueue() {
       </div>
     </div>
   );
+}
+
+export default async function ReviewQueue() {
+  return <ReviewQueueView />;
 }

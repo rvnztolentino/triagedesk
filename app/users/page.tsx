@@ -1,13 +1,13 @@
 import { ShieldCheck, UserCog, UserMinus } from "lucide-react";
 import { removeWorkspaceMemberAction, updateUserRoleAction } from "@/app/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
-import { requireAdmin } from "@/lib/auth";
+import { requireWorkspaceAdminContext } from "@/lib/auth";
 import { listWorkspaceMembers, canRemoveWorkspaceMember } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
-export default async function UsersPage() {
-  const { user: currentUser, workspace, membership } = await requireAdmin();
+export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string } = {}) {
+  const { user: currentUser, workspace, membership } = await requireWorkspaceAdminContext(workspaceSlug);
   const users = await listWorkspaceMembers(workspace.id, currentUser.id);
   const canEditRoles = membership.role === "owner";
 
@@ -64,6 +64,7 @@ export default async function UsersPage() {
 
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <form action={updateUserRoleAction} className="flex items-center gap-3">
+                      {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
                       <input type="hidden" name="userId" value={user.userId} />
                       <select
                         name="role"
@@ -84,6 +85,7 @@ export default async function UsersPage() {
                     </form>
                     {canRemove ? (
                       <form action={removeWorkspaceMemberAction}>
+                        {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
                         <input type="hidden" name="workspaceId" value={workspace.id} />
                         <input type="hidden" name="memberUserId" value={user.userId} />
                         <ConfirmSubmitButton confirmation={`Remove ${user.displayName || user.email || "this member"} from ${workspace.name}?`} className="h-10 px-4 rounded-xl border border-rose-500/30 text-sm font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2">
@@ -110,4 +112,8 @@ export default async function UsersPage() {
       </div>
     </div>
   );
+}
+
+export default async function UsersPage() {
+  return <UsersPageView />;
 }

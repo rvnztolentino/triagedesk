@@ -18,6 +18,7 @@ import {
   signInWithEmail,
   signUpWithEmail,
 } from "@/lib/auth";
+import { requestReceivedHref, scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { requireSupabaseAdminClient } from "@/lib/supabase";
 import { runTriage } from "@/lib/triage";
 import {
@@ -42,6 +43,7 @@ import {
   deleteWorkspace,
   assertWorkspaceMutable,
   getPostAuthWorkspacePath,
+  isWorkspaceAdmin,
   isWorkspacePreview,
   joinWorkspaceWithInvite,
   joinWorkspaceWithInviteCode,
@@ -60,6 +62,30 @@ function formText(formData: FormData, key: string) {
 function redirectWithError(path: string, error: unknown) {
   const message = error instanceof Error ? error.message : "Something went wrong.";
   redirect(`${path}${path.includes("?") ? "&" : "?"}error=${encodeURIComponent(message)}`);
+}
+
+async function requireActionWorkspace(formData: FormData) {
+  const workspaceSlug = formText(formData, "workspaceSlug");
+  if (!workspaceSlug) return { access: await requireOperationalWorkspace(), workspaceSlug: undefined };
+  const user = await requireUser();
+  const access = await requireWorkspaceMembership(workspaceSlugSchema.parse(workspaceSlug), user.id);
+  return { access: { user, ...access }, workspaceSlug: access.workspace.slug };
+}
+
+async function requireActionAdmin(formData: FormData) {
+  const context = await requireActionWorkspace(formData);
+  if (!isWorkspaceAdmin(context.access.membership.role) && !isWorkspacePreview(context.access.workspace.id)) {
+    redirect(scopedWorkspaceHref(context.workspaceSlug, "/tickets"));
+  }
+  return context;
+}
+
+async function requireActionOwner(formData?: FormData) {
+  const context = formData ? await requireActionWorkspace(formData) : { access: await requireOwner(), workspaceSlug: undefined };
+  if (context.access.membership.role !== "owner" || isWorkspacePreview(context.access.workspace.id)) {
+    redirect(scopedWorkspaceHref(context.workspaceSlug, "/tickets"));
+  }
+  return context;
 }
 
 function fileExtension(name: string) {
@@ -137,7 +163,7 @@ async function saveRequestAttachment(file: File, workspaceId: string, requestId:
 }
 
 export async function submitRequestAction(formData: FormData) {
-  const { user, workspace } = await requireOperationalWorkspace();
+  const { access: { user, workspace }, workspaceSlug } = await requireActionWorkspace(formData);
   assertWorkspaceMutable(workspace.id);
   const input = requestSubmissionSchema.parse({
     description: formText(formData, "description"),
@@ -163,13 +189,13 @@ export async function submitRequestAction(formData: FormData) {
   }
   await saveTriageResult(request.id, triage, workspace.id);
 
-  revalidatePath("/");
-  revalidatePath("/review");
-  redirect(`/submit/confirm?id=${request.id}`);
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
+  redirect(requestReceivedHref(workspaceSlug, request.id));
 }
 
 export async function approveRequestAction(formData: FormData) {
-  const { workspace } = await requireAdmin();
+  const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
   assertWorkspaceMutable(workspace.id);
   const input = reviewApprovalSchema.parse({
     requestId: formText(formData, "requestId"),
@@ -180,34 +206,34 @@ export async function approveRequestAction(formData: FormData) {
   });
   const ticket = await approveRequest(input, workspace.id);
 
-  revalidatePath("/");
-  revalidatePath("/review");
-  revalidatePath("/tickets");
-  redirect(`/tickets/${ticket.id}`);
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/tickets"));
+  redirect(scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`));
 }
 
 export async function rejectRequestAction(formData: FormData) {
-  const { workspace } = await requireAdmin();
+  const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
   assertWorkspaceMutable(workspace.id);
   await rejectRequest(formText(formData, "requestId"), workspace.id);
 
-  revalidatePath("/");
-  revalidatePath("/review");
-  redirect("/review");
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
+  redirect(scopedWorkspaceHref(workspaceSlug, "/review"));
 }
 
 export async function markDuplicateAction(formData: FormData) {
-  const { workspace } = await requireAdmin();
+  const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
   assertWorkspaceMutable(workspace.id);
   await markDuplicate(formText(formData, "requestId"), formText(formData, "duplicateOfTicketId"), workspace.id);
 
-  revalidatePath("/");
-  revalidatePath("/review");
-  redirect("/review");
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
+  redirect(scopedWorkspaceHref(workspaceSlug, "/review"));
 }
 
 export async function updateTicketAction(formData: FormData) {
-  const { workspace } = await requireAdmin();
+  const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
   assertWorkspaceMutable(workspace.id);
   const input = ticketUpdateSchema.parse({
     ticketId: formText(formData, "ticketId"),
@@ -218,21 +244,21 @@ export async function updateTicketAction(formData: FormData) {
   });
   await updateTicket(input, workspace.id);
 
-  revalidatePath("/");
-  revalidatePath("/tickets");
-  revalidatePath(`/tickets/${input.ticketId}`);
-  redirect(`/tickets/${input.ticketId}`);
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/tickets"));
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, `/tickets/${input.ticketId}`));
+  redirect(scopedWorkspaceHref(workspaceSlug, `/tickets/${input.ticketId}`));
 }
 
-export async function resetWorkspaceDataAction() {
-  const { workspace } = await requireOwner();
+export async function resetWorkspaceDataAction(formData?: FormData) {
+  const { access: { workspace }, workspaceSlug } = await requireActionOwner(formData);
   assertWorkspaceMutable(workspace.id);
   await resetWorkspaceData(workspace.id);
 
-  revalidatePath("/");
-  revalidatePath("/review");
-  revalidatePath("/tickets");
-  redirect("/");
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
+  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/tickets"));
+  redirect(scopedWorkspaceHref(workspaceSlug, "/"));
 }
 
 export async function signInAction(formData: FormData) {
@@ -290,7 +316,7 @@ export async function signOutAction() {
 }
 
 export async function updateUserRoleAction(formData: FormData) {
-  const { user: actor, workspace } = await requireOwner();
+  const { access: { user: actor, workspace }, workspaceSlug } = await requireActionOwner(formData);
   assertWorkspaceMutable(workspace.id);
   const input = userRoleUpdateSchema.parse({
     userId: formText(formData, "userId"),
@@ -298,12 +324,14 @@ export async function updateUserRoleAction(formData: FormData) {
   });
   await updateWorkspaceMemberRole(workspace.id, input.userId, input.role, actor.id);
 
-  revalidatePath("/users");
-  redirect("/users");
+  const returnPath = scopedWorkspaceHref(workspaceSlug, "/users");
+  revalidatePath(returnPath);
+  redirect(returnPath);
 }
 
 export async function createWorkspaceDepartmentAction(formData: FormData) {
-  const { workspace, membership } = await requireAdmin();
+  const { access: { workspace, membership }, workspaceSlug } = await requireActionAdmin(formData);
+  const returnPath = scopedWorkspaceHref(workspaceSlug, "/settings");
   try {
     const input = workspaceDepartmentCreateSchema.parse({
       workspaceId: workspace.id,
@@ -312,26 +340,27 @@ export async function createWorkspaceDepartmentAction(formData: FormData) {
       description: formText(formData, "description"),
     });
     await createWorkspaceDepartment(input, membership.role);
-    revalidatePath("/settings");
+    revalidatePath(returnPath);
   } catch (error) {
-    redirectWithError("/settings", error);
+    redirectWithError(returnPath, error);
   }
-  redirect("/settings");
+  redirect(returnPath);
 }
 
 export async function deleteWorkspaceDepartmentAction(formData: FormData) {
-  const { workspace, membership } = await requireAdmin();
+  const { access: { workspace, membership }, workspaceSlug } = await requireActionAdmin(formData);
+  const returnPath = scopedWorkspaceHref(workspaceSlug, "/settings");
   try {
     const input = workspaceDepartmentDeleteSchema.parse({
       workspaceId: workspace.id,
       id: formText(formData, "id"),
     });
     await deleteWorkspaceDepartment(input, membership.role);
-    revalidatePath("/settings");
+    revalidatePath(returnPath);
   } catch (error) {
-    redirectWithError("/settings", error);
+    redirectWithError(returnPath, error);
   }
-  redirect("/settings");
+  redirect(returnPath);
 }
 
 export async function createWorkspaceAction(formData: FormData) {
@@ -423,10 +452,11 @@ export async function leaveWorkspaceAction(formData: FormData) {
 
 export async function removeWorkspaceMemberAction(formData: FormData) {
   const user = await requireUser();
-  const returnPath = "/users";
+  const workspaceSlug = formText(formData, "workspaceSlug");
+  const returnPath = scopedWorkspaceHref(workspaceSlug || undefined, "/users");
   try {
     await removeWorkspaceMember(formText(formData, "workspaceId"), formText(formData, "memberUserId"), user.id);
-    revalidatePath("/users");
+    revalidatePath(returnPath);
     revalidatePath("/onboarding");
   } catch (error) {
     redirectWithError(returnPath, error);
@@ -456,5 +486,5 @@ export async function activateWorkspaceAction(formData: FormData) {
   const workspaceSlug = workspaceSlugSchema.parse(formText(formData, "workspaceSlug"));
   const access = await requireWorkspaceMembership(workspaceSlug, user.id);
   await setActiveWorkspaceCookie(workspaceSlug);
-  redirect(isWorkspacePreview(access.workspace.id) || access.membership.role !== "requester" ? "/" : "/tickets");
+  redirect(isWorkspacePreview(access.workspace.id) || access.membership.role !== "requester" ? scopedWorkspaceHref(workspaceSlug, "/") : scopedWorkspaceHref(workspaceSlug, "/tickets"));
 }

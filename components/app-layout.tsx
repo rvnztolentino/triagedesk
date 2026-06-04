@@ -22,6 +22,7 @@ import { BrandIcon } from "@/components/brand-icon";
 import { ThemeToggle } from "@/components/theme-controls";
 import type { AppUser, UserRole } from "@/lib/schema";
 import { cn } from "@/lib/utils";
+import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 
 const ownerNavItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -61,7 +62,7 @@ export function AppLayout({
 }: {
   children: React.ReactNode;
   currentUser: AppUser | null;
-  activeWorkspace: { name: string; role: UserRole; isPreview: boolean } | null;
+  activeWorkspace: { name: string; slug: string; role: UserRole; isPreview: boolean } | null;
 }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -130,11 +131,12 @@ export function AppLayout({
         <nav className="flex-1 py-6 px-4 space-y-2">
           {currentUser
             ? navItems.map((item) => {
-                const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+                const href = item.href === "/onboarding" ? item.href : scopedWorkspaceHref(activeWorkspace?.slug, item.href);
+                const active = pathname === href || (href !== "/" && pathname.startsWith(href));
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={href}
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm",

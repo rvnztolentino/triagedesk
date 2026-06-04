@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, Building2, CheckCircle2, FileText, Home, Paperclip, Sparkles } from "lucide-react";
 import { AttachmentFileName } from "@/components/attachment-file-name";
-import { requireOperationalWorkspace } from "@/lib/auth";
+import { requireWorkspaceContext } from "@/lib/auth";
 import { getLatestRequestBundle, getRequestBundle } from "@/lib/store";
+import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 
 export const dynamic = "force-dynamic";
 
-export default async function SubmitConfirm({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
-  const { user, workspace, membership } = await requireOperationalWorkspace();
+export async function SubmitConfirmView({ searchParams, requestId, workspaceSlug }: { searchParams?: Promise<{ id?: string }>; requestId?: string; workspaceSlug?: string }) {
+  const { user, workspace, membership } = await requireWorkspaceContext(workspaceSlug);
+  const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
   const isAdmin = membership.role === "admin" || membership.role === "owner";
-  const params = await searchParams;
-  const result = params.id
-    ? await getRequestBundle(params.id, isAdmin ? undefined : user.id, workspace.id)
+  const params = searchParams ? await searchParams : {};
+  const targetRequestId = requestId ?? params.id;
+  const result = targetRequestId
+    ? await getRequestBundle(targetRequestId, isAdmin ? undefined : user.id, workspace.id)
     : await getLatestRequestBundle(isAdmin ? undefined : user.id, workspace.id);
 
   if (!result) {
@@ -19,7 +22,7 @@ export default async function SubmitConfirm({ searchParams }: { searchParams: Pr
       <div className="max-w-2xl mx-auto py-8">
         <div className="bg-[#111111] rounded-2xl p-10 border border-neutral-800 text-center">
           <h1 className="text-2xl font-bold text-white">Request not found</h1>
-          <Link href="/submit" className="text-emerald-400 text-sm mt-4 inline-block">Submit a new request</Link>
+          <Link href={href("/submit")} className="text-emerald-400 text-sm mt-4 inline-block">Submit a new request</Link>
         </div>
       </div>
     );
@@ -91,7 +94,7 @@ export default async function SubmitConfirm({ searchParams }: { searchParams: Pr
                 </h3>
                 <div className="rounded-xl border border-neutral-800 bg-[#111111] divide-y divide-neutral-800">
                   {attachments.map((attachment) => (
-                    <a key={attachment.id} href={`/attachments/${attachment.id}`} className="px-4 py-3 flex min-w-0 items-center gap-3 text-sm text-neutral-300 hover:text-white">
+                    <a key={attachment.id} href={href(`/attachments/${attachment.id}`)} className="px-4 py-3 flex min-w-0 items-center gap-3 text-sm text-neutral-300 hover:text-white">
                       <FileText size={15} className="text-neutral-500 shrink-0" />
                       <AttachmentFileName fileName={attachment.fileName} className="flex-1" />
                     </a>
@@ -109,14 +112,18 @@ export default async function SubmitConfirm({ searchParams }: { searchParams: Pr
         </div>
 
         <div className="mt-8 pt-6 border-t border-neutral-800 flex items-center justify-between">
-          <Link href={isAdmin ? "/" : "/tickets"} className="text-sm font-medium text-neutral-500 hover:text-white flex items-center gap-2 transition-colors">
+          <Link href={isAdmin ? href("/") : href("/tickets")} className="text-sm font-medium text-neutral-500 hover:text-white flex items-center gap-2 transition-colors">
             <Home size={16} /> {isAdmin ? "Dashboard" : "My Tickets"}
           </Link>
-          <Link href={isAdmin ? `/review/${request.id}` : "/submit"} className="bg-neutral-800 text-white rounded-xl px-6 py-3 text-sm font-bold hover:bg-neutral-700 transition-all flex items-center gap-2 border border-neutral-700">
+          <Link href={isAdmin ? href(`/review/${request.id}`) : href("/submit")} className="bg-neutral-800 text-white rounded-xl px-6 py-3 text-sm font-bold hover:bg-neutral-700 transition-all flex items-center gap-2 border border-neutral-700">
             {isAdmin ? "Review Request" : "Submit Another"} <ArrowRight size={16} />
           </Link>
         </div>
       </div>
     </div>
   );
+}
+
+export default async function SubmitConfirm({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
+  return <SubmitConfirmView searchParams={searchParams} />;
 }

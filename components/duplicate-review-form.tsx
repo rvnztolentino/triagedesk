@@ -10,9 +10,10 @@ type DuplicateReviewFormProps = {
   tickets: TicketRecord[];
   isPreview: boolean;
   approveFormId: string;
+  workspaceSlug?: string;
 };
 
-export function DuplicateReviewForm({ requestId, tickets, isPreview, approveFormId }: DuplicateReviewFormProps) {
+export function DuplicateReviewForm({ requestId, tickets, isPreview, approveFormId, workspaceSlug }: DuplicateReviewFormProps) {
   const [query, setQuery] = useState("");
   const [selectedTicketId, setSelectedTicketId] = useState(tickets[0]?.id ?? "");
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId);
@@ -90,6 +91,7 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <form action={markDuplicateAction} className="sm:flex-1">
+          {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
           <input type="hidden" name="requestId" value={requestId} />
           <input type="hidden" name="duplicateOfTicketId" value={selectedTicketId} />
           <button

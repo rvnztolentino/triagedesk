@@ -2,17 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlertTriangle, ArrowLeft, Building2, Clock, FileText, LockKeyhole, MapPin, MessageSquare, User } from "lucide-react";
 import { updateTicketAction } from "@/app/actions";
-import { requireOperationalWorkspace } from "@/lib/auth";
+import { requireWorkspaceContext } from "@/lib/auth";
 import { getTicketDetail, listDepartments } from "@/lib/store";
 import { ticketStatuses } from "@/lib/schema";
 import { ticketStatusBadgeClass } from "@/lib/ticket-status";
 import { cn } from "@/lib/utils";
+import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { isWorkspacePreview } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
-export default async function TicketDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { user, workspace, membership } = await requireOperationalWorkspace();
+export async function TicketDetailView({ params, workspaceSlug }: { params: Promise<{ id: string }>; workspaceSlug?: string }) {
+  const { user, workspace, membership } = await requireWorkspaceContext(workspaceSlug);
+  const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
   const isPreview = isWorkspacePreview(workspace.id);
   const isAdmin = isPreview || membership.role === "admin" || membership.role === "owner";
   const { id } = await params;
@@ -28,7 +30,7 @@ export default async function TicketDetail({ params }: { params: Promise<{ id: s
   return (
     <div className="max-w-5xl mx-auto space-y-6 py-4">
       <div className="flex items-center justify-between mb-6">
-        <Link href="/tickets" className="text-sm font-medium text-neutral-500 hover:text-white flex items-center gap-2">
+        <Link href={href("/tickets")} className="text-sm font-medium text-neutral-500 hover:text-white flex items-center gap-2">
           <ArrowLeft size={16} /> Back to Tickets
         </Link>
       </div>
@@ -72,6 +74,7 @@ export default async function TicketDetail({ params }: { params: Promise<{ id: s
                 </div>
               ) : null}
               <fieldset disabled={isPreview} className="space-y-5 disabled:opacity-60">
+              {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
               <input type="hidden" name="ticketId" value={ticket.id} />
               <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-white">
                 <MessageSquare size={18} className="text-neutral-400" /> Update Ticket
@@ -185,7 +188,7 @@ export default async function TicketDetail({ params }: { params: Promise<{ id: s
                 <p className="text-sm text-neutral-500">No close matches found.</p>
               ) : (
                 similarTickets.map((similar) => (
-                  <Link key={similar.id} href={`/tickets/${similar.id}`} className="block bg-[#0a0a0a] border border-neutral-800 p-3 rounded-xl hover:border-neutral-700">
+                  <Link key={similar.id} href={href(`/tickets/${similar.id}`)} className="block bg-[#0a0a0a] border border-neutral-800 p-3 rounded-xl hover:border-neutral-700">
                     <div className="text-sm font-semibold text-white">{similar.title}</div>
                     <div className="text-xs text-neutral-500 mt-1">{similar.id} &middot; {similar.reason}</div>
                   </Link>
@@ -214,4 +217,8 @@ export default async function TicketDetail({ params }: { params: Promise<{ id: s
       </div>
     </div>
   );
+}
+
+export default async function TicketDetail({ params }: { params: Promise<{ id: string }> }) {
+  return <TicketDetailView params={params} />;
 }

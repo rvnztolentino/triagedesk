@@ -10,9 +10,10 @@ import {
   Sparkles,
   Ticket,
 } from "lucide-react";
-import { requireAdmin } from "@/lib/auth";
+import { requireWorkspaceAdminContext } from "@/lib/auth";
 import { getDashboardData } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 
 export const dynamic = "force-dynamic";
 
@@ -37,8 +38,9 @@ function setupRequirementLabel(value: string) {
   return labels[value] ?? value;
 }
 
-export default async function Dashboard() {
-  const { workspace } = await requireAdmin();
+export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string } = {}) {
+  const { workspace } = await requireWorkspaceAdminContext(workspaceSlug);
+  const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
   const data = await getDashboardData(workspace.id);
   const { counts, recentActivity, featuredReview, priorityDistribution, departmentWorkload, resolutionTrend } = data;
   const featured = featuredReview;
@@ -56,7 +58,7 @@ export default async function Dashboard() {
           <p className="text-neutral-500 mt-1">AI operations triage with review workflows, ticket tracking, and resolution analytics.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Link href="/submit" className="h-10 px-4 bg-emerald-500 hover:bg-emerald-600 text-black rounded-lg text-sm font-bold transition-colors inline-flex items-center justify-center">
+          <Link href={href("/submit")} className="h-10 px-4 bg-emerald-500 hover:bg-emerald-600 text-black rounded-lg text-sm font-bold transition-colors inline-flex items-center justify-center">
             + New Request
           </Link>
         </div>
@@ -95,12 +97,12 @@ export default async function Dashboard() {
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 min-w-full lg:min-w-[320px]">
-            <Link href="/review" className="bg-[#0a0a0a] border border-neutral-800 rounded-xl p-4 hover:border-emerald-500/40 transition-colors">
+            <Link href={href("/review")} className="bg-[#0a0a0a] border border-neutral-800 rounded-xl p-4 hover:border-emerald-500/40 transition-colors">
               <Inbox size={18} className="text-emerald-400 mb-3" />
               <div className="text-sm font-semibold text-white">1. Review Queue</div>
               <div className="text-xs text-neutral-500 mt-1">Approve triage</div>
             </Link>
-            <Link href="/tickets" className="bg-[#0a0a0a] border border-neutral-800 rounded-xl p-4 hover:border-emerald-500/40 transition-colors">
+            <Link href={href("/tickets")} className="bg-[#0a0a0a] border border-neutral-800 rounded-xl p-4 hover:border-emerald-500/40 transition-colors">
               <Ticket size={18} className="text-emerald-400 mb-3" />
               <div className="text-sm font-semibold text-white">2. Track Tickets</div>
               <div className="text-xs text-neutral-500 mt-1">Update status</div>
@@ -130,7 +132,7 @@ export default async function Dashboard() {
             <h3 className="font-bold text-neutral-300 flex items-center gap-2">
               <Clock size={16} className="text-neutral-500" /> Recent Activity
             </h3>
-            <Link href="/tickets" className="text-xs text-emerald-400">
+            <Link href={href("/tickets")} className="text-xs text-emerald-400">
               View Tickets &rarr;
             </Link>
           </div>
@@ -196,10 +198,10 @@ export default async function Dashboard() {
                 </div>
 
                 <div className="flex gap-3 pt-2 mt-auto">
-                  <Link href={`/review/${featured.request.id}`} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-bold rounded-xl text-xs transition-colors text-center">
+                  <Link href={href(`/review/${featured.request.id}`)} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-bold rounded-xl text-xs transition-colors text-center">
                     APPROVE & ASSIGN
                   </Link>
-                  <Link href={`/review/${featured.request.id}`} className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold rounded-xl text-xs transition-colors border border-neutral-700">
+                  <Link href={href(`/review/${featured.request.id}`)} className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold rounded-xl text-xs transition-colors border border-neutral-700">
                     Edit
                   </Link>
                 </div>
@@ -285,7 +287,7 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        <Link href="/review" className="col-span-12 bg-[#111111] border border-neutral-800 rounded-xl p-5 flex items-center justify-between hover:bg-[#151515] transition-colors">
+        <Link href={href("/review")} className="col-span-12 bg-[#111111] border border-neutral-800 rounded-xl p-5 flex items-center justify-between hover:bg-[#151515] transition-colors">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
               <Sparkles size={18} />
@@ -300,4 +302,8 @@ export default async function Dashboard() {
       </div>
     </div>
   );
+}
+
+export default async function Dashboard() {
+  return <DashboardView />;
 }

@@ -97,7 +97,7 @@ export default async function WorkspaceLandingPage({
           </h2>
           <p className="text-sm text-neutral-500 mt-1">Review members, roles, and removals from User Management.</p>
         </div>
-        <Link href="/users" className="h-10 px-4 rounded-lg bg-neutral-800 border border-neutral-700 text-sm font-bold text-white hover:bg-neutral-700 inline-flex items-center justify-center gap-2">
+        <Link href={`/w/${workspace.slug}/users`} className="h-10 px-4 rounded-lg bg-neutral-800 border border-neutral-700 text-sm font-bold text-white hover:bg-neutral-700 inline-flex items-center justify-center gap-2">
           Manage users <ArrowRight size={15} />
         </Link>
       </section>
