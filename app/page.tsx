@@ -126,10 +126,10 @@ function SignedOutLandingPage() {
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <StartNowLink className="w-full sm:w-auto" />
                 <Link
-                  href="/join/demo-clinic?code=DEMO-CLINIC-2026"
+                  href="/login"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-neutral-800 bg-[#111111] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-neutral-800 sm:w-auto"
                 >
-                  View demo
+                  Sign in
                 </Link>
               </div>
             </div>

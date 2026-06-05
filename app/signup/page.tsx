@@ -13,7 +13,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
         <div className="mb-8 text-center">
           <BrandIcon size={48} className="mx-auto mb-4 rounded-xl" />
           <h1 className="text-3xl font-bold tracking-tight text-white font-space">Create your account</h1>
-          <p className="text-sm text-neutral-500 mt-2">New accounts start as requesters after email verification.</p>
+          <p className="text-sm text-neutral-500 mt-2">Verify your email to finish setting up your account.</p>
         </div>
 
         <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-8 shadow-xl">
@@ -36,7 +36,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
               <input id="password" name="password" type="password" required minLength={8} className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500" />
             </div>
             <SubmitButton pendingText="Creating account...">
-              <UserPlus size={16} /> Create requester account
+              <UserPlus size={16} /> Create account
             </SubmitButton>
           </form>
           <p className="text-sm text-neutral-500 mt-6 text-center">
