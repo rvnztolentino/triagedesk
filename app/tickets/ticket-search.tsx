@@ -42,14 +42,14 @@ export function TicketSearch({ query, onNavigate }: TicketSearchProps) {
   }, [onNavigate, pathname, query, router, searchParams, value]);
 
   return (
-    <div className="relative min-w-full flex-1 sm:min-w-[320px]">
+    <div className="relative w-full lg:w-[380px]">
       <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
       <input
         value={value}
         onChange={(event) => setValue(event.target.value)}
         type="search"
         placeholder="Search tickets"
-        className="h-10 w-full rounded-xl border border-neutral-800 bg-[#0a0a0a] pl-9 pr-3 text-sm text-white placeholder:text-neutral-600 focus:border-emerald-500 focus:outline-none"
+        className="h-11 w-full rounded-xl border border-neutral-800 bg-transparent pl-9 pr-3 text-sm text-white placeholder:text-neutral-600 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/10"
       />
     </div>
   );

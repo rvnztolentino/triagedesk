@@ -7,12 +7,13 @@ import { cn } from "@/lib/utils";
 const THEME_KEY = "triagedesk-theme";
 const ACCENT_KEY = "triagedesk-accent";
 const PREFERENCE_EVENT = "triagedesk-preferences";
-const DEFAULT_ACCENT = "#7b787a";
+const DEFAULT_ACCENT = "#879D5A";
 
 export type ThemeMode = "dark" | "light";
 
 
 const legacyAccentMap: Record<string, string> = {
+  "#7b787a": "#879D5A",
   emerald: "#10b981",
   blue: "#3b82f6",
   orange: "#f97316",

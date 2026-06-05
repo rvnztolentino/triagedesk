@@ -44,8 +44,8 @@ export async function ReviewQueueView({ workspaceSlug }: { workspaceSlug?: strin
           </h2>
         </div>
 
-        <div className="divide-y divide-neutral-800">
-          {queue.length === 0 ? (
+        {queue.length === 0 ? (
+          <div className="divide-y divide-neutral-800">
             <div className="p-10 text-center">
               <h3 className="font-semibold text-white">{isSetupRequired ? "Setup required" : "No requests waiting"}</h3>
               <p className="text-sm text-neutral-500 mt-1">
@@ -61,52 +61,56 @@ export async function ReviewQueueView({ workspaceSlug }: { workspaceSlug?: strin
                 </Link>
               )}
             </div>
-          ) : (
-            queue.map(({ request, triage }) => (
-              <Link key={request.id} href={href(`/review/${request.id}`)} className="block hover:bg-[#151515] transition-colors group">
-                <div className="p-6 flex items-center gap-6">
-                  <div className="flex-shrink-0 flex flex-col items-center gap-2 w-16">
-                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", getPriorityColor(triage.priority))}>
-                      <AlertCircle size={18} />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <div className="min-w-[900px] divide-y divide-neutral-800">
+              {queue.map(({ request, triage }) => (
+                <Link key={request.id} href={href(`/review/${request.id}`)} className="block hover:bg-[#151515] transition-colors group">
+                  <div className="p-6 flex items-center gap-6">
+                    <div className="flex-shrink-0 flex flex-col items-center gap-2 w-16">
+                      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", getPriorityColor(triage.priority))}>
+                        <AlertCircle size={18} />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">{triage.priority}</span>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">{triage.priority}</span>
-                  </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="text-lg font-semibold text-white truncate group-hover:text-emerald-400 transition-colors">{triage.title}</h3>
-                      <span className="bg-neutral-800 text-neutral-400 text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide uppercase">
-                        {triage.department}
-                      </span>
-                      <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide ml-auto uppercase">
-                        {request.status}
-                      </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3 className="text-lg font-semibold text-white truncate group-hover:text-emerald-400 transition-colors">{triage.title}</h3>
+                        <span className="bg-neutral-800 text-neutral-400 text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide uppercase">
+                          {triage.department}
+                        </span>
+                        <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide ml-auto uppercase">
+                          {request.status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-neutral-500 truncate mb-2">{request.description}</p>
+                      <div className="flex items-center gap-4 text-xs font-medium text-neutral-500">
+                        <span className="flex items-center gap-1">
+                          <Clock size={12} /> {new Date(request.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <span>{request.location}</span>
+                        <span>{request.contactName || "Anonymous"}</span>
+                      </div>
                     </div>
-                    <p className="text-sm text-neutral-500 truncate mb-2">{request.description}</p>
-                    <div className="flex items-center gap-4 text-xs font-medium text-neutral-500">
-                      <span className="flex items-center gap-1">
-                        <Clock size={12} /> {new Date(request.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                      <span>{request.location}</span>
-                      <span>{request.contactName || "Anonymous"}</span>
-                    </div>
-                  </div>
 
-                  <div className="hidden lg:block w-64 bg-neutral-900 rounded-xl p-3 border border-neutral-800">
-                    <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Sparkles size={10} /> AI Summary
+                    <div className="hidden lg:block w-64 bg-neutral-900 rounded-xl p-3 border border-neutral-800">
+                      <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                        <Sparkles size={10} /> AI Summary
+                      </div>
+                      <div className="text-xs text-neutral-400 line-clamp-2">{triage.summary}</div>
                     </div>
-                    <div className="text-xs text-neutral-400 line-clamp-2">{triage.summary}</div>
-                  </div>
 
-                  <div className="flex-shrink-0 ml-4 text-neutral-600 group-hover:text-white transition-colors">
-                    <ChevronRight size={20} />
+                    <div className="flex-shrink-0 ml-4 text-neutral-600 group-hover:text-white transition-colors">
+                      <ChevronRight size={20} />
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))
-          )}
-        </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

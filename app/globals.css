@@ -37,8 +37,8 @@ textarea {
 }
 
 :root {
-  --accent: #7b787a;
-  --accent-strong: #6f6c6e;
+  --accent: #879D5A;
+  --accent-strong: #839e4e;
   --accent-text: var(--accent);
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   --accent-muted: color-mix(in srgb, var(--accent) 80%, transparent);

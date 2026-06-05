@@ -120,9 +120,9 @@ export function TicketsTableShell({
   }, []);
 
   return (
-    <div className="bg-[#111111] rounded-2xl shadow-xl border border-neutral-800 overflow-hidden" aria-busy={tableLoading ? true : undefined}>
-      <div className="flex items-center justify-between p-6 border-b border-neutral-800 gap-4 flex-wrap bg-[#151515]">
-        <div className="flex items-center gap-2 bg-[#0a0a0a] p-1 rounded-xl border border-neutral-800">
+    <div className="space-y-4" aria-busy={tableLoading ? true : undefined}>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="inline-flex w-full items-center gap-1 sm:w-auto">
           {[
             ["all", "All"],
             ["active", "Active"],
@@ -136,8 +136,10 @@ export function TicketsTableShell({
                 href={href}
                 onClick={(event) => handleNavigate(event, href, value)}
                 className={cn(
-                  "px-4 py-1.5 text-sm font-medium rounded-lg transition-all",
-                  optimisticFilter === value ? "bg-neutral-800 text-white shadow-sm" : "text-neutral-500 hover:text-neutral-300"
+                  "flex-1 rounded-lg border px-4 py-2 text-center text-sm font-semibold transition-all sm:flex-none",
+                  optimisticFilter === value
+                    ? "border-emerald-500/30 text-emerald-400"
+                    : "border-transparent text-neutral-500 hover:border-neutral-800 hover:text-neutral-200"
                 )}
               >
                 {label}
@@ -149,7 +151,9 @@ export function TicketsTableShell({
         <TicketSearch query={query} onNavigate={handleSearchNavigate} />
       </div>
 
-      {tableLoading ? <TicketsTableSkeleton /> : children}
+      <div className="overflow-hidden rounded-2xl border border-neutral-800 bg-[#111111] shadow-xl shadow-black/10">
+        {tableLoading ? <TicketsTableSkeleton /> : children}
+      </div>
     </div>
   );
 }
