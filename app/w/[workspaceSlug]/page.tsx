@@ -39,6 +39,7 @@ export default async function WorkspaceLandingPage({
 
   const query = await searchParams;
   const isPreview = isWorkspacePreview(workspace.id);
+  const canManageUsers = isWorkspaceAdmin(membership.role);
   const canManageInvites = !isPreview && isWorkspaceAdmin(membership.role);
   const invites = canManageInvites ? await listWorkspaceInvites(workspace.id, user.id) : [];
 
@@ -90,17 +91,19 @@ export default async function WorkspaceLandingPage({
         </div>
       ) : null}
 
-      <section className="bg-[#111111] border border-neutral-800 rounded-2xl p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <Users size={17} className="text-emerald-400" /> Workspace users
-          </h2>
-          <p className="text-sm text-neutral-500 mt-1">Review members, roles, and removals from User Management.</p>
-        </div>
-        <Link href={`/w/${workspace.slug}/users`} className="h-10 px-4 rounded-lg bg-neutral-800 border border-neutral-700 text-sm font-bold text-white hover:bg-neutral-700 inline-flex items-center justify-center gap-2">
-          Manage users <ArrowRight size={15} />
-        </Link>
-      </section>
+      {canManageUsers ? (
+        <section className="bg-[#111111] border border-neutral-800 rounded-2xl p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <Users size={17} className="text-emerald-400" /> Workspace users
+            </h2>
+            <p className="text-sm text-neutral-500 mt-1">Review members, roles, and removals from User Management.</p>
+          </div>
+          <Link href={`/w/${workspace.slug}/users`} className="h-10 px-4 rounded-lg bg-neutral-800 border border-neutral-700 text-sm font-bold text-white hover:bg-neutral-700 inline-flex items-center justify-center gap-2">
+            Manage users <ArrowRight size={15} />
+          </Link>
+        </section>
+      ) : null}
 
       {canManageInvites ? (
         <section className="grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-6">

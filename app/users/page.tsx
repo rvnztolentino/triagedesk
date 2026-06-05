@@ -1,6 +1,7 @@
 import { ShieldCheck, UserCog, UserMinus } from "lucide-react";
 import { removeWorkspaceMemberAction, updateUserRoleAction } from "@/app/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { SubmitButton } from "@/components/submit-button";
 import { requireWorkspaceAdminContext } from "@/lib/auth";
 import { listWorkspaceMembers, canRemoveWorkspaceMember } from "@/lib/workspaces";
 
@@ -76,19 +77,20 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
                         <option value="admin">Admin</option>
                         {isOwner ? <option value="owner">Owner</option> : null}
                       </select>
-                      <button
+                      <SubmitButton
+                        pendingText="Saving role..."
                         disabled={roleLocked}
-                        className="h-10 px-4 bg-neutral-800 border border-neutral-700 rounded-xl text-sm font-bold text-white hover:bg-neutral-700 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
+                        className="w-auto h-10 px-4 bg-neutral-800 border border-neutral-700 rounded-xl text-sm font-bold text-white hover:bg-neutral-700 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
                       >
                         Save Role
-                      </button>
+                      </SubmitButton>
                     </form>
                     {canRemove ? (
                       <form action={removeWorkspaceMemberAction}>
                         {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
                         <input type="hidden" name="workspaceId" value={workspace.id} />
                         <input type="hidden" name="memberUserId" value={user.userId} />
-                        <ConfirmSubmitButton confirmation={`Remove ${user.displayName || user.email || "this member"} from ${workspace.name}?`} className="h-10 px-4 rounded-xl border border-rose-500/30 text-sm font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2">
+                        <ConfirmSubmitButton confirmation={`Remove ${user.displayName || user.email || "this member"} from ${workspace.name}?`} pendingText="Removing..." className="h-10 px-4 rounded-xl border border-rose-500/30 text-sm font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-75">
                           <UserMinus size={15} /> Remove
                         </ConfirmSubmitButton>
                       </form>

@@ -24,12 +24,18 @@ export const metadata: Metadata = {
 const themeScript = `
 try {
   var theme = localStorage.getItem("triagedesk-theme") || "dark";
-  var accent = localStorage.getItem("triagedesk-accent") || "emerald";
+  var rawAccent = localStorage.getItem("triagedesk-accent") || "#10b981";
+  var legacy = { emerald: "#10b981", blue: "#3b82f6", orange: "#f97316", red: "#ef4444", violet: "#8b5cf6", yellow: "#eab308" };
+  var accent = legacy[rawAccent] || (/^#[0-9a-f]{6}$/i.test(rawAccent) ? rawAccent : "#10b981");
   document.documentElement.dataset.theme = theme;
-  document.documentElement.dataset.accent = accent;
+  document.documentElement.dataset.accent = "custom";
+  document.documentElement.style.setProperty("--accent", accent);
+  document.documentElement.style.setProperty("--accent-strong", accent);
+  document.documentElement.style.setProperty("--accent-text", accent);
+  document.documentElement.style.setProperty("--accent-border", "color-mix(in srgb, " + accent + " 30%, transparent)");
 } catch (_) {
   document.documentElement.dataset.theme = "dark";
-  document.documentElement.dataset.accent = "emerald";
+  document.documentElement.dataset.accent = "custom";
 }
 `;
 

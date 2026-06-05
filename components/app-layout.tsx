@@ -41,7 +41,6 @@ const previewNavItems = ownerNavItems.filter((item) => item.href !== "/users");
 const requesterNavItems = [
   { href: "/submit", icon: PlusCircle, label: "New Request" },
   { href: "/tickets", icon: Ticket, label: "My Tickets" },
-  { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 const workspaceNavItem = { href: "/onboarding", icon: Building2, label: "Workspace" };
@@ -126,14 +125,14 @@ export function AppLayout({
         <button
           type="button"
           aria-label="Close sidebar"
-          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          className="fixed inset-0 z-[110] bg-black/60 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       ) : null}
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 shrink-0 overscroll-contain bg-[#111111] border-r border-neutral-800 flex flex-col overflow-hidden transition-transform duration-200 md:static md:z-auto md:w-64 md:translate-x-0",
+          "fixed inset-y-0 left-0 z-[120] w-72 shrink-0 overscroll-contain bg-[#111111] border-r border-neutral-800 flex flex-col overflow-hidden transition-transform duration-200 md:static md:z-auto md:w-64 md:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -189,7 +188,7 @@ export function AppLayout({
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-        <header className="h-16 md:h-20 shrink-0 border-b border-neutral-800 flex items-center justify-between px-4 md:px-8 bg-[#0a0a0a]/80 backdrop-blur-md">
+        <header className="relative z-[90] h-16 md:h-20 shrink-0 border-b border-neutral-800 flex items-center justify-between px-4 md:px-8 bg-[#0a0a0a]/80 backdrop-blur-md">
           <button
             type="button"
             aria-label="Open sidebar"
@@ -240,7 +239,7 @@ export function AppLayout({
                 </button>
 
                 {profileOpen ? (
-                  <div role="menu" className="absolute right-0 top-12 z-50 w-56 rounded-xl border border-neutral-800 bg-[#111111] p-2 shadow-2xl">
+                  <div role="menu" className="absolute right-0 top-12 z-[100] w-56 rounded-xl border border-neutral-800 bg-[#111111] p-2 shadow-2xl">
                     <div className="px-3 py-2 border-b border-neutral-800 mb-2">
                       <div className="text-sm font-semibold text-white truncate">{currentUser.displayName}</div>
                       <div className="text-xs text-neutral-500 truncate">{currentUser.email}</div>

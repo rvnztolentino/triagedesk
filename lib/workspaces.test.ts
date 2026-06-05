@@ -181,7 +181,8 @@ describe("workspace foundation", () => {
   it("persists workspace selection and scopes legacy operations to the active workspace", () => {
     expect(authSource).toContain('const ACTIVE_WORKSPACE_COOKIE = "triagedesk_active_workspace"');
     expect(authSource).toContain("return { user, ...access };");
-    expect(workspaceDashboardSource).toContain("href={`/w/${workspace.slug}/activate`}");
+    expect(workspaceDashboardSource).toContain("href={`/w/${workspace.slug}`}");
+    expect(workspaceDashboardSource).not.toContain("href={`/w/${workspace.slug}/activate`}");
     expect(actionsSource).toContain("const request = await createRequest(input, user, workspace.id)");
     expect(actionsSource).toContain("await createRequestAttachment(request.id, upload, workspace.id)");
     expect(actionsSource).toContain("await updateTicket(input, workspace.id)");

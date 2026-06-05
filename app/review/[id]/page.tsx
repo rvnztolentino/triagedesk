@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowLeft, Building2, Check, FileText, LockKeyhole, Pape
 import { approveRequestAction, rejectRequestAction } from "@/app/actions";
 import { AttachmentFileName } from "@/components/attachment-file-name";
 import { DuplicateReviewForm } from "@/components/duplicate-review-form";
+import { SubmitButton } from "@/components/submit-button";
 import { requireWorkspaceAdminContext } from "@/lib/auth";
 import { getRequestBundle, listDepartments, listTickets } from "@/lib/store";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
@@ -198,9 +199,9 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
             </div>
 
             <div className="pt-6 border-t border-neutral-800 flex flex-wrap items-center gap-4">
-              <button className="bg-emerald-500 text-black rounded-xl px-8 py-3 text-sm font-bold hover:bg-emerald-600 transition-all flex items-center gap-2 flex-1 justify-center">
+              <SubmitButton pendingText="Approving..." className="h-auto bg-emerald-500 text-black rounded-xl px-8 py-3 text-sm font-bold hover:bg-emerald-600 transition-all flex items-center gap-2 flex-1 justify-center">
                 {isPreview ? <><LockKeyhole size={18} /> Preview locked</> : <><Check size={18} /> Approve & Dispatch</>}
-              </button>
+              </SubmitButton>
             </div>
             </fieldset>
           </form>
@@ -211,9 +212,9 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
             <form action={rejectRequestAction}>
               {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
               <input type="hidden" name="requestId" value={request.id} />
-              <button disabled={isPreview} className="bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl px-6 py-3 text-sm font-bold hover:bg-rose-500/20 transition-all flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60">
+              <SubmitButton disabled={isPreview} pendingText="Rejecting..." className="w-auto h-auto bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl px-6 py-3 text-sm font-bold hover:bg-rose-500/20 transition-all flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60">
                 <X size={18} /> Reject
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </div>

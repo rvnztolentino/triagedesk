@@ -74,24 +74,24 @@ export function RequestAttachmentsInput() {
 
   return (
     <div className="pt-2">
-      <label htmlFor="attachments" className="text-sm font-semibold text-neutral-300 block mb-2">Attach files (Optional)</label>
-      <label htmlFor="attachments" className="w-full border-2 border-dashed border-neutral-800 bg-[#0a0a0a] rounded-xl p-8 flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-600 transition-all cursor-pointer">
+      <div className="text-sm font-semibold text-neutral-300 block mb-2">Attach files (Optional)</div>
+      <label htmlFor="attachments" className="relative w-full border-2 border-dashed border-neutral-800 bg-[#0a0a0a] rounded-xl p-8 flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-600 transition-all cursor-pointer">
         <div className="w-12 h-12 bg-neutral-900 rounded-full flex items-center justify-center mb-3 border border-neutral-800">
           <Paperclip size={20} className="text-neutral-400" />
         </div>
         <span className="text-sm font-medium">Click to attach files</span>
         <span className="text-xs mt-1 text-neutral-600">JPG, PNG, WebP, PDF, DOCX, TXT, CSV, or JSON up to 10MB each</span>
+        <input
+          ref={inputRef}
+          id="attachments"
+          name="attachments"
+          type="file"
+          multiple
+          accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,.txt,.csv,.json,image/jpeg,image/png,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,application/json"
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          onChange={handleChange}
+        />
       </label>
-      <input
-        ref={inputRef}
-        id="attachments"
-        name="attachments"
-        type="file"
-        multiple
-        accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,.txt,.csv,.json,image/jpeg,image/png,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,application/json"
-        className="sr-only"
-        onChange={handleChange}
-      />
 
       {files.length > 0 ? (
         <div className="mt-4 rounded-xl border border-neutral-800 bg-[#0a0a0a] divide-y divide-neutral-800">

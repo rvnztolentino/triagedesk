@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Copy, Search, TicketPlus } from "lucide-react";
+import { Copy, LoaderCircle, Search, TicketPlus } from "lucide-react";
 import { markDuplicateAction } from "@/app/actions";
+import { SubmitButton } from "@/components/submit-button";
 import type { TicketRecord } from "@/lib/schema";
 
 type DuplicateReviewFormProps = {
@@ -15,6 +16,7 @@ type DuplicateReviewFormProps = {
 
 export function DuplicateReviewForm({ requestId, tickets, isPreview, approveFormId, workspaceSlug }: DuplicateReviewFormProps) {
   const [query, setQuery] = useState("");
+  const [createPending, setCreatePending] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState(tickets[0]?.id ?? "");
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId);
   const normalizedQuery = query.trim().toLowerCase();
@@ -94,20 +96,30 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
           {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
           <input type="hidden" name="requestId" value={requestId} />
           <input type="hidden" name="duplicateOfTicketId" value={selectedTicketId} />
-          <button
+          <SubmitButton
+            pendingText="Marking duplicate..."
             disabled={isPreview || !selectedTicketId}
             className="w-full bg-neutral-800 text-white border border-neutral-700 rounded-xl px-5 py-3 text-sm font-bold hover:bg-neutral-700 transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
           >
             <Copy size={18} /> Mark as duplicate
-          </button>
+          </SubmitButton>
         </form>
         <button
           type="submit"
           form={approveFormId}
-          disabled={isPreview}
+          disabled={isPreview || createPending}
+          onClick={() => setCreatePending(true)}
           className="sm:flex-1 bg-emerald-500 text-black rounded-xl px-5 py-3 text-sm font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <TicketPlus size={18} /> Create new ticket
+          {createPending ? (
+            <>
+              <LoaderCircle size={18} className="animate-spin" /> Creating ticket...
+            </>
+          ) : (
+            <>
+              <TicketPlus size={18} /> Create new ticket
+            </>
+          )}
         </button>
       </div>
     </section>

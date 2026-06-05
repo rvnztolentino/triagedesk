@@ -54,7 +54,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
               return (
                 <WorkspaceOpenLink
                   key={workspace.id}
-                  href={`/w/${workspace.slug}/activate`}
+                  href={`/w/${workspace.slug}`}
                   name={workspace.name}
                   slug={workspace.slug}
                   role={membership.role}
