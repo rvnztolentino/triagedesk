@@ -58,7 +58,7 @@ const workflowSteps = [
     icon: Sparkles,
     step: "02",
     title: "AI triages",
-    desc: "The app saves a needs-review request and stores the Groq triage result.",
+    desc: "AI drafts category, priority, department, summary, and reasoning for admin review.",
   },
   {
     icon: ShieldCheck,
@@ -155,7 +155,7 @@ function SignedOutLandingPage() {
                 <div className="grid grid-cols-1 gap-px bg-neutral-800 md:grid-cols-3">
                   <div className="bg-[#0d0d0d] p-5">
                     <div className="mb-3 flex items-center gap-2 text-xs text-neutral-500">
-                      <Inbox className="h-3.5 w-3.5" /> REQ-1003 - needs-review
+                      <Inbox className="h-3.5 w-3.5" /> REQ-1003 - needs review
                     </div>
                     <div className="rounded-lg border border-neutral-800 bg-[#111111] p-4">
                       <div className="flex items-center gap-2 text-xs text-neutral-500">
@@ -173,7 +173,7 @@ function SignedOutLandingPage() {
 
                   <div className="bg-[#0d0d0d] p-5">
                     <div className="mb-3 flex items-center gap-2 text-xs text-emerald-400">
-                      <Sparkles className="h-3.5 w-3.5" /> TRI-1003 - Groq triage
+                      <Sparkles className="h-3.5 w-3.5" /> AI triage result
                     </div>
                     <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.04] p-4">
                       <div className="flex flex-wrap gap-1.5">

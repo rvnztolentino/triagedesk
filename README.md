@@ -1,18 +1,10 @@
 # TriageDesk
 
-TriageDesk is an AI operations triage system for schools, clinics, offices, and facilities teams. It turns messy internal requests into structured Groq triage suggestions, keeps admins in the review loop, and converts approved requests into tracked tickets.
+TriageDesk is an AI operations triage system for schools, clinics, offices, and facilities teams. It converts messy internal requests into structured AI triage suggestions, keeps admins in the review loop, and turns approved requests into tracked tickets inside workspace-scoped queues.
 
-The product includes Supabase authentication, requester/admin roles, requester-scoped data visibility, admin review flows, request image uploads, ticket history, and activity history.
+The app includes Supabase authentication, workspace creation and invites, requester/admin/owner roles, requester-scoped data visibility, request attachments, AI triage review, ticket history, activity history, and a read-only demo clinic workspace.
 
 ![Dashboard](public/docs/dashboard.png)
-
-## Product Focus
-
-...
-
-## Features
-
-...
 
 ## Tech Stack
 
@@ -20,7 +12,7 @@ The product includes Supabase authentication, requester/admin roles, requester-s
 - React 19
 - TypeScript
 - Tailwind CSS 4
-- Supabase Auth, Database, and Storage
+- Supabase Auth, Database, Storage, and Row Level Security
 - Groq chat completions for AI triage
 - Zod for validation
 - Vitest, ESLint, and TypeScript checks
@@ -52,17 +44,17 @@ http://localhost:3000/auth/callback
 
 6. Run the SQL in `supabase/schema.sql` in the Supabase SQL editor.
 
-7. Confirm the `request-attachments` storage bucket exists. The schema attempts to create it automatically.
+7. Confirm the `request-attachments` Supabase Storage bucket exists. The schema attempts to create it automatically.
 
 8. Create a Groq API key and add it to `.env.local`.
 
-9. Start the app and verify setup:
+9. Start the app:
 
 ```sh
 pnpm dev
 ```
 
-Open:
+10. Verify setup:
 
 ```txt
 http://localhost:3000/api/health
@@ -90,7 +82,9 @@ SUPABASE_REQUEST_ATTACHMENTS_BUCKET=request-attachments
 
 `SUPABASE_SERVICE_ROLE_KEY` is server-only. Do not expose it in client code or commit real keys.
 
-`SEED_ADMIN_EMAIL` bootstraps the protected owner account. Sign up with that exact email and verify it through Supabase email confirmation. Other verified signups become requesters by default.
+`SEED_ADMIN_EMAIL` bootstraps the protected owner account at the user-profile level. Sign up with that exact email and verify it through Supabase email confirmation. New workspaces are owned by the user who creates them.
+
+`SUPABASE_REQUEST_ATTACHMENTS_BUCKET` stores request attachments privately. The code also accepts the older `SUPABASE_REQUEST_IMAGES_BUCKET` name as a fallback.
 
 ## How to Run
 
@@ -117,19 +111,25 @@ pnpm test
 
 ## Useful Routes
 
+- `/` - marketing page for signed-out users, dashboard for an active workspace
 - `/login` - sign in
-- `/preview` - read-only sample workspace
 - `/signup` - create an account
-- `/submit` - submit an operations request
-- `/review` - admin triage review queue
-- `/tickets` - view requester or admin ticket lists
-- `/users` - workspace user management
-- `/settings` - system status and appearance settings
+- `/onboarding` - create, join, or open workspaces
+- `/join/[workspaceSlug]` - join a workspace with an invite code
+- `/w/[workspaceSlug]` - workspace dashboard
+- `/w/[workspaceSlug]/requests/new` - submit an operations request
+- `/w/[workspaceSlug]/review` - admin triage review queue
+- `/w/[workspaceSlug]/tickets` - requester or admin ticket list
+- `/w/[workspaceSlug]/users` - workspace member management
+- `/w/[workspaceSlug]/settings` - departments, system status, and appearance settings
 - `/api/health` - setup health check
+
+Legacy unscoped routes such as `/tickets`, `/review`, `/users`, `/settings`, and `/submit` use the active workspace cookie when available.
 
 ## Notes
 
 - Runtime request submission requires `AI_PROVIDER=groq` and `GROQ_API_KEY`.
 - Supabase email confirmation must stay enabled; the app rejects immediate signup sessions.
-- Request attachments support common image and document files up to 10 MB each.
-- The `request-attachments` bucket is private; attachment links are served through workspace access checks.
+- Request attachments support JPG, PNG, WebP, PDF, DOCX, TXT, CSV, and JSON files up to 10 MB each.
+- The `request-attachments` bucket is private; attachment downloads are served through workspace access checks.
+- The `demo-clinic` workspace is a read-only preview. Create a workspace to submit requests or mutate tickets.

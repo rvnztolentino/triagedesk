@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UserPlus } from "lucide-react";
+import { ArrowLeft, UserPlus } from "lucide-react";
 import { signUpAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
 import { SubmitButton } from "@/components/submit-button";
@@ -42,6 +42,12 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           <p className="text-sm text-neutral-500 mt-6 text-center">
             Already have an account? <Link href={params.next ? `/login?next=${encodeURIComponent(params.next)}` : "/login"} className="text-emerald-400 hover:text-emerald-300 font-medium">Sign in</Link>
           </p>
+        </div>
+
+        <div className="mt-6 text-center">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-white transition-colors">
+            <ArrowLeft size={13} /> Back to landing page
+          </Link>
         </div>
       </div>
     </main>
