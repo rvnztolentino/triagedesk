@@ -262,7 +262,7 @@ export function AppLayout({
               <span className="text-[11px] font-medium text-amber-300">Preview — read-only</span>
             </div>
           ) : null}
-          <div className="text-[11px] text-neutral-600 text-center">
+          <div className="px-3 py-2 text-center text-xs uppercase text-neutral-600 font-semibold tracking-wider">
             Operational helpdesk
           </div>
         </div>

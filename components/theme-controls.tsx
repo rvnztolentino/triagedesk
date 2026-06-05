@@ -106,7 +106,8 @@ function applyAccentVariables(accent: string) {
   const hsv = hexToHsv(accent);
   root.dataset.accent = "custom";
   root.style.setProperty("--accent", accent);
-  root.style.setProperty("--accent-strong", hsvToHex(hsv.h, Math.min(1, hsv.s + 0.08), Math.max(0.62, hsv.v - 0.1)));
+  const saturationBoost = hsv.s < 0.04 ? 0 : 0.08 * Math.min(1, (hsv.s - 0.04) / 0.06);
+  root.style.setProperty("--accent-strong", hsvToHex(hsv.h, Math.min(1, hsv.s + saturationBoost), Math.max(0.62, hsv.v - 0.1)));
   root.style.setProperty("--accent-text", accent);
   root.style.setProperty("--accent-border", `color-mix(in srgb, ${accent} 30%, transparent)`);
 }
