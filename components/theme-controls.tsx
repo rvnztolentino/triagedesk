@@ -112,26 +112,73 @@ function applyAccentVariables(accent: string) {
   root.style.setProperty("--accent-border", `color-mix(in srgb, ${accent} 30%, transparent)`);
 }
 
+let cachedTheme: ThemeMode | null = null;
+let cachedAccent: string | null = null;
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+let accentDragReleaseFrame: number | null = null;
+
+function beginAccentDrag() {
+  if (accentDragReleaseFrame !== null) {
+    window.cancelAnimationFrame(accentDragReleaseFrame);
+    accentDragReleaseFrame = null;
+  }
+  document.documentElement.dataset.accentDragging = "true";
+}
+
+function endAccentDrag() {
+  if (accentDragReleaseFrame !== null) {
+    window.cancelAnimationFrame(accentDragReleaseFrame);
+  }
+
+  accentDragReleaseFrame = window.requestAnimationFrame(() => {
+    accentDragReleaseFrame = window.requestAnimationFrame(() => {
+      delete document.documentElement.dataset.accentDragging;
+      accentDragReleaseFrame = null;
+    });
+  });
+}
+
 function applyPreferences(theme: ThemeMode, accent: string) {
   const normalizedAccent = normalizeAccent(accent);
+
+  cachedTheme = theme;
+  cachedAccent = normalizedAccent;
+
   document.documentElement.dataset.theme = theme;
   applyAccentVariables(normalizedAccent);
-  localStorage.setItem(THEME_KEY, theme);
-  localStorage.setItem(ACCENT_KEY, normalizedAccent);
+
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+      localStorage.setItem(ACCENT_KEY, normalizedAccent);
+    } catch (e) {
+      console.error(e);
+    }
+  }, 100);
+
   window.dispatchEvent(new CustomEvent(PREFERENCE_EVENT, { detail: { theme, accent: normalizedAccent } }));
 }
 
 function preferenceSnapshot() {
   if (typeof window === "undefined") return `dark:${DEFAULT_ACCENT}`;
-  const theme = localStorage.getItem(THEME_KEY);
-  const accent = localStorage.getItem(ACCENT_KEY);
-  return `${isThemeMode(theme) ? theme : "dark"}:${normalizeAccent(accent)}`;
+  if (cachedTheme === null || cachedAccent === null) {
+    const theme = localStorage.getItem(THEME_KEY);
+    const accent = localStorage.getItem(ACCENT_KEY);
+    cachedTheme = isThemeMode(theme) ? theme : "dark";
+    cachedAccent = normalizeAccent(accent);
+  }
+  return `${cachedTheme}:${cachedAccent}`;
 }
 
 function subscribePreferences(callback: () => void) {
   if (typeof window === "undefined") return () => {};
   function handleStorage(event: StorageEvent) {
-    if (event.key === THEME_KEY || event.key === ACCENT_KEY) callback();
+    if (event.key === THEME_KEY || event.key === ACCENT_KEY) {
+      cachedTheme = null;
+      cachedAccent = null;
+      callback();
+    }
   }
   window.addEventListener(PREFERENCE_EVENT, callback);
   window.addEventListener("storage", handleStorage);
@@ -294,11 +341,18 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
               aria-valuetext={accent}
               onPointerDown={(event) => {
                 event.currentTarget.setPointerCapture(event.pointerId);
+                beginAccentDrag();
                 updateFromColorField(event);
               }}
               onPointerMove={(event) => {
                 if (event.buttons === 1) updateFromColorField(event);
               }}
+              onPointerUp={(event) => {
+                updateFromColorField(event);
+                endAccentDrag();
+              }}
+              onPointerCancel={endAccentDrag}
+              onLostPointerCapture={endAccentDrag}
               className="relative h-48 cursor-crosshair overflow-hidden rounded-xl border border-neutral-800 shadow-inner"
               style={{
                 background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hueColor})`,
@@ -322,11 +376,18 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
                 aria-valuemax={359}
                 onPointerDown={(event) => {
                   event.currentTarget.setPointerCapture(event.pointerId);
+                  beginAccentDrag();
                   updateFromHueTrack(event);
                 }}
                 onPointerMove={(event) => {
                   if (event.buttons === 1) updateFromHueTrack(event);
                 }}
+                onPointerUp={(event) => {
+                  updateFromHueTrack(event);
+                  endAccentDrag();
+                }}
+                onPointerCancel={endAccentDrag}
+                onLostPointerCapture={endAccentDrag}
                 className="relative h-7 flex-1 cursor-pointer rounded-full border border-neutral-800"
                 style={{ background: "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)" }}
               >

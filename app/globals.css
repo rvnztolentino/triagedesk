@@ -46,6 +46,13 @@ textarea {
   --accent-glow: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
+html[data-accent-dragging="true"] *,
+html[data-accent-dragging="true"] *::before,
+html[data-accent-dragging="true"] *::after {
+  transition-duration: 0ms !important;
+  transition-delay: 0ms !important;
+}
+
 html[data-accent="blue"] {
   --accent: #3b82f6;
   --accent-strong: #2563eb;
@@ -340,4 +347,3 @@ html[data-theme="light"] .shadow-black\/20 {
 html[data-theme="light"] .bg-emerald-500\/\[0\.04\] {
   background-color: color-mix(in srgb, var(--accent) 4%, transparent);
 }
-

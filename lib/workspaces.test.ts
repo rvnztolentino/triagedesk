@@ -27,6 +27,7 @@ const ticketsSource = readFileSync(new URL("../app/tickets/page.tsx", import.met
 const workspaceDashboardSource = readFileSync(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8");
 const workspaceOpenLinkSource = readFileSync(new URL("../components/workspace-open-link.tsx", import.meta.url), "utf8");
 const appLayoutSource = readFileSync(new URL("../components/app-layout.tsx", import.meta.url), "utf8");
+const themeControlsSource = readFileSync(new URL("../components/theme-controls.tsx", import.meta.url), "utf8");
 const settingsSource = readFileSync(new URL("../app/settings/page.tsx", import.meta.url), "utf8");
 const globalStylesSource = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 
@@ -211,5 +212,14 @@ describe("workspace foundation", () => {
     expect(globalStylesSource).toContain("color: #92400e;");
     expect(globalStylesSource).toContain('html[data-theme="light"][data-accent="yellow"]');
     expect(globalStylesSource).toContain("--accent-text: #a16207;");
+  });
+
+  it("disables transition lag while dragging custom accent colors", () => {
+    expect(themeControlsSource).toContain("document.documentElement.dataset.accentDragging = \"true\"");
+    expect(themeControlsSource).toContain("delete document.documentElement.dataset.accentDragging");
+    expect(themeControlsSource).toContain("onLostPointerCapture={endAccentDrag}");
+    expect(globalStylesSource).toContain('html[data-accent-dragging="true"] *');
+    expect(globalStylesSource).toContain("transition-duration: 0ms !important;");
+    expect(globalStylesSource).toContain("transition-delay: 0ms !important;");
   });
 });
