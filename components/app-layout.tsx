@@ -119,6 +119,14 @@ export function AppLayout({
     );
   }
 
+  if (!currentUser && pathname === "/") {
+    return (
+      <div className="bg-[#0a0a0a] text-neutral-200 min-h-screen w-full">
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="bg-[#0a0a0a] text-neutral-200 h-dvh w-full flex overflow-hidden font-sans">
       {sidebarOpen ? (

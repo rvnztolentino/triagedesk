@@ -3,14 +3,23 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
+  Building2,
   CheckCircle2,
   Clock,
   Database,
+  History,
   Inbox,
+  Layers,
+  ListChecks,
+  ShieldCheck,
   Sparkles,
   Ticket,
+  Users,
+  Wrench,
 } from "lucide-react";
-import { requireWorkspaceAdminContext } from "@/lib/auth";
+import { BrandIcon } from "@/components/brand-icon";
+import { HomeHeader } from "@/components/home-header";
+import { getCurrentUser, requireWorkspaceAdminContext } from "@/lib/auth";
 import { getDashboardData } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
@@ -36,6 +45,334 @@ function setupRequirementLabel(value: string) {
     "AI_PROVIDER=groq": "AI triage provider",
   };
   return labels[value] ?? value;
+}
+
+const workflowSteps = [
+  {
+    icon: Inbox,
+    step: "01",
+    title: "Submit request",
+    desc: "A requester describes the issue, location, contact, urgency, and optional attachments.",
+  },
+  {
+    icon: Sparkles,
+    step: "02",
+    title: "AI triages",
+    desc: "The app saves a needs-review request and stores the Groq triage result.",
+  },
+  {
+    icon: ShieldCheck,
+    step: "03",
+    title: "Admin reviews",
+    desc: "An admin edits title, priority, department, and summary, then approves, rejects, or marks duplicate.",
+  },
+  {
+    icon: Ticket,
+    step: "04",
+    title: "Track resolution",
+    desc: "Approval creates a TRG ticket with status new; later updates add notes and activity.",
+  },
+];
+
+const highlights = [
+  { icon: Sparkles, title: "AI-assisted triage", desc: "Suggested category, priority, and action notes on every request." },
+  { icon: Building2, title: "Workspace-scoped data", desc: "Strict isolation per workspace so staff only see what they should." },
+  { icon: Users, title: "Requester & admin roles", desc: "Requester, admin, and owner roles with clean permission boundaries." },
+  { icon: ListChecks, title: "Review queue", desc: "A focused queue for admins to approve, edit, or reject AI suggestions." },
+  { icon: Ticket, title: "Ticket lifecycle", desc: "Open, in-progress, blocked, resolved, with assignees and timestamps." },
+  { icon: History, title: "Activity history", desc: "An audit-friendly trail of who did what, when, and why." },
+];
+
+function StartNowLink({ className = "" }: { className?: string }) {
+  return (
+    <Link
+      href="/signup?next=/onboarding"
+      className={cn(
+        "inline-flex items-center justify-center gap-2 rounded-md bg-emerald-500 px-5 py-2.5 text-sm font-bold text-black transition-colors hover:bg-emerald-600",
+        className
+      )}
+    >
+      Start now
+      <ArrowRight className="h-4 w-4" />
+    </Link>
+  );
+}
+
+function SignedOutLandingPage() {
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-neutral-200 antialiased selection:bg-emerald-500/30">
+      <HomeHeader />
+
+      <main>
+        <section className="relative overflow-hidden">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 -top-40 h-[520px] bg-[radial-gradient(ellipse_at_top,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_60%)]"
+          />
+          <div className="relative mx-auto max-w-6xl px-5 pt-28 pb-16 sm:pt-32 sm:pb-24">
+            <div className="mx-auto max-w-3xl text-center">
+              <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-[#111111] px-3 py-1 text-xs text-neutral-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Built for operations teams
+              </div>
+              <h1 className="mt-6 text-4xl font-semibold tracking-tight text-white sm:text-5xl md:text-6xl">
+                Turn messy internal requests into <span className="text-emerald-400">review-ready tickets</span>
+              </h1>
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-neutral-400 sm:text-lg">
+                TriageDesk uses AI to read internal requests from staff, suggest a category, priority, and next action, then keeps
+                an admin in the loop before anything becomes a tracked ticket.
+              </p>
+
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <StartNowLink className="w-full sm:w-auto" />
+                <Link
+                  href="/join/demo-clinic?code=DEMO-CLINIC-2026"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-neutral-800 bg-[#111111] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-neutral-800 sm:w-auto"
+                >
+                  View demo
+                </Link>
+              </div>
+            </div>
+
+            <div className="relative mx-auto mt-16 max-w-5xl">
+              <div
+                aria-hidden
+                className="absolute -inset-x-6 -inset-y-4 rounded-3xl bg-gradient-to-b from-emerald-500/10 to-transparent blur-2xl"
+              />
+              <div className="relative overflow-hidden rounded-2xl border border-neutral-800 bg-[#0d0d0d] shadow-2xl shadow-black/40">
+                <div className="flex items-center gap-2 border-b border-neutral-800 bg-[#111111] px-4 py-2.5">
+                  <div className="flex gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-neutral-700" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-neutral-700" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-neutral-700" />
+                  </div>
+                  <span className="ml-3 text-xs text-neutral-500">triagedesk.app - Demo Clinic review queue</span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-px bg-neutral-800 md:grid-cols-3">
+                  <div className="bg-[#0d0d0d] p-5">
+                    <div className="mb-3 flex items-center gap-2 text-xs text-neutral-500">
+                      <Inbox className="h-3.5 w-3.5" /> REQ-1003 - needs-review
+                    </div>
+                    <div className="rounded-lg border border-neutral-800 bg-[#111111] p-4">
+                      <div className="flex items-center gap-2 text-xs text-neutral-500">
+                        <span className="h-5 w-5 rounded-full bg-neutral-800 text-center text-[10px] leading-5 text-neutral-400">N</span>
+                        Nurse Station - Recovery Wing, Room 304
+                      </div>
+                      <p className="mt-3 text-sm text-neutral-200">
+                        Aircon in Recovery Room 304 is leaking again. Floor is wet near the outlet.
+                      </p>
+                      <div className="mt-3 flex gap-1.5">
+                        <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-400">Urgency: wet floor near patients and staff</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#0d0d0d] p-5">
+                    <div className="mb-3 flex items-center gap-2 text-xs text-emerald-400">
+                      <Sparkles className="h-3.5 w-3.5" /> TRI-1003 - Groq triage
+                    </div>
+                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/[0.04] p-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-300">Maintenance</span>
+                        <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">High priority</span>
+                      </div>
+                      <ul className="mt-3 space-y-1.5 text-xs text-neutral-300">
+                        {[
+                          "Suggested title: HVAC issue at Recovery Wing, Room 304",
+                          "Summary: recurring AC leak creates a wet floor hazard",
+                          "Similar ticket found: TRG-1038",
+                        ].map((item) => (
+                          <li key={item} className="flex gap-2">
+                            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-none text-emerald-400" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#0d0d0d] p-5">
+                    <div className="mb-3 flex items-center gap-2 text-xs text-neutral-500">
+                      <ShieldCheck className="h-3.5 w-3.5" /> Admin review
+                    </div>
+                    <div className="rounded-lg border border-neutral-800 bg-[#111111] p-4">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-neutral-400">Editable review form</span>
+                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-2 py-0.5 font-bold text-amber-300">
+                          <AlertTriangle className="h-3 w-3" /> Human decision
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm text-white">Approve & Dispatch, Mark duplicate, or Reject</p>
+                      <div className="mt-3 flex items-center justify-between gap-3 text-xs text-neutral-500">
+                        <span className="inline-flex items-center gap-1">
+                          <Wrench className="h-3.5 w-3.5" /> If approved: new TRG ticket
+                        </span>
+                        <span>Duplicate option: TRG-1038</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 rounded-md border border-neutral-800 bg-[#0a0a0a] px-3 py-2 text-[11px] text-neutral-500">
+                      <History className="h-3.5 w-3.5" />
+                      Activity records request saved and AI triage completed before review.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="workflow" className="border-t border-neutral-800">
+          <div className="mx-auto max-w-6xl px-5 py-20">
+            <div className="max-w-2xl">
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">How it works</p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">From inbox chaos to tracked resolution</h2>
+            </div>
+
+            <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {workflowSteps.map(({ icon: Icon, step, title, desc }) => (
+                <div
+                  key={step}
+                  className="group rounded-xl border border-neutral-800 bg-[#111111] p-5 transition-colors hover:border-neutral-700 hover:bg-neutral-800"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-emerald-500/10 ring-1 ring-emerald-500/20">
+                      <Icon className="h-4 w-4 text-emerald-400" />
+                    </div>
+                    <span className="font-mono text-xs text-neutral-600">{step}</span>
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold text-white">{title}</h3>
+                  <p className="mt-1.5 text-sm text-neutral-400">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="highlights" className="border-t border-neutral-800 bg-[#111111]">
+          <div className="mx-auto max-w-6xl px-5 py-20">
+            <div className="max-w-2xl">
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Product highlights</p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Everything an operations team needs</h2>
+            </div>
+
+            <div className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {highlights.map(({ icon: Icon, title, desc }) => (
+                <div key={title} className="rounded-xl border border-neutral-800 bg-[#0d0d0d] p-5 transition-colors hover:border-neutral-700 hover:bg-neutral-800">
+                  <Icon className="h-4 w-4 text-emerald-400" />
+                  <h3 className="mt-3 text-sm font-semibold text-white">{title}</h3>
+                  <p className="mt-1.5 text-sm text-neutral-400">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="preview" className="border-t border-neutral-800">
+          <div className="mx-auto max-w-6xl px-5 py-20">
+            <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:items-center">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">A real example</p>
+                <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">One request, fully triaged in seconds</h2>
+                <p className="mt-4 text-neutral-400">
+                  See how a vague staff message becomes a needs-review item with editable triage fields before any ticket is created.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link
+                    href="/join/demo-clinic?code=DEMO-CLINIC-2026"
+                    className="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-[#111111] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-neutral-800"
+                  >
+                    View live demo
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="rounded-xl border border-neutral-800 bg-[#111111] p-4">
+                  <div className="flex items-center gap-2 text-xs text-neutral-500">
+                    <Inbox className="h-3.5 w-3.5" /> REQ-1003 - Nurse Station
+                  </div>
+                  <p className="mt-2 text-sm text-neutral-200">&quot;Aircon in Recovery Room 304 is leaking again. Floor is wet near the outlet.&quot;</p>
+                </div>
+
+                <div className="flex justify-center text-neutral-700">
+                  <ArrowRight className="h-4 w-4 rotate-90" />
+                </div>
+
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.04] p-4">
+                  <div className="flex items-center gap-2 text-xs text-emerald-400">
+                    <Sparkles className="h-3.5 w-3.5" /> AI suggestion
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-300">Maintenance</span>
+                    <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">
+                      <AlertTriangle className="mr-1 inline h-3 w-3" />
+                      High priority
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-neutral-300">
+                    Summary: inspect Recovery Room 304 because the AC leak is recurring and creating a wet floor hazard.
+                  </p>
+                </div>
+
+                <div className="flex justify-center text-neutral-700">
+                  <ArrowRight className="h-4 w-4 rotate-90" />
+                </div>
+
+                <div className="rounded-xl border border-neutral-800 bg-[#111111] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs text-neutral-500">
+                      <Ticket className="h-3.5 w-3.5" /> Review outcome
+                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-300">
+                      <CheckCircle2 className="h-3 w-3" /> Admin controlled
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-white">Approve into a new TRG ticket, reject, or mark duplicate of TRG-1038.</p>
+                  <div className="mt-2 flex items-center justify-between gap-3 text-xs text-neutral-500">
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" /> Activity history
+                    </span>
+                    <span>Ticket updates add notes and status changes</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-neutral-800">
+          <div className="mx-auto max-w-4xl px-5 py-24 text-center">
+            <Layers className="mx-auto h-6 w-6 text-emerald-400" />
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Bring order to your internal requests</h2>
+            <p className="mx-auto mt-3 max-w-xl text-neutral-400">
+              Start triaging in minutes. Keep your team in control with human review on every AI suggestion.
+            </p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <StartNowLink className="w-full sm:w-auto" />
+              <Link
+                href="/login"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-neutral-800 bg-[#111111] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-neutral-800 sm:w-auto"
+              >
+                Sign in
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-neutral-800">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-8 text-xs text-neutral-500 sm:flex-row">
+          <div className="flex items-center gap-2">
+            <BrandIcon size={28} className="rounded-md" />
+            <span>TriageDesk</span>
+          </div>
+          <span>© {new Date().getFullYear()} TriageDesk. All rights reserved.</span>
+        </div>
+      </footer>
+    </div>
+  );
 }
 
 export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string } = {}) {
@@ -305,5 +642,7 @@ export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string 
 }
 
 export default async function Dashboard() {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return <SignedOutLandingPage />;
   return <DashboardView />;
 }
