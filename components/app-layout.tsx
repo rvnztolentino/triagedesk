@@ -64,6 +64,10 @@ function isNewRequestPath(path: string) {
   return path === "/submit" || path === "/requests/new" || /^\/w\/[^/]+\/requests\/new$/.test(path);
 }
 
+function isAuthPath(path: string) {
+  return path === "/login" || path.startsWith("/signup") || path.startsWith("/auth");
+}
+
 export function AppLayout({
   children,
   currentUser,
@@ -77,7 +81,7 @@ export function AppLayout({
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
   const [pendingPath, setPendingPath] = React.useState<string | null>(null);
-  const isAuthPage = pathname === "/login" || pathname.startsWith("/signup") || pathname.startsWith("/auth");
+  const isAuthPage = isAuthPath(pathname);
   const operationalNavItems = activeWorkspace?.isPreview
     ? previewNavItems
     : activeWorkspace?.role === "owner"
@@ -374,7 +378,7 @@ export function AppLayout({
 
         {/* Main content */}
         <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 md:p-8" aria-busy={pendingPath ? true : undefined}>
-          {pendingPath ? (isNewRequestPath(pendingPath) ? <PageLoadingSpinner /> : <PageLoadingSkeleton />) : children}
+          {pendingPath ? (isNewRequestPath(pendingPath) || isAuthPath(pendingPath) ? <PageLoadingSpinner /> : <PageLoadingSkeleton />) : children}
         </main>
       </div>
     </div>
