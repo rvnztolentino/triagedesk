@@ -88,7 +88,7 @@ function StartNowLink({ className = "" }: { className?: string }) {
     <Link
       href="/signup?next=/onboarding"
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-md bg-emerald-500 px-5 py-2.5 text-sm font-bold text-black transition-colors hover:bg-emerald-600",
+        "inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-bold text-black transition-colors hover:bg-emerald-600",
         className
       )}
     >
@@ -127,7 +127,7 @@ function SignedOutLandingPage() {
                 <StartNowLink className="w-full sm:w-auto" />
                 <Link
                   href="/join/demo-clinic?code=DEMO-CLINIC-2026"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-neutral-800 bg-[#111111] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-neutral-800 sm:w-auto"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-neutral-800 bg-[#111111] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-neutral-800 sm:w-auto"
                 >
                   View demo
                 </Link>
@@ -137,7 +137,10 @@ function SignedOutLandingPage() {
             <div className="relative mx-auto mt-16 max-w-5xl">
               <div
                 aria-hidden
-                className="absolute -inset-x-6 -inset-y-4 rounded-3xl bg-gradient-to-b from-emerald-500/10 to-transparent blur-2xl"
+                className="absolute -inset-x-6 -inset-y-4 rounded-3xl blur-2xl"
+                style={{
+                  backgroundImage: "linear-gradient(to bottom, color-mix(in srgb, var(--accent) 10%, transparent), transparent)",
+                }}
               />
               <div className="relative overflow-hidden rounded-2xl border border-neutral-800 bg-[#0d0d0d] shadow-2xl shadow-black/40">
                 <div className="flex items-center gap-2 border-b border-neutral-800 bg-[#111111] px-4 py-2.5">
@@ -280,7 +283,7 @@ function SignedOutLandingPage() {
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link
                     href="/join/demo-clinic?code=DEMO-CLINIC-2026"
-                    className="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-[#111111] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-neutral-800"
+                    className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-[#111111] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-neutral-800"
                   >
                     View live demo
                     <ArrowRight className="h-4 w-4" />
@@ -353,7 +356,7 @@ function SignedOutLandingPage() {
               <StartNowLink className="w-full sm:w-auto" />
               <Link
                 href="/login"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-neutral-800 bg-[#111111] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-neutral-800 sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-neutral-800 bg-[#111111] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-neutral-800 sm:w-auto"
               >
                 Sign in
               </Link>
@@ -395,7 +398,7 @@ export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string 
           <p className="text-neutral-500 mt-1">AI operations triage with review workflows, ticket tracking, and resolution analytics.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Link href={href("/submit")} className="h-10 px-4 bg-emerald-500 hover:bg-emerald-600 text-black rounded-lg text-sm font-bold transition-colors inline-flex items-center justify-center">
+          <Link href={href("/submit")} className="h-10 px-4 bg-emerald-500 hover:bg-emerald-600 text-black rounded-full text-sm font-bold transition-colors inline-flex items-center justify-center">
             + New Request
           </Link>
         </div>
@@ -415,7 +418,7 @@ export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string 
                 activity, and AI triage require the setup in <span className="font-mono text-neutral-200">.codex/setup.md</span>.
               </p>
             </div>
-            <Link href="/api/health" className="px-4 py-2 bg-[#0a0a0a] border border-neutral-800 rounded-lg text-sm font-medium text-neutral-300 hover:bg-neutral-800 transition-colors text-center">
+            <Link href="/api/health" className="px-4 py-2 bg-[#0a0a0a] border border-neutral-800 rounded-full text-sm font-medium text-neutral-300 hover:bg-neutral-800 transition-colors text-center">
               Check Health
             </Link>
           </div>
@@ -535,10 +538,10 @@ export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string 
                 </div>
 
                 <div className="flex gap-3 pt-2 mt-auto">
-                  <Link href={href(`/review/${featured.request.id}`)} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-bold rounded-xl text-xs transition-colors text-center">
+                  <Link href={href(`/review/${featured.request.id}`)} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-bold rounded-full text-xs transition-colors text-center">
                     APPROVE & ASSIGN
                   </Link>
-                  <Link href={href(`/review/${featured.request.id}`)} className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold rounded-xl text-xs transition-colors border border-neutral-700">
+                  <Link href={href(`/review/${featured.request.id}`)} className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold rounded-full text-xs transition-colors border border-neutral-700">
                     Edit
                   </Link>
                 </div>

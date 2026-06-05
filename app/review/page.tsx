@@ -52,11 +52,11 @@ export async function ReviewQueueView({ workspaceSlug }: { workspaceSlug?: strin
                 {isSetupRequired ? "Database and AI triage configuration must be completed." : "New submissions will appear here after AI triage."}
               </p>
               {isSetupRequired ? (
-                <Link href="/api/health" className="mt-5 inline-flex bg-neutral-800 text-white border border-neutral-700 rounded-xl px-5 py-2 text-sm font-bold">
+                <Link href="/api/health" className="mt-5 inline-flex bg-neutral-800 text-white border border-neutral-700 rounded-full px-5 py-2 text-sm font-bold">
                   Check Health
                 </Link>
               ) : (
-                <Link href={href("/submit")} className="mt-5 inline-flex bg-emerald-500 text-black rounded-xl px-5 py-2 text-sm font-bold">
+                <Link href={href("/submit")} className="mt-5 inline-flex bg-emerald-500 text-black rounded-full px-5 py-2 text-sm font-bold">
                   Submit Request
                 </Link>
               )}

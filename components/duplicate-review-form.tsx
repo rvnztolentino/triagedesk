@@ -99,7 +99,7 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
           <SubmitButton
             pendingText="Marking duplicate..."
             disabled={isPreview || !selectedTicketId}
-            className="w-full bg-neutral-800 text-white border border-neutral-700 rounded-xl px-5 py-3 text-sm font-bold hover:bg-neutral-700 transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
+            className="w-full bg-neutral-800 text-white border border-neutral-700 rounded-full px-5 py-3 text-sm font-bold hover:bg-neutral-700 transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
           >
             <Copy size={18} /> Mark as duplicate
           </SubmitButton>

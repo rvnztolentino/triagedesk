@@ -103,7 +103,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
                 <p className="text-sm text-neutral-500">No close matches found.</p>
               ) : (
                 similarTickets.map((ticket) => (
-                  <Link key={ticket.id} href={href(`/tickets/${ticket.id}`)} className="block bg-[#0a0a0a] border border-neutral-800 p-3 rounded-xl hover:border-neutral-700">
+                  <Link key={ticket.id} href={href(`/tickets/${ticket.id}`)} className="block bg-[#0a0a0a] border border-neutral-800 p-3 rounded-full hover:border-neutral-700">
                     <div className="text-sm font-semibold text-white">{ticket.title}</div>
                     <div className="text-xs text-neutral-500 mt-1">{ticket.id} &middot; {ticket.reason}</div>
                   </Link>
@@ -199,7 +199,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
             </div>
 
             <div className="pt-6 border-t border-neutral-800 flex flex-wrap items-center gap-4">
-              <SubmitButton pendingText="Approving..." className="h-auto bg-emerald-500 text-black rounded-xl px-8 py-3 text-sm font-bold hover:bg-emerald-600 transition-all flex items-center gap-2 flex-1 justify-center">
+              <SubmitButton pendingText="Approving..." className="h-auto bg-emerald-500 text-black rounded-full px-8 py-3 text-sm font-bold hover:bg-emerald-600 transition-all flex items-center gap-2 flex-1 justify-center">
                 {isPreview ? <><LockKeyhole size={18} /> Preview locked</> : <><Check size={18} /> Approve & Dispatch</>}
               </SubmitButton>
             </div>
@@ -212,7 +212,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
             <form action={rejectRequestAction}>
               {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
               <input type="hidden" name="requestId" value={request.id} />
-              <SubmitButton disabled={isPreview} pendingText="Rejecting..." className="w-auto h-auto bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl px-6 py-3 text-sm font-bold hover:bg-rose-500/20 transition-all flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60">
+              <SubmitButton disabled={isPreview} pendingText="Rejecting..." className="w-auto h-auto bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-full px-6 py-3 text-sm font-bold hover:bg-rose-500/20 transition-all flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60">
                 <X size={18} /> Reject
               </SubmitButton>
             </form>

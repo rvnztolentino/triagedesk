@@ -36,7 +36,7 @@ export default async function JoinWorkspacePage({
           <ShieldCheck size={28} className="text-emerald-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white font-space">You already belong to {workspace.name}</h1>
           <p className="text-sm text-neutral-500 mt-2">Open the workspace instead of joining it again.</p>
-          <Link href={`/w/${workspace.slug}`} className="mt-6 inline-flex h-10 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black text-sm font-bold items-center justify-center">
+          <Link href={`/w/${workspace.slug}`} className="mt-6 inline-flex h-10 px-5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-black text-sm font-bold items-center justify-center">
             Open workspace
           </Link>
         </div>

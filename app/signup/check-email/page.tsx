@@ -16,7 +16,7 @@ export default async function CheckEmailPage({ searchParams }: { searchParams: P
           <p className="text-sm text-neutral-500 mt-3 leading-relaxed">
             We sent a verification link to <span className="text-neutral-300">{email}</span>. Confirm that email before signing in or using TriageDesk.
           </p>
-          <Link href="/login" className="mt-6 inline-flex h-10 px-5 bg-emerald-500 hover:bg-emerald-600 text-black rounded-xl text-sm font-bold items-center justify-center">
+          <Link href="/login" className="mt-6 inline-flex h-10 px-5 bg-emerald-500 hover:bg-emerald-600 text-black rounded-full text-sm font-bold items-center justify-center">
             Back to sign in
           </Link>
         </div>

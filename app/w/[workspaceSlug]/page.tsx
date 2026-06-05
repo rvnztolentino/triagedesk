@@ -66,7 +66,7 @@ export default async function WorkspaceLandingPage({
             </span>
             <form action={activateWorkspaceAction}>
               <input type="hidden" name="workspaceSlug" value={workspace.slug} />
-              <SubmitButton pendingText={isPreview ? "Opening preview..." : "Opening operations..."} className="w-auto h-10 px-4 rounded-lg">
+              <SubmitButton pendingText={isPreview ? "Opening preview..." : "Opening operations..."} className="w-auto h-10 px-4 rounded-full">
                 {isPreview ? "Open preview" : "Open operations"} <ArrowRight size={15} />
               </SubmitButton>
             </form>
@@ -162,7 +162,7 @@ export default async function WorkspaceLandingPage({
                               <input type="hidden" name="workspaceId" value={workspace.id} />
                               <input type="hidden" name="workspaceSlug" value={workspace.slug} />
                               <input type="hidden" name="inviteId" value={invite.id} />
-                              <button className="h-9 px-3 rounded-lg border border-rose-500/30 text-xs font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2">
+                              <button className="h-9 px-3 rounded-full border border-rose-500/30 text-xs font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2">
                                 <Trash2 size={14} /> Revoke
                               </button>
                             </form>
@@ -172,7 +172,7 @@ export default async function WorkspaceLandingPage({
                               <input type="hidden" name="workspaceId" value={workspace.id} />
                               <input type="hidden" name="workspaceSlug" value={workspace.slug} />
                               <input type="hidden" name="inviteId" value={invite.id} />
-                              <ConfirmSubmitButton confirmation={`Remove invite ${invite.code}? This cannot be undone.`} className="h-9 px-3 rounded-lg border border-neutral-700 text-xs font-bold text-neutral-300 hover:bg-neutral-800 inline-flex items-center gap-2">
+                              <ConfirmSubmitButton confirmation={`Remove invite ${invite.code}? This cannot be undone.`} className="h-9 px-3 rounded-full border border-neutral-700 text-xs font-bold text-neutral-300 hover:bg-neutral-800 inline-flex items-center gap-2">
                                 <Trash2 size={14} /> Remove
                               </ConfirmSubmitButton>
                             </form>
@@ -208,7 +208,7 @@ export default async function WorkspaceLandingPage({
           <form action={leaveWorkspaceAction} className="mt-5">
             <input type="hidden" name="workspaceId" value={workspace.id} />
             <input type="hidden" name="workspaceSlug" value={workspace.slug} />
-            <ConfirmSubmitButton confirmation={`Leave ${workspace.name}? You will need a new valid invite to join again.`} className="h-11 px-4 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 sm:w-auto border border-neutral-700 bg-neutral-800 text-white hover:bg-neutral-700">
+            <ConfirmSubmitButton confirmation={`Leave ${workspace.name}? You will need a new valid invite to join again.`} className="h-11 px-4 rounded-full text-sm font-bold inline-flex items-center justify-center gap-2 sm:w-auto border border-neutral-700 bg-neutral-800 text-white hover:bg-neutral-700">
               <LogOut size={16} /> Leave workspace
             </ConfirmSubmitButton>
           </form>

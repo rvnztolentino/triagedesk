@@ -36,7 +36,7 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
             <Link href={href("/tickets")} className="text-sm font-medium text-neutral-500 hover:text-white px-4 py-2">
               My Tickets
             </Link>
-            <Link href="/api/health" className="bg-neutral-800 text-white rounded-xl px-6 py-3 text-sm font-bold hover:bg-neutral-700 transition-all border border-neutral-700">
+            <Link href="/api/health" className="bg-neutral-800 text-white rounded-full px-6 py-3 text-sm font-bold hover:bg-neutral-700 transition-all border border-neutral-700">
               Check Health
             </Link>
           </div>

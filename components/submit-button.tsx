@@ -24,7 +24,7 @@ export function SubmitButton({
       type="submit"
       disabled={disabled || pending}
       className={cn(
-        "w-full h-11 bg-emerald-500 hover:bg-emerald-600 text-black rounded-xl text-sm font-bold transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed",
+        "w-full h-11 bg-emerald-500 hover:bg-emerald-600 text-black rounded-full text-sm font-bold transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed",
         className
       )}
       {...props}

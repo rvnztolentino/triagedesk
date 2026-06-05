@@ -110,7 +110,7 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
               </div>
 
               <div className="flex justify-end">
-                <button className="bg-emerald-500 text-black px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-600 inline-flex items-center gap-2">
+                <button className="bg-emerald-500 text-black px-5 py-2.5 rounded-full text-sm font-bold hover:bg-emerald-600 inline-flex items-center gap-2">
                   {isPreview ? <><LockKeyhole size={15} /> Preview locked</> : "Save Update"}
                 </button>
               </div>
@@ -188,7 +188,7 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
                 <p className="text-sm text-neutral-500">No close matches found.</p>
               ) : (
                 similarTickets.map((similar) => (
-                  <Link key={similar.id} href={href(`/tickets/${similar.id}`)} className="block bg-[#0a0a0a] border border-neutral-800 p-3 rounded-xl hover:border-neutral-700">
+                  <Link key={similar.id} href={href(`/tickets/${similar.id}`)} className="block bg-[#0a0a0a] border border-neutral-800 p-3 rounded-full hover:border-neutral-700">
                     <div className="text-sm font-semibold text-white">{similar.title}</div>
                     <div className="text-xs text-neutral-500 mt-1">{similar.id} &middot; {similar.reason}</div>
                   </Link>

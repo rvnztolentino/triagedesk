@@ -37,8 +37,8 @@ textarea {
 }
 
 :root {
-  --accent: #10b981;
-  --accent-strong: #059669;
+  --accent: #7b787a;
+  --accent-strong: #6f6c6e;
   --accent-text: var(--accent);
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   --accent-muted: color-mix(in srgb, var(--accent) 80%, transparent);
@@ -245,3 +245,99 @@ html[data-theme="light"] .placeholder\:text-neutral-700::placeholder,
 html[data-theme="light"] .placeholder-neutral-600::placeholder {
   color: #94a3b8;
 }
+
+/* ── App layout dropdown animation ── */
+
+@keyframes app-dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.app-dropdown-enter {
+  animation: app-dropdown-in 200ms ease-out both;
+}
+
+/* ── Light mode: sidebar & header refinements ── */
+
+html[data-theme="light"] .hover\:bg-neutral-800\/60:hover {
+  background-color: #e5e7eb;
+}
+
+html[data-theme="light"] .hover\:bg-neutral-800\/50:hover {
+  background-color: #f1f5f9;
+}
+
+html[data-theme="light"] .bg-neutral-800\/60 {
+  background-color: #e5e7eb;
+}
+
+html[data-theme="light"] .border-neutral-800\/60 {
+  border-color: #e2e8f0;
+}
+
+html[data-theme="light"] .border-neutral-800\/40 {
+  border-color: #f1f5f9;
+}
+
+html[data-theme="light"] .hover\:border-neutral-700:hover {
+  border-color: #cbd5e1;
+}
+
+html[data-theme="light"] .bg-emerald-500\/15 {
+  background-color: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+html[data-theme="light"] .bg-emerald-500\/10 {
+  background-color: var(--accent-soft);
+}
+
+html[data-theme="light"] .border-emerald-500\/30 {
+  border-color: var(--accent-border);
+}
+
+html[data-theme="light"] .border-emerald-500\/20 {
+  border-color: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+html[data-theme="light"] .bg-emerald-400 {
+  background-color: var(--accent);
+}
+
+html[data-theme="light"] .hover\:bg-neutral-900:hover {
+  background-color: #f8fafc;
+}
+
+html[data-theme="light"] .shadow-black\/20 {
+  --tw-shadow-color: rgba(0, 0, 0, 0.08);
+}
+
+/* ── Welcome/Home page accent overrides ── */
+
+.from-emerald-500\/10 {
+  --tw-gradient-from: color-mix(in srgb, var(--accent) 10%, transparent) var(--tw-gradient-from-position);
+  --tw-gradient-to: color-mix(in srgb, var(--accent) 0%, transparent) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+}
+
+.bg-emerald-500\/\[0\.04\] {
+  background-color: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+
+.ring-emerald-500\/20 {
+  --tw-ring-color: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.selection\:bg-emerald-500\/30::selection {
+  background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+html[data-theme="light"] .bg-emerald-500\/\[0\.04\] {
+  background-color: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+

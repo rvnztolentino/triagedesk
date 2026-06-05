@@ -68,7 +68,7 @@ export function AuthHashCallback() {
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-white font-space">Email confirmation failed</h1>
               <p className="text-sm text-neutral-500 mt-3 leading-relaxed">{error}</p>
-              <Link href="/login" className="mt-6 inline-flex h-10 px-5 bg-emerald-500 hover:bg-emerald-600 text-black rounded-xl text-sm font-bold items-center justify-center">
+              <Link href="/login" className="mt-6 inline-flex h-10 px-5 bg-emerald-500 hover:bg-emerald-600 text-black rounded-full text-sm font-bold items-center justify-center">
                 Back to sign in
               </Link>
             </>

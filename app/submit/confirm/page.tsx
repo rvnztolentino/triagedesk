@@ -115,7 +115,7 @@ export async function SubmitConfirmView({ searchParams, requestId, workspaceSlug
           <Link href={isAdmin ? href("/") : href("/tickets")} className="text-sm font-medium text-neutral-500 hover:text-white flex items-center gap-2 transition-colors">
             <Home size={16} /> {isAdmin ? "Dashboard" : "My Tickets"}
           </Link>
-          <Link href={isAdmin ? href(`/review/${request.id}`) : href("/submit")} className="bg-neutral-800 text-white rounded-xl px-6 py-3 text-sm font-bold hover:bg-neutral-700 transition-all flex items-center gap-2 border border-neutral-700">
+          <Link href={isAdmin ? href(`/review/${request.id}`) : href("/submit")} className="bg-neutral-800 text-white rounded-full px-6 py-3 text-sm font-bold hover:bg-neutral-700 transition-all flex items-center gap-2 border border-neutral-700">
             {isAdmin ? "Review Request" : "Submit Another"} <ArrowRight size={16} />
           </Link>
         </div>

@@ -136,7 +136,7 @@ async function TicketTable({
                     </span>
                   </td>
                   <td className="p-6 text-right">
-                    <Link href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="inline-flex p-2 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors">
+                    <Link href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="inline-flex p-2 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded-full transition-colors">
                       <ArrowUpRight size={18} />
                     </Link>
                   </td>

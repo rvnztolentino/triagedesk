@@ -110,7 +110,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
                   <form action={deleteWorkspaceDepartmentAction}>
                     {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
                     <input type="hidden" name="id" value={department.id} />
-                    <button className="h-9 px-3 rounded-lg border border-rose-500/30 text-xs font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2">
+                    <button className="h-9 px-3 rounded-full border border-rose-500/30 text-xs font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2">
                       <Trash2 size={14} /> Remove
                     </button>
                   </form>
@@ -134,7 +134,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
                 <label htmlFor="department-description" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Description</label>
                 <input id="department-description" name="description" placeholder="Vehicle and shuttle requests" className="h-11 w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-emerald-500 placeholder:text-neutral-700" />
               </div>
-              <button className="h-11 px-5 bg-neutral-800 border border-neutral-700 rounded-xl text-sm font-bold text-white hover:bg-neutral-700">
+              <button className="h-11 px-5 bg-neutral-800 border border-neutral-700 rounded-full text-sm font-bold text-white hover:bg-neutral-700">
                 Add
               </button>
             </form>

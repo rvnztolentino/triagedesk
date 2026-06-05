@@ -7,18 +7,10 @@ import { cn } from "@/lib/utils";
 const THEME_KEY = "triagedesk-theme";
 const ACCENT_KEY = "triagedesk-accent";
 const PREFERENCE_EVENT = "triagedesk-preferences";
-const DEFAULT_ACCENT = "#10b981";
+const DEFAULT_ACCENT = "#7b787a";
 
 export type ThemeMode = "dark" | "light";
 
-const presetAccents = [
-  { label: "Green", value: "#10b981" },
-  { label: "Blue", value: "#3b82f6" },
-  { label: "Orange", value: "#f97316" },
-  { label: "Red", value: "#ef4444" },
-  { label: "Violet", value: "#8b5cf6" },
-  { label: "Yellow", value: "#eab308" },
-] as const;
 
 const legacyAccentMap: Record<string, string> = {
   emerald: "#10b981",
@@ -382,24 +374,17 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
             </div>
           </div>
 
-          <div className="mt-3 flex gap-2">
-            {presetAccents.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                title={option.label}
-                aria-label={option.label}
-                onClick={() => {
-                  setHexDraft(null);
-                  applyPreferences(theme, option.value);
-                }}
-                className={cn(
-                  "h-8 flex-1 rounded-full border transition-transform hover:scale-105",
-                  accent === option.value ? "border-white shadow-[0_0_0_3px_var(--accent-soft)]" : "border-white/20"
-                )}
-                style={{ backgroundColor: option.value }}
-              />
-            ))}
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => {
+                setHexDraft(null);
+                applyPreferences(theme, DEFAULT_ACCENT);
+              }}
+              className="w-full h-9 rounded-xl border border-neutral-800 bg-[#0a0a0a] hover:bg-neutral-800/60 text-xs font-medium text-neutral-400 hover:text-white transition-all duration-200"
+            >
+              Set to default
+            </button>
           </div>
         </div>
       ) : null}
