@@ -109,6 +109,35 @@ pnpm typecheck
 pnpm test
 ```
 
+## GitHub Actions CI
+
+This repository includes `.github/workflows/ci.yml`.
+
+The workflow runs on pull requests and pushes to `main`:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+The CI build uses placeholder Supabase and Groq environment values because these checks only need to compile and test the app. Do not put real service keys directly in the workflow file.
+
+Manual setup:
+
+1. Push this repository to GitHub.
+2. Confirm the default branch is named `main`, or update `.github/workflows/ci.yml` if your default branch has a different name.
+3. Open the repository in GitHub and go to `Actions`.
+4. If GitHub prompts you to enable workflows, click `I understand my workflows, go ahead and enable them`.
+5. Open a pull request or push to `main`.
+6. Confirm the `CI / Lint, typecheck, test, and build` check passes.
+
+Optional production secrets:
+
+If you later add deployment or integration tests that need real services, add values in GitHub under `Settings` -> `Secrets and variables` -> `Actions`. Keep `SUPABASE_SERVICE_ROLE_KEY` as a secret, never a plain repository variable.
+
 ## Useful Routes
 
 - `/` - marketing page for signed-out users, dashboard for an active workspace
