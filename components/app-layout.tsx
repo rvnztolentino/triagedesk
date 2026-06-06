@@ -68,6 +68,10 @@ function isAuthPath(path: string) {
   return path === "/login" || path.startsWith("/signup") || path.startsWith("/auth");
 }
 
+function isPublicPath(path: string) {
+  return path === "/" || isAuthPath(path);
+}
+
 export function AppLayout({
   children,
   currentUser,
@@ -138,18 +142,36 @@ export function AppLayout({
     }
   }
 
+  function handlePublicNavigate(event: React.MouseEvent<HTMLDivElement>) {
+    if (event.defaultPrevented || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+
+    const target = event.target instanceof Element ? event.target : null;
+    const link = target?.closest<HTMLAnchorElement>("a[href]");
+    if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
+
+    const href = link.getAttribute("href");
+    if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+
+    const nextUrl = new URL(href, window.location.origin);
+    if (nextUrl.origin !== window.location.origin) return;
+
+    if (nextUrl.pathname !== pathname && isPublicPath(nextUrl.pathname)) {
+      setPendingPath(nextUrl.pathname);
+    }
+  }
+
   if (isAuthPage) {
     return (
-      <div className="bg-[#0a0a0a] text-neutral-200 min-h-screen w-full">
-        {children}
+      <div className="bg-[#0a0a0a] text-neutral-200 min-h-screen w-full" onClickCapture={handlePublicNavigate}>
+        {pendingPath ? <PageLoadingSpinner fullScreen /> : children}
       </div>
     );
   }
 
   if (!currentUser && pathname === "/") {
     return (
-      <div className="bg-[#0a0a0a] text-neutral-200 min-h-screen w-full">
-        {children}
+      <div className="bg-[#0a0a0a] text-neutral-200 min-h-screen w-full" onClickCapture={handlePublicNavigate}>
+        {pendingPath ? <PageLoadingSpinner fullScreen /> : children}
       </div>
     );
   }
