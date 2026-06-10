@@ -50,7 +50,7 @@ export function HomeHeader() {
       aria-label="Home navigation"
     >
       <div className="flex items-center justify-between gap-4 px-5 py-3 sm:px-6 sm:py-3.5 lg:px-8">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5 transition-opacity hover:opacity-80" aria-label="TriageDesk home">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="TriageDesk home">
           <BrandIcon size={28} className="rounded-md" />
           <span className="text-base font-semibold tracking-tight text-white lg:text-lg">TriageDesk</span>
         </Link>
@@ -70,7 +70,7 @@ export function HomeHeader() {
           </Link>
           <Link
             href="/signup?next=/onboarding"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-emerald-500 px-5 text-sm font-bold text-black transition-colors hover:bg-emerald-600"
+            className="inline-flex h-10 transform-gpu items-center justify-center gap-2 rounded-full bg-emerald-500 px-5 text-sm font-bold text-black shadow-[0_10px_26px_-18px_var(--accent)] transition-all duration-200 ease-out hover:scale-[1.035] hover:bg-emerald-600 hover:shadow-[0_18px_34px_-16px_var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111] active:scale-[1.01]"
           >
             Start now
             <ArrowRight className="h-4 w-4" />
@@ -122,7 +122,7 @@ export function HomeHeader() {
           </Link>
           <Link
             href="/signup?next=/onboarding"
-            className="mt-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 text-sm font-bold text-black transition-colors hover:bg-emerald-600"
+            className="mt-2 inline-flex h-12 w-full transform-gpu items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 text-sm font-bold text-black shadow-[0_10px_26px_-18px_var(--accent)] transition-all duration-200 ease-out hover:scale-[1.025] hover:bg-emerald-600 hover:shadow-[0_18px_34px_-16px_var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111] active:scale-[1.005]"
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Start now

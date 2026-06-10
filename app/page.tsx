@@ -88,7 +88,7 @@ function StartNowLink({ className = "" }: { className?: string }) {
     <Link
       href="/signup?next=/onboarding"
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-bold text-black transition-colors hover:bg-emerald-600",
+        "inline-flex transform-gpu items-center justify-center gap-2 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-bold text-black shadow-[0_10px_26px_-18px_var(--accent)] transition-all duration-200 ease-out hover:scale-[1.035] hover:bg-emerald-600 hover:shadow-[0_18px_34px_-16px_var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] active:scale-[1.01]",
         className
       )}
     >
