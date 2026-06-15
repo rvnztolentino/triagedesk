@@ -85,6 +85,9 @@ export function AppLayout({
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
   const [pendingPath, setPendingPath] = React.useState<string | null>(null);
+  const [isScrolled, setIsScrolled] = React.useState(false);
+  const mainRef = React.useRef<HTMLDivElement>(null);
+
   const isAuthPage = isAuthPath(pathname);
   const operationalNavItems = activeWorkspace?.isPreview
     ? previewNavItems
@@ -108,6 +111,26 @@ export function AppLayout({
     const timeout = window.setTimeout(() => setPendingPath(null), 10000);
     return () => window.clearTimeout(timeout);
   }, [pendingPath]);
+
+  React.useEffect(() => {
+    const mainEl = mainRef.current;
+    if (!mainEl) return;
+
+    const handleScroll = () => {
+      setIsScrolled(mainEl.scrollTop > 0);
+    };
+
+    mainEl.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      mainEl.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    setIsScrolled(false);
+  }, [pathname]);
 
   React.useEffect(() => {
     if (!profileOpen) return;
@@ -295,9 +318,16 @@ export function AppLayout({
       </aside>
 
       {/* ── Main column ── */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
         {/* Header */}
-        <header className="relative z-[90] shrink-0 flex items-center justify-between gap-4 px-4 md:px-6 h-16">
+        <header
+          className={cn(
+            "absolute top-0 left-0 right-0 z-[90] shrink-0 flex items-center justify-between gap-4 px-4 md:px-6 h-16 transition-all duration-200",
+            isScrolled
+              ? "bg-[#0a0a0a]/80 backdrop-blur-md border-b border-neutral-800/40"
+              : "bg-transparent border-b border-transparent"
+          )}
+        >
           {/* Left: mobile hamburger + spacer */}
           <div className="flex items-center gap-3">
             <button
@@ -385,21 +415,23 @@ export function AppLayout({
           </div>
         </header>
 
-        {/* Preview banner */}
-        {activeWorkspace?.isPreview ? (
-          <div className="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-4 py-3 md:px-6">
-            <div className="flex items-start gap-2 text-sm">
-              <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
-              <p className="text-amber-100">
-                <span className="font-bold text-amber-300">Preview locked.</span>{" "}
-                Demo Clinic is read-only. Explore the sample workflow, then create your own workspace to use actions.
-              </p>
-            </div>
-          </div>
-        ) : null}
-
         {/* Main content */}
-        <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 md:p-8" aria-busy={pendingPath ? true : undefined}>
+        <main
+          ref={mainRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4 pt-20 md:px-8 md:pb-8 md:pt-24"
+          aria-busy={pendingPath ? true : undefined}
+        >
+          {activeWorkspace?.isPreview ? (
+            <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+              <div className="flex items-start gap-2 text-sm">
+                <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
+                <p className="text-amber-100">
+                  <span className="font-bold text-amber-300">Preview locked.</span>{" "}
+                  Demo Clinic is read-only. Explore the sample workflow, then create your own workspace to use actions.
+                </p>
+              </div>
+            </div>
+          ) : null}
           {pendingPath ? (isNewRequestPath(pendingPath) || isAuthPath(pendingPath) ? <PageLoadingSpinner /> : <PageLoadingSkeleton />) : children}
         </main>
       </div>

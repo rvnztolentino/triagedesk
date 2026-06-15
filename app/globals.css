@@ -292,6 +292,11 @@ html[data-theme="light"] .border-neutral-800\/40 {
   border-color: #f1f5f9;
 }
 
+html[data-theme="light"] header.bg-\[\#0a0a0a\]\/80 {
+  background-color: rgba(248, 250, 252, 0.8);
+  border-color: rgba(226, 232, 240, 0.8);
+}
+
 html[data-theme="light"] .hover\:border-neutral-700:hover {
   border-color: #cbd5e1;
 }
