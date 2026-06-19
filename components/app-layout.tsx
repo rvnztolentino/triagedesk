@@ -126,7 +126,7 @@ export function AppLayout({
     return () => {
       mainEl.removeEventListener("scroll", handleScroll);
     };
-  }, []);
+  }, [pathname]);
 
   React.useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });
