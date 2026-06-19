@@ -1,0 +1,28 @@
+import * as Sentry from "@sentry/nextjs";
+
+const SENSITIVE_KEYS = ["authorization", "cookie", "token", "password", "email", "prompt", "description", "file", "name"];
+
+function hasSentryDsn() {
+  return Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN);
+}
+
+function scrubRecord(input: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(input).map(([key, value]) => {
+      const lowerKey = key.toLowerCase();
+      if (SENSITIVE_KEYS.some((sensitiveKey) => lowerKey.includes(sensitiveKey))) {
+        return [key, "[redacted]"];
+      }
+      return [key, value];
+    })
+  );
+}
+
+export function captureOperationalError(error: unknown, context: Record<string, unknown> = {}) {
+  if (!hasSentryDsn()) return;
+
+  Sentry.withScope((scope) => {
+    scope.setContext("triagedesk", scrubRecord(context));
+    Sentry.captureException(error);
+  });
+}

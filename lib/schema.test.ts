@@ -13,6 +13,25 @@ describe("schemas", () => {
     expect(result.success).toBe(false);
   });
 
+  it("caps request text fields to protect storage and AI context", () => {
+    expect(
+      requestSubmissionSchema.safeParse({
+        description: "A".repeat(1201),
+        location: "Front desk",
+        contactName: "",
+        urgencyNote: "",
+      }).success
+    ).toBe(false);
+    expect(
+      requestSubmissionSchema.safeParse({
+        description: "The ceiling is leaking above the intake counter.",
+        location: "A".repeat(161),
+        contactName: "",
+        urgencyNote: "",
+      }).success
+    ).toBe(false);
+  });
+
   it("accepts valid rules triage output", () => {
     const result = triageDraftSchema.safeParse({
       source: "rules",

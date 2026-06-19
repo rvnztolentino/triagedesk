@@ -129,7 +129,7 @@ export function AppLayout({
   }, []);
 
   React.useEffect(() => {
-    setIsScrolled(false);
+    mainRef.current?.scrollTo({ top: 0 });
   }, [pathname]);
 
   React.useEffect(() => {

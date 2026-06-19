@@ -373,6 +373,21 @@ grant select, insert, update, delete on table
   request_attachments
 to service_role;
 
+create table if not exists security_rate_limits (
+  scope text not null,
+  key_hash text not null,
+  window_start timestamptz not null default now(),
+  usage_count bigint not null default 0 check (usage_count >= 0),
+  updated_at timestamptz not null default now(),
+  primary key (scope, key_hash)
+);
+
+create index if not exists security_rate_limits_updated_at_idx on security_rate_limits (updated_at);
+
+alter table security_rate_limits enable row level security;
+
+grant select, insert, update, delete on table security_rate_limits to service_role;
+
 create or replace function is_workspace_member(target_workspace_id uuid)
 returns boolean
 language sql
@@ -618,6 +633,80 @@ revoke all on function can_view_workspace_request(uuid, text) from public;
 revoke all on function can_view_workspace_ticket(uuid, text) from public;
 grant execute on function can_view_workspace_request(uuid, text) to authenticated, service_role;
 grant execute on function can_view_workspace_ticket(uuid, text) to authenticated, service_role;
+
+create or replace function check_rate_limit(
+  target_scope text,
+  target_key_hash text,
+  target_limit integer,
+  target_window_seconds integer,
+  target_increment bigint default 1
+)
+returns table (allowed boolean, remaining bigint, reset_at timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_record security_rate_limits%rowtype;
+begin
+  if nullif(trim(target_scope), '') is null or nullif(trim(target_key_hash), '') is null then
+    raise exception 'Rate limit scope and key are required.';
+  end if;
+
+  if target_limit < 1 or target_window_seconds < 1 or target_increment < 1 then
+    raise exception 'Rate limit configuration is invalid.';
+  end if;
+
+  delete from security_rate_limits
+  where updated_at < now() - interval '7 days';
+
+  loop
+    select *
+    into current_record
+    from security_rate_limits
+    where scope = target_scope
+      and key_hash = target_key_hash
+    for update;
+
+    if not found then
+      begin
+        insert into security_rate_limits (scope, key_hash, window_start, usage_count, updated_at)
+        values (target_scope, target_key_hash, now(), target_increment, now())
+        returning * into current_record;
+        exit;
+      exception
+        when unique_violation then
+          -- Another request created the row first; retry and lock it.
+      end;
+    elsif current_record.window_start + make_interval(secs => target_window_seconds) <= now() then
+      update security_rate_limits
+      set window_start = now(),
+          usage_count = target_increment,
+          updated_at = now()
+      where scope = target_scope
+        and key_hash = target_key_hash
+      returning * into current_record;
+      exit;
+    else
+      update security_rate_limits
+      set usage_count = usage_count + target_increment,
+          updated_at = now()
+      where scope = target_scope
+        and key_hash = target_key_hash
+      returning * into current_record;
+      exit;
+    end if;
+  end loop;
+
+  reset_at := current_record.window_start + make_interval(secs => target_window_seconds);
+  allowed := current_record.usage_count <= target_limit;
+  remaining := greatest(target_limit::bigint - current_record.usage_count, 0);
+  return next;
+end;
+$$;
+
+revoke all on function check_rate_limit(text, text, integer, integer, bigint) from public;
+grant execute on function check_rate_limit(text, text, integer, integer, bigint) to service_role;
 
 alter table departments enable row level security;
 alter table user_profiles enable row level security;

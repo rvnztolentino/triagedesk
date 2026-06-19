@@ -49,6 +49,65 @@ describe("rulesTriage", () => {
     ).rejects.toThrow("AI triage is not configured");
   });
 
+  it("falls back to rules triage when Groq times out or fails", async () => {
+    vi.stubEnv("AI_PROVIDER", "groq");
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network timeout"));
+
+    const result = await runTriage({
+      description: "Aircon in Room 304 is leaking again. Floor is wet near the outlet.",
+      location: "Building A, Room 304",
+      contactName: "",
+      urgencyNote: "",
+      similarTickets: [],
+    });
+
+    expect(result.source).toBe("rules");
+    expect(result.department).toBe("maintenance");
+    fetchMock.mockRestore();
+  });
+
+  it("filters model-returned similar ticket ids to provided candidates", async () => {
+    vi.stubEnv("AI_PROVIDER", "groq");
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  title: "Water leak at Room 304",
+                  category: "Maintenance",
+                  priority: "high",
+                  department: "maintenance",
+                  summary: "Maintenance should inspect the leak.",
+                  priorityReasoning: "Wet floors can create a safety risk.",
+                  similarTicketIds: ["TRG-1", "TRG-secret"],
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 }
+      )
+    );
+
+    const result = await runTriage({
+      description: "Aircon in Room 304 is leaking again. Floor is wet near the outlet.",
+      location: "Building A, Room 304",
+      contactName: "",
+      urgencyNote: "",
+      similarTickets: [
+        { id: "TRG-1", title: "Leak", status: "open", priority: "high", department: "maintenance", reason: "same room" },
+      ],
+    });
+
+    expect(result.source).toBe("groq");
+    expect(result.similarTicketIds).toEqual(["TRG-1"]);
+    fetchMock.mockRestore();
+  });
+
   it("keeps runtime AI context minimal", () => {
     const payload = buildTriagePromptPayload({
       description: "A".repeat(1400),

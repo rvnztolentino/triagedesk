@@ -17,10 +17,10 @@ export const userRoleSchema = z.enum(userRoles);
 export const assignableUserRoleSchema = z.enum(assignableUserRoles);
 
 export const requestSubmissionSchema = z.object({
-  description: z.string().trim().min(10, "Describe the issue in at least 10 characters."),
-  location: z.string().trim().min(2, "Location is required."),
-  contactName: z.string().trim().default(""),
-  urgencyNote: z.string().trim().default(""),
+  description: z.string().trim().min(10, "Describe the issue in at least 10 characters.").max(1200, "Keep the description under 1,200 characters."),
+  location: z.string().trim().min(2, "Location is required.").max(160, "Keep the location under 160 characters."),
+  contactName: z.string().trim().max(80, "Keep the contact name under 80 characters.").default(""),
+  urgencyNote: z.string().trim().max(400, "Keep the urgency note under 400 characters.").default(""),
 });
 
 export const triageDraftSchema = z.object({
@@ -36,18 +36,18 @@ export const triageDraftSchema = z.object({
 
 export const reviewApprovalSchema = z.object({
   requestId: z.string().min(1),
-  title: z.string().trim().min(3),
+  title: z.string().trim().min(3).max(160),
   priority: prioritySchema,
   department: departmentSchema,
-  summary: z.string().trim().min(10),
+  summary: z.string().trim().min(10).max(1200),
 });
 
 export const ticketUpdateSchema = z.object({
   ticketId: z.string().min(1),
   status: ticketStatusSchema,
   department: departmentSchema,
-  resolutionNotes: z.string().trim().default(""),
-  note: z.string().trim().default(""),
+  resolutionNotes: z.string().trim().max(4000).default(""),
+  note: z.string().trim().max(2000).default(""),
 });
 
 export const authCredentialsSchema = z.object({

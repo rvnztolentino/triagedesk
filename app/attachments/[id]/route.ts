@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOperationalWorkspace } from "@/lib/auth";
 import { getVisibleRequestAttachment } from "@/lib/store";
 import { requireSupabaseAdminClient } from "@/lib/supabase";
+import { enforceRateLimit, RateLimitError } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,20 @@ function attachmentBucket() {
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { user, workspace, membership } = await requireOperationalWorkspace();
+  try {
+    await enforceRateLimit({
+      scope: "attachment_download_user_hour",
+      keyParts: [user.id, workspace.id],
+      limit: 60,
+      windowSeconds: 60 * 60,
+      message: "Attachment download limit reached. Try again later.",
+    });
+  } catch (error) {
+    if (error instanceof RateLimitError) {
+      return new NextResponse(error.message, { status: 429 });
+    }
+    throw error;
+  }
   const { id } = await params;
   const isAdmin = membership.role === "admin" || membership.role === "owner";
   const attachment = await getVisibleRequestAttachment(id, isAdmin ? undefined : user.id, workspace.id);
