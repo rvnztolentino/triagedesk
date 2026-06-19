@@ -20,6 +20,8 @@ import {
 } from "@/lib/auth";
 import { requestReceivedHref, scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { requireSupabaseAdminClient } from "@/lib/supabase";
+import { captureOperationalError } from "@/lib/monitoring";
+import { assertSameOriginRequest, enforceRateLimit, requestIdentity } from "@/lib/security";
 import { runTriage } from "@/lib/triage";
 import {
   approveRequest,
@@ -64,6 +66,61 @@ function redirectWithError(path: string, error: unknown) {
   redirect(`${path}${path.includes("?") ? "&" : "?"}error=${encodeURIComponent(message)}`);
 }
 
+async function requireTrustedActionRequest() {
+  await assertSameOriginRequest();
+}
+
+async function enforceAuthAttemptLimit(scope: "signin" | "signup", email?: string) {
+  const identity = await requestIdentity();
+  await enforceRateLimit({
+    scope: `auth_${scope}`,
+    keyParts: scope === "signin" ? [identity.ip, email || "unknown-email"] : [identity.ip],
+    limit: scope === "signin" ? 5 : 3,
+    windowSeconds: scope === "signin" ? 10 * 60 : 60 * 60,
+    message: "Too many authentication attempts. Try again later.",
+  });
+}
+
+async function enforceInviteJoinLimit(workspaceSlug: string) {
+  const identity = await requestIdentity();
+  await enforceRateLimit({
+    scope: "invite_join",
+    keyParts: [identity.ip, workspaceSlug || "any-workspace"],
+    limit: 10,
+    windowSeconds: 60 * 60,
+    message: "Too many invite attempts. Try again later.",
+  });
+}
+
+async function enforceRequestSubmissionLimits(userId: string, workspaceId: string, attachments: File[]) {
+  await enforceRateLimit({
+    scope: "request_submit_user_hour",
+    keyParts: [userId],
+    limit: 5,
+    windowSeconds: 60 * 60,
+    message: "Request submission limit reached. Try again later.",
+  });
+  await enforceRateLimit({
+    scope: "request_submit_workspace_day",
+    keyParts: [workspaceId],
+    limit: 30,
+    windowSeconds: 24 * 60 * 60,
+    message: "Workspace daily request limit reached. Try again tomorrow.",
+  });
+
+  const uploadBytes = attachments.reduce((total, file) => total + file.size, 0);
+  if (uploadBytes > 0) {
+    await enforceRateLimit({
+      scope: "workspace_upload_bytes_day",
+      keyParts: [workspaceId],
+      limit: MAX_WORKSPACE_UPLOAD_BYTES_PER_DAY,
+      windowSeconds: 24 * 60 * 60,
+      incrementBy: uploadBytes,
+      message: "Workspace daily upload limit reached. Try again tomorrow.",
+    });
+  }
+}
+
 async function requireActionWorkspace(formData: FormData) {
   const workspaceSlug = formText(formData, "workspaceSlug");
   if (!workspaceSlug) return { access: await requireOperationalWorkspace(), workspaceSlug: undefined };
@@ -93,8 +150,9 @@ function fileExtension(name: string) {
   return match?.[0] ?? "";
 }
 
-const MAX_REQUEST_ATTACHMENTS = 5;
+const MAX_REQUEST_ATTACHMENTS = 3;
 const MAX_REQUEST_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const MAX_WORKSPACE_UPLOAD_BYTES_PER_DAY = 100 * 1024 * 1024;
 const allowedAttachmentTypes = new Map([
   [".jpg", "image/jpeg"],
   [".jpeg", "image/jpeg"],
@@ -116,7 +174,51 @@ function sanitizeFileName(name: string) {
   return normalized || "attachment";
 }
 
-function validateRequestAttachments(formData: FormData) {
+function hasPrefix(bytes: Uint8Array, prefix: number[]) {
+  return prefix.every((value, index) => bytes[index] === value);
+}
+
+function isUtf8(bytes: Uint8Array) {
+  try {
+    new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function validateAttachmentSignature(file: File, extension: string) {
+  const bytes = new Uint8Array(await file.slice(0, Math.min(file.size, 4096)).arrayBuffer());
+  const ascii = new TextDecoder("latin1").decode(bytes);
+
+  const valid = extension === ".jpg" || extension === ".jpeg"
+    ? hasPrefix(bytes, [0xff, 0xd8, 0xff])
+    : extension === ".png"
+      ? hasPrefix(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      : extension === ".webp"
+        ? ascii.startsWith("RIFF") && ascii.slice(8, 12) === "WEBP"
+        : extension === ".pdf"
+          ? ascii.startsWith("%PDF-")
+          : extension === ".docx"
+            ? hasPrefix(bytes, [0x50, 0x4b, 0x03, 0x04])
+            : [".txt", ".csv", ".json"].includes(extension)
+              ? isUtf8(bytes)
+              : false;
+
+  if (!valid) {
+    throw new Error(`${file.name} does not match its declared file type.`);
+  }
+
+  if (extension === ".json") {
+    try {
+      JSON.parse(await file.text());
+    } catch {
+      throw new Error(`${file.name} must contain valid JSON.`);
+    }
+  }
+}
+
+async function validateRequestAttachments(formData: FormData) {
   const files = formData.getAll("attachments").filter((value): value is File => value instanceof File && value.size > 0);
   if (files.length > MAX_REQUEST_ATTACHMENTS) {
     throw new Error(`Attach up to ${MAX_REQUEST_ATTACHMENTS} files per request.`);
@@ -134,9 +236,21 @@ function validateRequestAttachments(formData: FormData) {
     if (file.size > MAX_REQUEST_ATTACHMENT_BYTES) {
       throw new Error(`${file.name} must be 10 MB or smaller.`);
     }
+    await validateAttachmentSignature(file, extension);
   }
 
   return files;
+}
+
+async function removeUploadedAttachments(paths: string[]) {
+  if (paths.length === 0) return;
+
+  try {
+    const client = requireSupabaseAdminClient();
+    await client.storage.from(requestAttachmentBucket()).remove(paths);
+  } catch (error) {
+    captureOperationalError(error, { area: "attachment_cleanup" });
+  }
 }
 
 async function saveRequestAttachment(file: File, workspaceId: string, requestId: string) {
@@ -163,6 +277,7 @@ async function saveRequestAttachment(file: File, workspaceId: string, requestId:
 }
 
 export async function submitRequestAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const { access: { user, workspace }, workspaceSlug } = await requireActionWorkspace(formData);
   assertWorkspaceMutable(workspace.id);
   const input = requestSubmissionSchema.parse({
@@ -172,7 +287,8 @@ export async function submitRequestAction(formData: FormData) {
     urgencyNote: formText(formData, "urgencyNote"),
   });
   requireSupabaseAdminClient();
-  const attachments = validateRequestAttachments(formData);
+  const attachments = await validateRequestAttachments(formData);
+  await enforceRequestSubmissionLimits(user.id, workspace.id, attachments);
   const departments = await listDepartments(workspace.id);
   const similarTickets = await getSimilarTickets(`${input.description} ${input.location} ${input.urgencyNote}`, undefined, workspace.id);
   const reusableTriage = await findReusableTriageDraft(input, workspace.id);
@@ -183,9 +299,16 @@ export async function submitRequestAction(formData: FormData) {
       }
     : await runTriage({ ...input, similarTickets, departments });
   const request = await createRequest(input, user, workspace.id);
+  const uploadedPaths: string[] = [];
   for (const attachment of attachments) {
     const upload = await saveRequestAttachment(attachment, workspace.id, request.id);
-    await createRequestAttachment(request.id, upload, workspace.id);
+    uploadedPaths.push(upload.storagePath);
+    try {
+      await createRequestAttachment(request.id, upload, workspace.id);
+    } catch (error) {
+      await removeUploadedAttachments(uploadedPaths);
+      throw error;
+    }
   }
   await saveTriageResult(request.id, triage, workspace.id);
 
@@ -195,6 +318,7 @@ export async function submitRequestAction(formData: FormData) {
 }
 
 export async function approveRequestAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
   assertWorkspaceMutable(workspace.id);
   const input = reviewApprovalSchema.parse({
@@ -213,6 +337,7 @@ export async function approveRequestAction(formData: FormData) {
 }
 
 export async function rejectRequestAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
   assertWorkspaceMutable(workspace.id);
   await rejectRequest(formText(formData, "requestId"), workspace.id);
@@ -223,6 +348,7 @@ export async function rejectRequestAction(formData: FormData) {
 }
 
 export async function markDuplicateAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
   assertWorkspaceMutable(workspace.id);
   await markDuplicate(formText(formData, "requestId"), formText(formData, "duplicateOfTicketId"), workspace.id);
@@ -233,6 +359,7 @@ export async function markDuplicateAction(formData: FormData) {
 }
 
 export async function updateTicketAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
   assertWorkspaceMutable(workspace.id);
   const input = ticketUpdateSchema.parse({
@@ -251,6 +378,7 @@ export async function updateTicketAction(formData: FormData) {
 }
 
 export async function resetWorkspaceDataAction(formData?: FormData) {
+  await requireTrustedActionRequest();
   const { access: { workspace }, workspaceSlug } = await requireActionOwner(formData);
   assertWorkspaceMutable(workspace.id);
   await resetWorkspaceData(workspace.id);
@@ -262,12 +390,14 @@ export async function resetWorkspaceDataAction(formData?: FormData) {
 }
 
 export async function signInAction(formData: FormData) {
+  await requireTrustedActionRequest();
   let redirectTo = "/onboarding";
   try {
     const credentials = loginCredentialsSchema.parse({
       email: formText(formData, "email"),
       password: formText(formData, "password"),
     });
+    await enforceAuthAttemptLimit("signin", credentials.email);
     await signInWithEmail(credentials);
     redirectTo = sanitizeInternalRedirect(formText(formData, "next")) ?? getPostAuthWorkspacePath();
   } catch (error) {
@@ -278,9 +408,11 @@ export async function signInAction(formData: FormData) {
 }
 
 export async function signUpAction(formData: FormData) {
+  await requireTrustedActionRequest();
   let redirectTo = "/signup/check-email";
   const next = sanitizeInternalRedirect(formText(formData, "next"));
   try {
+    await enforceAuthAttemptLimit("signup");
     const result = await signUpWithEmail({
       email: formText(formData, "email"),
       password: formText(formData, "password"),
@@ -294,6 +426,7 @@ export async function signUpAction(formData: FormData) {
 }
 
 export async function completeEmailVerificationFromTokensAction(formData: FormData) {
+  await requireTrustedActionRequest();
   try {
     const accessToken = formText(formData, "accessToken");
     const refreshToken = formText(formData, "refreshToken");
@@ -311,11 +444,13 @@ export async function completeEmailVerificationFromTokensAction(formData: FormDa
 }
 
 export async function signOutAction() {
+  await requireTrustedActionRequest();
   await clearSessionCookies();
   redirect("/login");
 }
 
 export async function updateUserRoleAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const { access: { user: actor, workspace }, workspaceSlug } = await requireActionOwner(formData);
   assertWorkspaceMutable(workspace.id);
   const input = userRoleUpdateSchema.parse({
@@ -330,6 +465,7 @@ export async function updateUserRoleAction(formData: FormData) {
 }
 
 export async function createWorkspaceDepartmentAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const { access: { workspace, membership }, workspaceSlug } = await requireActionAdmin(formData);
   const returnPath = scopedWorkspaceHref(workspaceSlug, "/settings");
   try {
@@ -348,6 +484,7 @@ export async function createWorkspaceDepartmentAction(formData: FormData) {
 }
 
 export async function deleteWorkspaceDepartmentAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const { access: { workspace, membership }, workspaceSlug } = await requireActionAdmin(formData);
   const returnPath = scopedWorkspaceHref(workspaceSlug, "/settings");
   try {
@@ -364,6 +501,7 @@ export async function deleteWorkspaceDepartmentAction(formData: FormData) {
 }
 
 export async function createWorkspaceAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const user = await requireUser();
   let redirectTo = "/onboarding";
   try {
@@ -377,12 +515,14 @@ export async function createWorkspaceAction(formData: FormData) {
 }
 
 export async function joinWorkspaceAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const user = await requireUser();
   const workspaceSlug = formText(formData, "workspaceSlug");
   const code = formText(formData, "code");
   let redirectTo = "/onboarding";
 
   try {
+    await enforceInviteJoinLimit(workspaceSlug);
     const access = workspaceSlug
       ? await joinWorkspaceWithInvite(workspaceSlug, code, user.id)
       : await joinWorkspaceWithInviteCode(code, user.id);
@@ -396,6 +536,7 @@ export async function joinWorkspaceAction(formData: FormData) {
 }
 
 export async function createWorkspaceInviteAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const user = await requireUser();
   const workspaceSlug = workspaceSlugSchema.parse(formText(formData, "workspaceSlug"));
   let redirectTo = `/w/${workspaceSlug}`;
@@ -410,6 +551,7 @@ export async function createWorkspaceInviteAction(formData: FormData) {
 }
 
 export async function revokeWorkspaceInviteAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const user = await requireUser();
   const workspaceSlug = workspaceSlugSchema.parse(formText(formData, "workspaceSlug"));
   try {
@@ -422,6 +564,7 @@ export async function revokeWorkspaceInviteAction(formData: FormData) {
 }
 
 export async function deleteWorkspaceInviteAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const user = await requireUser();
   const workspaceSlug = workspaceSlugSchema.parse(formText(formData, "workspaceSlug"));
   try {
@@ -434,6 +577,7 @@ export async function deleteWorkspaceInviteAction(formData: FormData) {
 }
 
 export async function leaveWorkspaceAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const user = await requireUser();
   const workspaceSlug = workspaceSlugSchema.parse(formText(formData, "workspaceSlug"));
   try {
@@ -451,6 +595,7 @@ export async function leaveWorkspaceAction(formData: FormData) {
 }
 
 export async function removeWorkspaceMemberAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const user = await requireUser();
   const workspaceSlug = formText(formData, "workspaceSlug");
   const returnPath = scopedWorkspaceHref(workspaceSlug || undefined, "/users");
@@ -465,6 +610,7 @@ export async function removeWorkspaceMemberAction(formData: FormData) {
 }
 
 export async function deleteWorkspaceAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const user = await requireUser();
   try {
     const workspaceId = formText(formData, "workspaceId");
@@ -482,6 +628,7 @@ export async function deleteWorkspaceAction(formData: FormData) {
 }
 
 export async function activateWorkspaceAction(formData: FormData) {
+  await requireTrustedActionRequest();
   const user = await requireUser();
   const workspaceSlug = workspaceSlugSchema.parse(formText(formData, "workspaceSlug"));
   const access = await requireWorkspaceMembership(workspaceSlug, user.id);
