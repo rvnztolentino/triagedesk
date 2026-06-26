@@ -1,10 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Copy, LoaderCircle, Search, TicketPlus } from "lucide-react";
+import { useActionState, useMemo, useState } from "react";
+import { AlertTriangle, Copy, LoaderCircle, Search, TicketPlus } from "lucide-react";
 import { markDuplicateAction } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
+import type { ActionState } from "@/lib/errors";
 import type { TicketRecord } from "@/lib/schema";
+
+const initialState: ActionState = {};
 
 type DuplicateReviewFormProps = {
   requestId: string;
@@ -15,6 +18,7 @@ type DuplicateReviewFormProps = {
 };
 
 export function DuplicateReviewForm({ requestId, tickets, isPreview, approveFormId, workspaceSlug }: DuplicateReviewFormProps) {
+  const [dupState, markDuplicate] = useActionState(markDuplicateAction, initialState);
   const [query, setQuery] = useState("");
   const [createPending, setCreatePending] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState(tickets[0]?.id ?? "");
@@ -91,8 +95,15 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
         </div>
       </div>
 
+      {dupState.error ? (
+        <div role="alert" className="mt-4 st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+          <p><span className="font-semibold">Couldn&apos;t save.</span> {dupState.error}</p>
+        </div>
+      ) : null}
+
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-        <form action={markDuplicateAction} className="sm:flex-1">
+        <form action={markDuplicate} className="sm:flex-1">
           {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
           <input type="hidden" name="requestId" value={requestId} />
           <input type="hidden" name="duplicateOfTicketId" value={selectedTicketId} />

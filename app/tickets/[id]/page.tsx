@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Building2, Clock, FileText, LockKeyhole, MapPin, MessageSquare, User } from "lucide-react";
-import { updateTicketAction } from "@/app/actions";
+import { ArrowLeft, Building2, Clock, FileText, MapPin, MessageSquare, User } from "lucide-react";
+import { TicketUpdateForm } from "@/components/ticket-update-form";
 import { requireWorkspaceContext } from "@/lib/auth";
 import { getTicketDetail, listDepartments } from "@/lib/store";
-import { ticketStatuses } from "@/lib/schema";
 import { ticketStatusBadgeClass } from "@/lib/ticket-status";
 import { cn } from "@/lib/utils";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
@@ -63,56 +62,15 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
             </div>
 
             {isAdmin ? (
-            <form action={updateTicketAction} className="mt-8 pt-8 border-t border-border space-y-5">
-              {isPreview ? (
-                <div className="st-warn rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
-                  <LockKeyhole size={15} className="mt-0.5 shrink-0" />
-                  <p><span className="font-semibold">Preview locked.</span> Ticket update controls are visible for evaluation, but changes cannot be saved.</p>
-                </div>
-              ) : null}
-              <fieldset disabled={isPreview} className="space-y-5 disabled:opacity-60">
-              {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
-              <input type="hidden" name="ticketId" value={ticket.id} />
-              <h3 className="text-base font-medium mb-2 flex items-center gap-2 text-fg">
-                <MessageSquare size={18} className="text-muted" /> Update Ticket
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="status" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Status</label>
-                  <select id="status" name="status" defaultValue={ticket.status} className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm text-fg focus:outline-none focus:border-accent-border">
-                    {ticketStatuses.map((status) => (
-                      <option key={status} value={status}>{status.replace("-", " ")}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="department" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Department</label>
-                  <select id="department" name="department" defaultValue={ticket.department} className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm text-fg focus:outline-none focus:border-accent-border">
-                    {departments.map((department) => (
-                      <option key={department.id} value={department.id}>{department.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="resolutionNotes" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Resolution Notes</label>
-                <textarea id="resolutionNotes" name="resolutionNotes" defaultValue={ticket.resolutionNotes} rows={3} className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-4 text-sm text-fg focus:outline-none focus:border-accent-border resize-none" />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="note" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Internal Note</label>
-                <textarea id="note" name="note" rows={2} placeholder="Add a note or update..." className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-4 text-sm text-fg focus:outline-none focus:border-accent-border resize-none placeholder:text-faint" />
-              </div>
-
-              <div className="flex justify-end">
-                <button className="bg-accent text-accent-fg px-5 py-2.5 rounded-[var(--radius-control)] text-sm font-medium hover:opacity-90 transition-opacity inline-flex items-center gap-2">
-                  {isPreview ? <><LockKeyhole size={15} /> Preview locked</> : "Save Update"}
-                </button>
-              </div>
-              </fieldset>
-            </form>
+              <TicketUpdateForm
+                workspaceSlug={workspaceSlug}
+                ticketId={ticket.id}
+                isPreview={isPreview}
+                status={ticket.status}
+                department={ticket.department}
+                resolutionNotes={ticket.resolutionNotes}
+                departments={departments}
+              />
             ) : null}
           </div>
 

@@ -3,11 +3,12 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, LockKeyhole, MapPin, User } from "lucide-react";
-import { submitRequestAction, type SubmitRequestState } from "@/app/actions";
+import { submitRequestAction } from "@/app/actions";
 import { RequestAttachmentsInput } from "@/components/request-attachments-input";
 import { SubmitButton } from "@/components/submit-button";
+import type { ActionState } from "@/lib/errors";
 
-const initialState: SubmitRequestState = {};
+const initialState: ActionState = {};
 
 export function SubmitRequestForm({
   workspaceSlug,

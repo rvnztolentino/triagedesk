@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { authCredentialsSchema, loginCredentialsSchema, workspaceSlugSchema, type AppUser, type AuthCredentials, type UserProfileRecord, type UserRole } from "@/lib/schema";
 import { getSupabaseAdminClient, getSupabaseAuthClient, getRuntimeSetupStatus, requireSupabaseAdminClient, requireSupabaseAuthClient, SetupRequiredError } from "@/lib/supabase";
+import { PublicError } from "@/lib/errors";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { getPostAuthWorkspacePath, isWorkspaceAdmin, isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
 
@@ -319,7 +320,7 @@ export async function signUpWithEmail(input: AuthCredentials, next?: string) {
   });
 
   if (error) {
-    throw new Error(error.message || "Create account failed.");
+    throw new PublicError(error.message || "Create account failed.");
   }
 
   assertEmailVerificationRequired(Boolean(data.session));
@@ -335,7 +336,7 @@ export async function completeEmailVerification(code: string) {
   const { data, error } = await authClient.auth.exchangeCodeForSession(code);
 
   if (error || !data.session || !data.user?.email) {
-    throw new Error(error?.message || "Email verification failed.");
+    throw new PublicError(error?.message || "Email verification failed.");
   }
 
   return completeVerifiedSession({
@@ -353,7 +354,7 @@ export async function completeEmailOtpVerification(tokenHash: string, type: stri
   });
 
   if (error || !data.session || !data.user?.email) {
-    throw new Error(error?.message || "Email verification failed.");
+    throw new PublicError(error?.message || "Email verification failed.");
   }
 
   return completeVerifiedSession({
@@ -368,11 +369,11 @@ export async function completeEmailVerificationFromTokens(input: { accessToken: 
   const { data, error } = await authClient.auth.getUser(input.accessToken);
 
   if (error || !data.user?.email) {
-    throw new Error(error?.message || "Email verification failed.");
+    throw new PublicError(error?.message || "Email verification failed.");
   }
 
   if (!data.user.email_confirmed_at) {
-    throw new Error("Verify your email before signing in.");
+    throw new PublicError("Verify your email before signing in.");
   }
 
   return completeVerifiedSession({
@@ -392,11 +393,11 @@ export async function signInWithEmail(input: { email: string; password: string }
   const { data, error } = await authClient.auth.signInWithPassword(credentials);
 
   if (error || !data.session || !data.user?.email) {
-    throw new Error(error?.message || "Sign in failed.");
+    throw new PublicError(error?.message || "Sign in failed.");
   }
 
   if (!data.user.email_confirmed_at) {
-    throw new Error("Verify your email before signing in.");
+    throw new PublicError("Verify your email before signing in.");
   }
 
   let profile = await getUserProfile(data.user.id);

@@ -21,6 +21,7 @@ import {
 import { requestReceivedHref, scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { requireSupabaseAdminClient, SetupRequiredError } from "@/lib/supabase";
 import { ZodError } from "zod";
+import { type ActionState, PublicError } from "@/lib/errors";
 import { captureOperationalError } from "@/lib/monitoring";
 import { assertSameOriginRequest, enforceRateLimit, requestIdentity, RateLimitError } from "@/lib/security";
 import { runTriage } from "@/lib/triage";
@@ -63,23 +64,22 @@ function formText(formData: FormData, key: string) {
 }
 
 function redirectWithError(path: string, error: unknown) {
-  const message = error instanceof Error ? error.message : "Something went wrong.";
+  const message = actionErrorMessage(error);
   redirect(`${path}${path.includes("?") ? "&" : "?"}error=${encodeURIComponent(message)}`);
 }
 
-export type SubmitRequestState = { error?: string };
-
 // Turn a thrown action error into a user-facing message. Validation, rate-limit,
-// and setup errors carry safe, actionable text; anything else is reported
-// generically so internal failures (e.g. DB constraint issues) never leak.
-function submitRequestErrorMessage(error: unknown): string {
+// setup, and explicitly-public errors carry safe, actionable text; anything else
+// is reported generically so internal failures (e.g. DB constraint or connection
+// errors) never leak to the UI.
+function actionErrorMessage(error: unknown): string {
   if (error instanceof ZodError) {
     return error.issues[0]?.message ?? "Please check the form and try again.";
   }
   if (error instanceof RateLimitError) {
     return error.message || "You're sending requests too quickly. Please wait a moment and try again.";
   }
-  if (error instanceof SetupRequiredError) {
+  if (error instanceof SetupRequiredError || error instanceof PublicError) {
     return error.message;
   }
   return "We couldn't process your request right now. Please try again in a moment.";
@@ -296,9 +296,9 @@ async function saveRequestAttachment(file: File, workspaceId: string, requestId:
 }
 
 export async function submitRequestAction(
-  _prevState: SubmitRequestState,
+  _prevState: ActionState,
   formData: FormData,
-): Promise<SubmitRequestState> {
+): Promise<ActionState> {
   let destination: string;
 
   try {
@@ -342,7 +342,7 @@ export async function submitRequestAction(
     destination = requestReceivedHref(workspaceSlug, request.id);
   } catch (error) {
     captureOperationalError(error, { area: "submit_request" });
-    return { error: submitRequestErrorMessage(error) };
+    return { error: actionErrorMessage(error) };
   }
 
   // redirect() throws a control-flow signal, so it must live outside the
@@ -350,76 +350,111 @@ export async function submitRequestAction(
   redirect(destination);
 }
 
-export async function approveRequestAction(formData: FormData) {
-  await requireTrustedActionRequest();
-  const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
-  assertWorkspaceMutable(workspace.id);
-  const input = reviewApprovalSchema.parse({
-    requestId: formText(formData, "requestId"),
-    title: formText(formData, "title"),
-    priority: formText(formData, "priority"),
-    department: formText(formData, "department"),
-    summary: formText(formData, "summary"),
-  });
-  const ticket = await approveRequest(input, workspace.id);
+export async function approveRequestAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  let destination: string;
+  try {
+    await requireTrustedActionRequest();
+    const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
+    assertWorkspaceMutable(workspace.id);
+    const input = reviewApprovalSchema.parse({
+      requestId: formText(formData, "requestId"),
+      title: formText(formData, "title"),
+      priority: formText(formData, "priority"),
+      department: formText(formData, "department"),
+      summary: formText(formData, "summary"),
+    });
+    const ticket = await approveRequest(input, workspace.id);
 
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/tickets"));
-  redirect(scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/tickets"));
+    destination = scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`);
+  } catch (error) {
+    captureOperationalError(error, { area: "approve_request" });
+    return { error: actionErrorMessage(error) };
+  }
+  redirect(destination);
 }
 
-export async function rejectRequestAction(formData: FormData) {
-  await requireTrustedActionRequest();
-  const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
-  assertWorkspaceMutable(workspace.id);
-  await rejectRequest(formText(formData, "requestId"), workspace.id);
+export async function rejectRequestAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  let destination: string;
+  try {
+    await requireTrustedActionRequest();
+    const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
+    assertWorkspaceMutable(workspace.id);
+    await rejectRequest(formText(formData, "requestId"), workspace.id);
 
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
-  redirect(scopedWorkspaceHref(workspaceSlug, "/review"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
+    destination = scopedWorkspaceHref(workspaceSlug, "/review");
+  } catch (error) {
+    captureOperationalError(error, { area: "reject_request" });
+    return { error: actionErrorMessage(error) };
+  }
+  redirect(destination);
 }
 
-export async function markDuplicateAction(formData: FormData) {
-  await requireTrustedActionRequest();
-  const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
-  assertWorkspaceMutable(workspace.id);
-  await markDuplicate(formText(formData, "requestId"), formText(formData, "duplicateOfTicketId"), workspace.id);
+export async function markDuplicateAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  let destination: string;
+  try {
+    await requireTrustedActionRequest();
+    const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
+    assertWorkspaceMutable(workspace.id);
+    await markDuplicate(formText(formData, "requestId"), formText(formData, "duplicateOfTicketId"), workspace.id);
 
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
-  redirect(scopedWorkspaceHref(workspaceSlug, "/review"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
+    destination = scopedWorkspaceHref(workspaceSlug, "/review");
+  } catch (error) {
+    captureOperationalError(error, { area: "mark_duplicate" });
+    return { error: actionErrorMessage(error) };
+  }
+  redirect(destination);
 }
 
-export async function updateTicketAction(formData: FormData) {
-  await requireTrustedActionRequest();
-  const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
-  assertWorkspaceMutable(workspace.id);
-  const input = ticketUpdateSchema.parse({
-    ticketId: formText(formData, "ticketId"),
-    status: formText(formData, "status"),
-    department: formText(formData, "department"),
-    resolutionNotes: formText(formData, "resolutionNotes"),
-    note: formText(formData, "note"),
-  });
-  await updateTicket(input, workspace.id);
+export async function updateTicketAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  let destination: string;
+  try {
+    await requireTrustedActionRequest();
+    const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
+    assertWorkspaceMutable(workspace.id);
+    const input = ticketUpdateSchema.parse({
+      ticketId: formText(formData, "ticketId"),
+      status: formText(formData, "status"),
+      department: formText(formData, "department"),
+      resolutionNotes: formText(formData, "resolutionNotes"),
+      note: formText(formData, "note"),
+    });
+    await updateTicket(input, workspace.id);
 
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/tickets"));
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, `/tickets/${input.ticketId}`));
-  redirect(scopedWorkspaceHref(workspaceSlug, `/tickets/${input.ticketId}`));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/tickets"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, `/tickets/${input.ticketId}`));
+    destination = scopedWorkspaceHref(workspaceSlug, `/tickets/${input.ticketId}`);
+  } catch (error) {
+    captureOperationalError(error, { area: "update_ticket" });
+    return { error: actionErrorMessage(error) };
+  }
+  redirect(destination);
 }
 
-export async function resetWorkspaceDataAction(formData?: FormData) {
-  await requireTrustedActionRequest();
-  const { access: { workspace }, workspaceSlug } = await requireActionOwner(formData);
-  assertWorkspaceMutable(workspace.id);
-  await resetWorkspaceData(workspace.id);
+export async function resetWorkspaceDataAction(_prevState: ActionState, formData?: FormData): Promise<ActionState> {
+  let destination: string;
+  try {
+    await requireTrustedActionRequest();
+    const { access: { workspace }, workspaceSlug } = await requireActionOwner(formData);
+    assertWorkspaceMutable(workspace.id);
+    await resetWorkspaceData(workspace.id);
 
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/tickets"));
-  redirect(scopedWorkspaceHref(workspaceSlug, "/"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/tickets"));
+    destination = scopedWorkspaceHref(workspaceSlug, "/");
+  } catch (error) {
+    captureOperationalError(error, { area: "reset_workspace" });
+    return { error: actionErrorMessage(error) };
+  }
+  redirect(destination);
 }
 
 export async function signInAction(formData: FormData) {
@@ -465,14 +500,14 @@ export async function completeEmailVerificationFromTokensAction(formData: FormDa
     const refreshToken = formText(formData, "refreshToken");
 
     if (!accessToken || !refreshToken) {
-      throw new Error("Verification link is missing a session token.");
+      throw new PublicError("Verification link is missing a session token.");
     }
 
     await completeEmailVerificationFromTokens({ accessToken, refreshToken });
     return { redirectTo: getPostVerificationRedirect(formText(formData, "next")) };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Email verification failed.";
-    return { error: message };
+    captureOperationalError(error, { area: "email_verification" });
+    return { error: actionErrorMessage(error) };
   }
 }
 

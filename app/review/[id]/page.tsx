@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Building2, Check, FileText, LockKeyhole, Paperclip, Sparkles, X } from "lucide-react";
-import { approveRequestAction, rejectRequestAction } from "@/app/actions";
+import { AlertTriangle, ArrowLeft, Building2, FileText, Paperclip, Sparkles } from "lucide-react";
 import { AttachmentFileName } from "@/components/attachment-file-name";
-import { SubmitButton } from "@/components/submit-button";
+import { ReviewDecisionForm } from "@/components/review-decision-form";
 import { requireWorkspaceAdminContext } from "@/lib/auth";
 import { getRequestBundle, listDepartments } from "@/lib/store";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
@@ -117,14 +116,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
             <h2 className="text-xl font-semibold text-fg">AI Triage Output</h2>
           </div>
 
-          <form id={approveFormId} action={approveRequestAction} className="space-y-6">
-            {isPreview ? (
-              <div className="st-warn rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
-                <LockKeyhole size={15} className="mt-0.5 shrink-0" />
-                <p><span className="font-semibold">Preview locked.</span> Review fields are visible for evaluation, but approval actions are disabled.</p>
-              </div>
-            ) : null}
-            <fieldset disabled={isPreview} className="space-y-6 disabled:opacity-60">
+          <ReviewDecisionForm formId={approveFormId} isPreview={isPreview}>
             {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
             <input type="hidden" name="requestId" value={request.id} />
 
@@ -191,22 +183,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
                 className="w-full text-sm text-fg bg-bg border border-border rounded-[var(--radius-control)] p-4 focus:outline-none focus:border-accent-border resize-none placeholder:text-faint"
               />
             </div>
-
-            <div className="pt-6 border-t border-border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <SubmitButton pendingText="Approving..." className="h-auto w-full rounded-[var(--radius-control)] bg-accent px-6 py-3 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 sm:w-auto">
-                {isPreview ? <><LockKeyhole size={18} /> Preview locked</> : <><Check size={18} /> Approve &amp; Dispatch</>}
-              </SubmitButton>
-              <SubmitButton
-                disabled={isPreview}
-                formAction={rejectRequestAction}
-                pendingText="Rejecting..."
-                className="st-danger h-auto w-full rounded-[var(--radius-control)] border px-5 py-3 text-sm font-medium transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-              >
-                <X size={18} /> Reject
-              </SubmitButton>
-            </div>
-            </fieldset>
-          </form>
+          </ReviewDecisionForm>
         </div>
       </div>
     </div>
