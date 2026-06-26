@@ -193,6 +193,13 @@ begin
   alter table departments add primary key (workspace_id, id);
 end $$;
 
+-- Normalize the ai_triage_results.source check so existing deployments (whose
+-- constraint may predate the rules fallback and only allow 'groq') accept both
+-- the rules-based and Groq-based triage sources. Idempotent on re-run.
+alter table ai_triage_results drop constraint if exists ai_triage_results_source_check;
+alter table ai_triage_results
+  add constraint ai_triage_results_source_check check (source in ('rules', 'groq'));
+
 delete from workspace_invites
 where id = '00000000-0000-4000-8000-000000000002'
   or code = 'DEMO-SCHOOL-2026';

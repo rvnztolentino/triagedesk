@@ -19,9 +19,10 @@ import {
   signUpWithEmail,
 } from "@/lib/auth";
 import { requestReceivedHref, scopedWorkspaceHref } from "@/lib/workspace-routing";
-import { requireSupabaseAdminClient } from "@/lib/supabase";
+import { requireSupabaseAdminClient, SetupRequiredError } from "@/lib/supabase";
+import { ZodError } from "zod";
 import { captureOperationalError } from "@/lib/monitoring";
-import { assertSameOriginRequest, enforceRateLimit, requestIdentity } from "@/lib/security";
+import { assertSameOriginRequest, enforceRateLimit, requestIdentity, RateLimitError } from "@/lib/security";
 import { runTriage } from "@/lib/triage";
 import {
   approveRequest,
@@ -64,6 +65,24 @@ function formText(formData: FormData, key: string) {
 function redirectWithError(path: string, error: unknown) {
   const message = error instanceof Error ? error.message : "Something went wrong.";
   redirect(`${path}${path.includes("?") ? "&" : "?"}error=${encodeURIComponent(message)}`);
+}
+
+export type SubmitRequestState = { error?: string };
+
+// Turn a thrown action error into a user-facing message. Validation, rate-limit,
+// and setup errors carry safe, actionable text; anything else is reported
+// generically so internal failures (e.g. DB constraint issues) never leak.
+function submitRequestErrorMessage(error: unknown): string {
+  if (error instanceof ZodError) {
+    return error.issues[0]?.message ?? "Please check the form and try again.";
+  }
+  if (error instanceof RateLimitError) {
+    return error.message || "You're sending requests too quickly. Please wait a moment and try again.";
+  }
+  if (error instanceof SetupRequiredError) {
+    return error.message;
+  }
+  return "We couldn't process your request right now. Please try again in a moment.";
 }
 
 async function requireTrustedActionRequest() {
@@ -276,45 +295,59 @@ async function saveRequestAttachment(file: File, workspaceId: string, requestId:
   };
 }
 
-export async function submitRequestAction(formData: FormData) {
-  await requireTrustedActionRequest();
-  const { access: { user, workspace }, workspaceSlug } = await requireActionWorkspace(formData);
-  assertWorkspaceMutable(workspace.id);
-  const input = requestSubmissionSchema.parse({
-    description: formText(formData, "description"),
-    location: formText(formData, "location"),
-    contactName: formText(formData, "contactName"),
-    urgencyNote: formText(formData, "urgencyNote"),
-  });
-  requireSupabaseAdminClient();
-  const attachments = await validateRequestAttachments(formData);
-  await enforceRequestSubmissionLimits(user.id, workspace.id, attachments);
-  const departments = await listDepartments(workspace.id);
-  const similarTickets = await getSimilarTickets(`${input.description} ${input.location} ${input.urgencyNote}`, undefined, workspace.id);
-  const reusableTriage = await findReusableTriageDraft(input, workspace.id);
-  const triage = reusableTriage
-    ? {
-        ...reusableTriage,
-        similarTicketIds: similarTickets.slice(0, 3).map((ticket) => ticket.id),
-      }
-    : await runTriage({ ...input, similarTickets, departments });
-  const request = await createRequest(input, user, workspace.id);
-  const uploadedPaths: string[] = [];
-  for (const attachment of attachments) {
-    const upload = await saveRequestAttachment(attachment, workspace.id, request.id);
-    uploadedPaths.push(upload.storagePath);
-    try {
-      await createRequestAttachment(request.id, upload, workspace.id);
-    } catch (error) {
-      await removeUploadedAttachments(uploadedPaths);
-      throw error;
-    }
-  }
-  await saveTriageResult(request.id, triage, workspace.id);
+export async function submitRequestAction(
+  _prevState: SubmitRequestState,
+  formData: FormData,
+): Promise<SubmitRequestState> {
+  let destination: string;
 
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
-  revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
-  redirect(requestReceivedHref(workspaceSlug, request.id));
+  try {
+    await requireTrustedActionRequest();
+    const { access: { user, workspace }, workspaceSlug } = await requireActionWorkspace(formData);
+    assertWorkspaceMutable(workspace.id);
+    const input = requestSubmissionSchema.parse({
+      description: formText(formData, "description"),
+      location: formText(formData, "location"),
+      contactName: formText(formData, "contactName"),
+      urgencyNote: formText(formData, "urgencyNote"),
+    });
+    requireSupabaseAdminClient();
+    const attachments = await validateRequestAttachments(formData);
+    await enforceRequestSubmissionLimits(user.id, workspace.id, attachments);
+    const departments = await listDepartments(workspace.id);
+    const similarTickets = await getSimilarTickets(`${input.description} ${input.location} ${input.urgencyNote}`, undefined, workspace.id);
+    const reusableTriage = await findReusableTriageDraft(input, workspace.id);
+    const triage = reusableTriage
+      ? {
+          ...reusableTriage,
+          similarTicketIds: similarTickets.slice(0, 3).map((ticket) => ticket.id),
+        }
+      : await runTriage({ ...input, similarTickets, departments });
+    const request = await createRequest(input, user, workspace.id);
+    const uploadedPaths: string[] = [];
+    for (const attachment of attachments) {
+      const upload = await saveRequestAttachment(attachment, workspace.id, request.id);
+      uploadedPaths.push(upload.storagePath);
+      try {
+        await createRequestAttachment(request.id, upload, workspace.id);
+      } catch (error) {
+        await removeUploadedAttachments(uploadedPaths);
+        throw error;
+      }
+    }
+    await saveTriageResult(request.id, triage, workspace.id);
+
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
+    revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
+    destination = requestReceivedHref(workspaceSlug, request.id);
+  } catch (error) {
+    captureOperationalError(error, { area: "submit_request" });
+    return { error: submitRequestErrorMessage(error) };
+  }
+
+  // redirect() throws a control-flow signal, so it must live outside the
+  // try/catch above or it would be swallowed as a failure.
+  redirect(destination);
 }
 
 export async function approveRequestAction(formData: FormData) {
