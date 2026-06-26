@@ -33,8 +33,8 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white font-space">Settings</h1>
-          <p className="text-neutral-500 mt-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-fg">Settings</h1>
+          <p className="text-muted mt-1">
             {isAdmin ? "Review workspace configuration and access policy." : "Manage your personal appearance preferences."}
           </p>
         </div>
@@ -42,44 +42,44 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
 
       {isAdmin && setup ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
+          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
             <div className="flex items-center gap-2 mb-5">
-              <Settings size={17} className="text-emerald-400" />
-              <h2 className="font-semibold text-white">System Health</h2>
+              <Settings size={17} className="text-accent" />
+              <h2 className="font-medium text-fg">System Health</h2>
             </div>
             <div className="space-y-4 text-sm">
-              <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-                <span className="text-neutral-500">Database</span>
-                <span className="text-neutral-200">{setup.supabaseConfigured ? "Configured" : "Missing setup"}</span>
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <span className="text-muted">Database</span>
+                <span className="text-fg">{setup.supabaseConfigured ? "Configured" : "Missing setup"}</span>
               </div>
-              <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-                <span className="text-neutral-500">AI triage</span>
-                <span className="text-neutral-200">{setup.groqConfigured ? "Configured" : "Missing setup"}</span>
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <span className="text-muted">AI triage</span>
+                <span className="text-fg">{setup.groqConfigured ? "Configured" : "Missing setup"}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-neutral-500">Attachment bucket</span>
-                <span className="text-neutral-200">{setup.storageBucket}</span>
+                <span className="text-muted">Attachment bucket</span>
+                <span className="text-fg">{setup.storageBucket}</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
+          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
             <div className="flex items-center gap-2 mb-5">
-              <CheckCircle2 size={17} className="text-emerald-400" />
-              <h2 className="font-semibold text-white">Access Policy</h2>
+              <CheckCircle2 size={17} className="text-accent" />
+              <h2 className="font-medium text-fg">Access Policy</h2>
             </div>
             <div className="space-y-4 text-sm">
-              <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-                <span className="text-neutral-500">Workspace entry</span>
-                <span className="text-neutral-200">Invite only</span>
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <span className="text-muted">Workspace entry</span>
+                <span className="text-fg">Invite only</span>
               </div>
-              <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-                <span className="text-neutral-500">Assigned role</span>
-                <span className="text-neutral-200">From invite</span>
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <span className="text-muted">Assigned role</span>
+                <span className="text-fg">From invite</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-neutral-500">Invite creation</span>
-                <span className="text-neutral-200">{isPreview ? "Locked in preview" : membership.role === "owner" ? "Requester or admin" : "Requester only"}</span>
+                <span className="text-muted">Invite creation</span>
+                <span className="text-fg">{isPreview ? "Locked in preview" : membership.role === "owner" ? "Requester or admin" : "Requester only"}</span>
               </div>
             </div>
           </div>
@@ -87,30 +87,30 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
       ) : null}
 
       {params.error ? (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{params.error}</div>
+        <div className="st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm">{params.error}</div>
       ) : null}
 
       {isAdmin ? (
-        <div className="bg-[#111111] border border-neutral-800 rounded-2xl overflow-hidden">
-          <div className="p-6 border-b border-neutral-800 bg-[#151515]">
-            <h2 className="font-semibold text-white flex items-center gap-2">
-              <Building2 size={17} className="text-emerald-400" /> Departments
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
+          <div className="p-6 border-b border-border bg-surface-2">
+            <h2 className="font-medium text-fg flex items-center gap-2">
+              <Building2 size={17} className="text-accent" /> Departments
             </h2>
-            <p className="text-sm text-neutral-500 mt-1">Request creation and AI triage use this workspace list.</p>
+            <p className="text-sm text-muted mt-1">Request creation and AI triage use this workspace list.</p>
           </div>
 
-          <div className="divide-y divide-neutral-800">
+          <div className="divide-y divide-border">
             {departments.map((department) => (
               <div key={department.id} className="p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <div className="font-medium text-white">{department.name}</div>
-                  <div className="text-xs text-neutral-500 mt-1">{department.id}{department.description ? ` · ${department.description}` : ""}</div>
+                  <div className="font-medium text-fg">{department.name}</div>
+                  <div className="font-mono text-xs text-muted mt-1">{department.id}{department.description ? ` · ${department.description}` : ""}</div>
                 </div>
                 {!isPreview && !(defaultDepartmentIds as readonly string[]).includes(department.id) ? (
                   <form action={deleteWorkspaceDepartmentAction}>
                     {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
                     <input type="hidden" name="id" value={department.id} />
-                    <button className="h-9 px-3 rounded-full border border-rose-500/30 text-xs font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2">
+                    <button className="st-danger h-9 px-3 rounded-[var(--radius-control)] border text-xs font-medium hover:opacity-90 transition-opacity inline-flex items-center gap-2">
                       <Trash2 size={14} /> Remove
                     </button>
                   </form>
@@ -120,21 +120,21 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
           </div>
 
           {!isPreview ? (
-            <form action={createWorkspaceDepartmentAction} className="p-6 border-t border-neutral-800 grid grid-cols-1 gap-3 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+            <form action={createWorkspaceDepartmentAction} className="p-6 border-t border-border grid grid-cols-1 gap-3 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
               {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
               <div className="space-y-2">
-                <label htmlFor="department-id" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">ID</label>
-                <input id="department-id" name="id" required placeholder="transport" className="h-11 w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-emerald-500 placeholder:text-neutral-700" />
+                <label htmlFor="department-id" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">ID</label>
+                <input id="department-id" name="id" required placeholder="transport" className="h-11 w-full bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-accent-border placeholder:text-faint" />
               </div>
               <div className="space-y-2">
-                <label htmlFor="department-name" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Name</label>
-                <input id="department-name" name="name" required placeholder="Transport" className="h-11 w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-emerald-500 placeholder:text-neutral-700" />
+                <label htmlFor="department-name" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Name</label>
+                <input id="department-name" name="name" required placeholder="Transport" className="h-11 w-full bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-accent-border placeholder:text-faint" />
               </div>
               <div className="space-y-2">
-                <label htmlFor="department-description" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Description</label>
-                <input id="department-description" name="description" placeholder="Vehicle and shuttle requests" className="h-11 w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-emerald-500 placeholder:text-neutral-700" />
+                <label htmlFor="department-description" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Description</label>
+                <input id="department-description" name="description" placeholder="Vehicle and shuttle requests" className="h-11 w-full bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-accent-border placeholder:text-faint" />
               </div>
-              <button className="h-11 px-5 bg-neutral-800 border border-neutral-700 rounded-full text-sm font-bold text-white hover:bg-neutral-700">
+              <button className="h-11 px-5 bg-surface-hover border border-border rounded-[var(--radius-control)] text-sm font-medium text-fg hover:bg-surface transition-colors">
                 Add
               </button>
             </form>
@@ -143,9 +143,9 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
       ) : null}
 
       {missing.length > 0 ? (
-        <div className="bg-[#111111] border border-amber-500/30 rounded-2xl p-6">
-          <h2 className="font-semibold text-amber-300">Missing configuration</h2>
-          <p className="text-sm text-neutral-500 mt-1">{missing.join(", ")}</p>
+        <div className="bg-surface border border-[var(--st-warn)]/40 rounded-[var(--radius-card)] p-6">
+          <h2 className="font-medium text-[var(--st-warn)]">Missing configuration</h2>
+          <p className="text-sm text-muted mt-1">{missing.join(", ")}</p>
         </div>
       ) : null}
     </div>

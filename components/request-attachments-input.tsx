@@ -74,13 +74,13 @@ export function RequestAttachmentsInput() {
 
   return (
     <div className="pt-2">
-      <div className="text-sm font-semibold text-neutral-300 block mb-2">Attach files (Optional)</div>
-      <label htmlFor="attachments" className="relative w-full border-2 border-dashed border-neutral-800 bg-[#0a0a0a] rounded-xl p-8 flex flex-col items-center justify-center text-neutral-500 hover:border-neutral-600 transition-all cursor-pointer">
-        <div className="w-12 h-12 bg-neutral-900 rounded-full flex items-center justify-center mb-3 border border-neutral-800">
-          <Paperclip size={20} className="text-neutral-400" />
+      <div className="text-sm font-medium text-fg block mb-2">Attach files (Optional)</div>
+      <label htmlFor="attachments" className="relative w-full border border-dashed border-border-strong bg-bg rounded-[var(--radius-card)] p-8 flex flex-col items-center justify-center text-muted hover:border-accent-border transition-colors cursor-pointer">
+        <div className="w-11 h-11 bg-surface rounded-[var(--radius-control)] flex items-center justify-center mb-3 border border-border">
+          <Paperclip size={18} className="text-muted" />
         </div>
-        <span className="text-sm font-medium">Click to attach files</span>
-        <span className="text-xs mt-1 text-neutral-600">JPG, PNG, WebP, PDF, DOCX, TXT, CSV, or JSON up to 10MB each</span>
+        <span className="text-sm font-medium text-fg">Click to attach files</span>
+        <span className="text-xs mt-1 text-faint">JPG, PNG, WebP, PDF, DOCX, TXT, CSV, or JSON up to 10MB each</span>
         <input
           ref={inputRef}
           id="attachments"
@@ -94,16 +94,16 @@ export function RequestAttachmentsInput() {
       </label>
 
       {files.length > 0 ? (
-        <div className="mt-4 rounded-xl border border-neutral-800 bg-[#0a0a0a] divide-y divide-neutral-800">
-          <div className="px-4 py-3 text-xs font-semibold text-emerald-400">{files.length} file{files.length === 1 ? "" : "s"} ready to upload</div>
+        <div className="mt-4 rounded-[var(--radius-card)] border border-border bg-bg divide-y divide-border">
+          <div className="px-4 py-3 text-xs font-medium text-accent">{files.length} file{files.length === 1 ? "" : "s"} ready to upload</div>
           {files.map((file) => (
             <div key={fileKey(file)} className="px-4 py-3 flex items-center gap-3">
-              <FileText size={16} className="text-neutral-500 shrink-0" />
+              <FileText size={16} className="text-muted shrink-0" />
               <div className="min-w-0 flex-1">
-                <AttachmentFileName fileName={file.name} className="text-sm text-neutral-200" />
-                <div className="text-xs text-neutral-600">{extensionFor(file).replace(".", "").toUpperCase()} · {formatBytes(file.size)}</div>
+                <AttachmentFileName fileName={file.name} className="text-sm text-fg" />
+                <div className="font-mono text-xs text-faint">{extensionFor(file).replace(".", "").toUpperCase()} · {formatBytes(file.size)}</div>
               </div>
-              <button type="button" onClick={() => removeFile(fileKey(file))} className="h-8 w-8 rounded-lg border border-neutral-800 text-neutral-500 hover:text-white hover:border-neutral-700 inline-flex items-center justify-center" aria-label={`Remove ${file.name}`}>
+              <button type="button" onClick={() => removeFile(fileKey(file))} className="h-8 w-8 rounded-[var(--radius-control)] border border-border text-muted hover:text-fg hover:border-border-strong transition-colors inline-flex items-center justify-center" aria-label={`Remove ${file.name}`}>
                 <X size={14} />
               </button>
             </div>
@@ -111,7 +111,7 @@ export function RequestAttachmentsInput() {
         </div>
       ) : null}
 
-      {error ? <p className="mt-3 text-sm text-rose-400">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[var(--st-warn)]">{error}</p> : null}
     </div>
   );
 }

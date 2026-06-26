@@ -16,23 +16,23 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white font-space">User Management</h1>
-          <p className="text-neutral-500 mt-1">Manage active members and workspace roles for {workspace.name}.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-fg">User Management</h1>
+          <p className="text-muted mt-1">Manage active members and workspace roles for {workspace.name}.</p>
         </div>
       </div>
 
-      <div className="bg-[#111111] rounded-2xl shadow-xl border border-neutral-800 overflow-hidden">
-        <div className="p-6 border-b border-neutral-800 bg-[#151515]">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <UserCog size={17} className="text-emerald-400" /> Accounts ({users.length})
+      <div className="bg-surface rounded-[var(--radius-card)] border border-border overflow-hidden">
+        <div className="p-6 border-b border-border bg-surface-2">
+          <h2 className="font-medium text-fg flex items-center gap-2">
+            <UserCog size={17} className="text-accent" /> Accounts ({users.length})
           </h2>
         </div>
 
-        <div className="divide-y divide-neutral-800">
+        <div className="divide-y divide-border">
           {users.length === 0 ? (
             <div className="p-10 text-center">
-              <h3 className="font-semibold text-white">No accounts found</h3>
-              <p className="text-sm text-neutral-500 mt-1">Users will appear here after signup.</p>
+              <h3 className="font-medium text-fg">No accounts found</h3>
+              <p className="text-sm text-muted mt-1">Users will appear here after signup.</p>
             </div>
           ) : (
             users.map((user) => {
@@ -44,23 +44,23 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
                 <div key={user.id} className="p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-3 mb-1">
-                      <h3 className="font-semibold text-white truncate">{user.displayName || user.email}</h3>
-                      <span className="bg-neutral-800 text-neutral-400 text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide uppercase">
+                      <h3 className="font-medium text-fg truncate">{user.displayName || user.email}</h3>
+                      <span className="bg-surface-hover text-muted text-[10px] px-2 py-0.5 rounded-md font-medium tracking-wide uppercase">
                         {user.role}
                       </span>
                       {isSelf ? (
-                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide uppercase">
+                        <span className="bg-accent-soft text-accent border border-accent-border text-[10px] px-2 py-0.5 rounded-md font-medium tracking-wide uppercase">
                           You
                         </span>
                       ) : null}
                       {isOwner ? (
-                        <span className="bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] px-2 py-0.5 rounded-md font-bold tracking-wide uppercase">
+                        <span className="st-warn border text-[10px] px-2 py-0.5 rounded-md font-medium tracking-wide uppercase">
                           Protected
                         </span>
                       ) : null}
                     </div>
-                    <p className="text-sm text-neutral-500">{user.email}</p>
-                    <p className="text-xs text-neutral-600 mt-1">Joined {new Date(user.createdAt).toLocaleDateString()}</p>
+                    <p className="text-sm text-muted">{user.email}</p>
+                    <p className="font-mono text-xs text-faint mt-1">Joined {new Date(user.createdAt).toLocaleDateString()}</p>
                   </div>
 
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -71,7 +71,7 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
                         name="role"
                         defaultValue={user.role}
                         disabled={roleLocked}
-                        className="h-10 bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:text-neutral-600"
+                        className="h-10 bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-accent-border disabled:cursor-not-allowed disabled:text-faint"
                       >
                         <option value="requester">Requester</option>
                         <option value="admin">Admin</option>
@@ -80,7 +80,7 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
                       <SubmitButton
                         pendingText="Saving role..."
                         disabled={roleLocked}
-                        className="w-auto h-10 px-4 bg-neutral-800 border border-neutral-700 rounded-full text-sm font-bold text-white hover:bg-neutral-700 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
+                        className="w-auto h-10 px-4 bg-surface-hover border border-border rounded-[var(--radius-control)] text-sm font-medium text-fg hover:bg-surface transition-colors disabled:cursor-not-allowed disabled:text-faint disabled:hover:bg-surface-hover"
                       >
                         Save Role
                       </SubmitButton>
@@ -90,7 +90,7 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
                         {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
                         <input type="hidden" name="workspaceId" value={workspace.id} />
                         <input type="hidden" name="memberUserId" value={user.userId} />
-                        <ConfirmSubmitButton confirmation={`Remove ${user.displayName || user.email || "this member"} from ${workspace.name}?`} pendingText="Removing..." className="h-10 px-4 rounded-full border border-rose-500/30 text-sm font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-75">
+                        <ConfirmSubmitButton confirmation={`Remove ${user.displayName || user.email || "this member"} from ${workspace.name}?`} pendingText="Removing..." className="st-danger h-10 px-4 rounded-[var(--radius-control)] border text-sm font-medium hover:opacity-90 transition-opacity inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-75">
                           <UserMinus size={15} /> Remove
                         </ConfirmSubmitButton>
                       </form>
@@ -103,11 +103,11 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
         </div>
       </div>
 
-      <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-6 flex gap-4">
-        <ShieldCheck size={20} className="text-emerald-400 flex-shrink-0 mt-0.5" />
+      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 flex gap-4">
+        <ShieldCheck size={20} className="text-accent flex-shrink-0 mt-0.5" />
         <div>
-          <h2 className="font-semibold text-white">Role policy</h2>
-          <p className="text-sm text-neutral-500 mt-1">
+          <h2 className="font-medium text-fg">Role policy</h2>
+          <p className="text-sm text-muted mt-1">
             Workspace owners can assign requester/admin roles. Admins can remove requester members. Owner access cannot be changed here.
           </p>
         </div>

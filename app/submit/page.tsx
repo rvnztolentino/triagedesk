@@ -18,25 +18,25 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
   if (isSetupRequired && !isPreview) {
     return (
       <div className="max-w-2xl mx-auto w-full">
-        <div className="bg-[#111111] rounded-2xl p-8 md:p-10 shadow-xl border border-amber-500/30">
+        <div className="bg-surface rounded-[var(--radius-card)] p-8 md:p-10 border border-[var(--st-warn)]/40">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 bg-amber-500/10 text-amber-400 rounded-xl flex items-center justify-center border border-amber-500/20">
+            <div className="st-warn w-10 h-10 border rounded-[var(--radius-control)] flex items-center justify-center">
               <AlertTriangle size={20} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white font-space">Setup Required</h1>
-              <p className="text-sm text-neutral-500">New requests require database and AI triage configuration.</p>
+              <h1 className="text-xl font-semibold tracking-tight text-fg">Setup Required</h1>
+              <p className="text-sm text-muted">New requests require database and AI triage configuration.</p>
             </div>
           </div>
-          <div className="bg-[#0a0a0a] border border-neutral-800 rounded-xl p-4 text-sm text-neutral-400 leading-relaxed">
+          <div className="bg-bg border border-border rounded-[var(--radius-control)] p-4 text-sm text-muted leading-relaxed">
             Complete the manual setup in{" "}
-            <span className="font-mono text-neutral-200">.codex/setup.md</span>, then restart the dev server.
+            <span className="font-mono text-fg">.codex/setup.md</span>, then restart the dev server.
           </div>
           <div className="pt-6 flex items-center justify-between">
-            <Link href={href("/tickets")} className="text-sm font-medium text-neutral-500 hover:text-white px-4 py-2">
+            <Link href={href("/tickets")} className="text-sm font-medium text-muted hover:text-fg px-4 py-2 transition-colors">
               My Tickets
             </Link>
-            <Link href="/api/health" className="bg-neutral-800 text-white rounded-full px-6 py-3 text-sm font-bold hover:bg-neutral-700 transition-all border border-neutral-700">
+            <Link href="/api/health" className="bg-surface text-fg rounded-[var(--radius-control)] px-6 py-3 text-sm font-medium hover:bg-surface-hover transition-colors border border-border">
               Check Health
             </Link>
           </div>
@@ -48,22 +48,22 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
   return (
     <div className="max-w-2xl mx-auto w-full">
       <div className="mb-6 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-white font-space mb-2">New Request</h1>
-        <p className="text-neutral-500">Describe the issue and AI triage will structure it immediately.</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-fg mb-2">New Request</h1>
+        <p className="text-muted">Describe the issue and AI triage will structure it immediately.</p>
       </div>
 
-      <div className="bg-[#111111] rounded-2xl p-8 md:p-10 shadow-xl border border-neutral-800">
+      <div className="bg-surface rounded-[var(--radius-card)] p-8 md:p-10 border border-border">
         <form action={submitRequestAction} className="space-y-6">
           {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
           {isPreview ? (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-start gap-2">
-              <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
-              <p><span className="font-bold text-amber-300">Preview locked.</span> This sample form is visible for evaluation. Create your own workspace to submit a request.</p>
+            <div className="st-warn rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
+              <LockKeyhole size={15} className="mt-0.5 shrink-0" />
+              <p><span className="font-semibold">Preview locked.</span> This sample form is visible for evaluation. Create your own workspace to submit a request.</p>
             </div>
           ) : null}
           <fieldset disabled={isPreview} className="space-y-6 disabled:opacity-60">
           <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-semibold text-neutral-300">What&apos;s the issue?</label>
+            <label htmlFor="description" className="text-sm font-medium text-fg">What&apos;s the issue?</label>
             <textarea
               id="description"
               name="description"
@@ -71,14 +71,14 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
               minLength={10}
               rows={5}
               placeholder="E.g., Aircon in Room 304 is leaking again. Floor is wet near the outlet."
-              className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl p-4 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-white transition-all resize-none placeholder:text-neutral-700"
+              className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-4 text-sm focus:outline-none focus:border-accent-border text-fg transition-colors resize-none placeholder:text-faint"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label htmlFor="location" className="text-sm font-semibold text-neutral-300 flex items-center gap-2">
-                <MapPin size={16} className="text-neutral-500" /> Location
+              <label htmlFor="location" className="text-sm font-medium text-fg flex items-center gap-2">
+                <MapPin size={16} className="text-muted" /> Location
               </label>
               <input
                 id="location"
@@ -86,41 +86,41 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
                 required
                 type="text"
                 placeholder="Building A, Room 304"
-                className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-white transition-all placeholder:text-neutral-700"
+                className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm focus:outline-none focus:border-accent-border text-fg transition-colors placeholder:text-faint"
               />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="contactName" className="text-sm font-semibold text-neutral-300 flex items-center gap-2">
-                <User size={16} className="text-neutral-500" /> Contact Name
+              <label htmlFor="contactName" className="text-sm font-medium text-fg flex items-center gap-2">
+                <User size={16} className="text-muted" /> Contact Name
               </label>
               <input
                 id="contactName"
                 name="contactName"
                 type="text"
                 placeholder="Jane Doe"
-                className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-white transition-all placeholder:text-neutral-700"
+                className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm focus:outline-none focus:border-accent-border text-fg transition-colors placeholder:text-faint"
               />
             </div>
           </div>
 
           <div className="space-y-2 relative">
-            <label htmlFor="urgencyNote" className="text-sm font-semibold text-neutral-300 flex items-center gap-2">
-              <AlertTriangle size={16} className="text-neutral-500" /> Urgency Note (Optional)
+            <label htmlFor="urgencyNote" className="text-sm font-medium text-fg flex items-center gap-2">
+              <AlertTriangle size={16} className="text-muted" /> Urgency Note (Optional)
             </label>
             <input
               id="urgencyNote"
               name="urgencyNote"
               type="text"
               placeholder="Why is it urgent?"
-              className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-white transition-all pr-10 placeholder:text-neutral-700"
+              className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm focus:outline-none focus:border-accent-border text-fg transition-colors pr-10 placeholder:text-faint"
             />
           </div>
 
           <RequestAttachmentsInput />
 
-          <div className="pt-6 border-t border-neutral-800 flex items-center justify-between">
-            <Link href={href("/tickets")} className="text-sm font-medium text-neutral-500 hover:text-white px-4 py-2">
+          <div className="pt-6 border-t border-border flex items-center justify-between">
+            <Link href={href("/tickets")} className="text-sm font-medium text-muted hover:text-fg px-4 py-2 transition-colors">
               Cancel
             </Link>
             <SubmitButton pendingText="Uploading..." className="w-auto h-auto px-8 py-3">

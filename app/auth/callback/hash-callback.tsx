@@ -60,25 +60,25 @@ export function AuthHashCallback() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
-        <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-8 shadow-xl text-center">
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-8 text-center">
           {error ? (
             <>
-              <div className="mx-auto mb-5 w-12 h-12 bg-rose-500/10 text-rose-300 border border-rose-500/20 rounded-xl flex items-center justify-center">
+              <div className="st-danger mx-auto mb-5 w-12 h-12 border rounded-[var(--radius-control)] flex items-center justify-center">
                 <MailWarning size={24} />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-white font-space">Email confirmation failed</h1>
-              <p className="text-sm text-neutral-500 mt-3 leading-relaxed">{error}</p>
-              <Link href="/login" className="mt-6 inline-flex h-10 px-5 bg-emerald-500 hover:bg-emerald-600 text-black rounded-full text-sm font-bold items-center justify-center">
+              <h1 className="text-xl font-semibold tracking-tight text-fg">Email confirmation failed</h1>
+              <p className="text-sm text-muted mt-3 leading-relaxed">{error}</p>
+              <Link href="/login" className="mt-6 inline-flex h-10 px-5 bg-accent hover:opacity-90 text-accent-fg rounded-[var(--radius-control)] text-sm font-medium items-center justify-center transition-opacity">
                 Back to sign in
               </Link>
             </>
           ) : (
             <>
-              <div className="mx-auto mb-5 w-12 h-12 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl flex items-center justify-center">
+              <div className="mx-auto mb-5 w-12 h-12 bg-accent-soft text-accent border border-accent-border rounded-[var(--radius-control)] flex items-center justify-center">
                 <LoaderCircle size={24} className="animate-spin" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-white font-space">Confirming your email</h1>
-              <p className="text-sm text-neutral-500 mt-3 leading-relaxed">
+              <h1 className="text-xl font-semibold tracking-tight text-fg">Confirming your email</h1>
+              <p className="text-sm text-muted mt-3 leading-relaxed">
                 {isPending ? "Finishing your account setup." : "Reading your verification link."}
               </p>
             </>

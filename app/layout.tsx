@@ -1,8 +1,21 @@
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppLayout } from "@/components/app-layout";
 import { getActiveWorkspaceAccess, getCurrentUser } from "@/lib/auth";
 import { isWorkspacePreview } from "@/lib/workspaces";
+
+const geistSans = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "TriageDesk",
@@ -28,14 +41,9 @@ try {
   var legacy = { "#7b787a": "#879D5A", emerald: "#10b981", blue: "#3b82f6", orange: "#f97316", red: "#ef4444", violet: "#8b5cf6", yellow: "#eab308" };
   var accent = legacy[rawAccent] || (/^#[0-9a-f]{6}$/i.test(rawAccent) ? rawAccent : "#879D5A");
   document.documentElement.dataset.theme = theme;
-  document.documentElement.dataset.accent = "custom";
   document.documentElement.style.setProperty("--accent", accent);
-  document.documentElement.style.setProperty("--accent-strong", accent);
-  document.documentElement.style.setProperty("--accent-text", accent);
-  document.documentElement.style.setProperty("--accent-border", "color-mix(in srgb, " + accent + " 30%, transparent)");
 } catch (_) {
   document.documentElement.dataset.theme = "dark";
-  document.documentElement.dataset.accent = "custom";
 }
 `;
 
@@ -44,11 +52,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const activeWorkspace = currentUser ? await getActiveWorkspaceAccess(currentUser.id) : undefined;
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="font-sans bg-[#0a0a0a] text-neutral-200 min-h-screen" suppressHydrationWarning>
+      <body className="font-sans bg-bg text-fg min-h-screen antialiased" suppressHydrationWarning>
         <AppLayout
           currentUser={currentUser}
           activeWorkspace={activeWorkspace ? {

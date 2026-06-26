@@ -34,41 +34,41 @@ export function TicketsTableSkeleton() {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[#0d0d0d] border-b border-neutral-800 text-xs uppercase tracking-wider text-neutral-500">
-              <th className="font-semibold p-6 w-28">ID</th>
-              <th className="font-semibold p-6">Details</th>
-              <th className="font-semibold p-6">Status</th>
-              <th className="font-semibold p-6">Department</th>
-              <th className="font-semibold p-6 text-right">Action</th>
+            <tr className="bg-surface-2 border-b border-border font-mono text-xs uppercase tracking-[0.12em] text-muted">
+              <th className="font-medium p-6 w-28">ID</th>
+              <th className="font-medium p-6">Details</th>
+              <th className="font-medium p-6">Status</th>
+              <th className="font-medium p-6">Department</th>
+              <th className="font-medium p-6 text-right">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-800">
+          <tbody className="divide-y divide-border">
             {Array.from({ length: 5 }).map((_, index) => (
               <tr key={index}>
                 <td className="p-6">
-                  <div className="h-4 w-20 animate-pulse rounded bg-neutral-800" />
+                  <div className="h-4 w-20 animate-pulse rounded bg-surface-hover" />
                 </td>
                 <td className="p-6">
-                  <div className="h-4 w-56 animate-pulse rounded bg-neutral-800" />
-                  <div className="mt-3 h-3 w-72 animate-pulse rounded bg-neutral-800/70" />
+                  <div className="h-4 w-56 animate-pulse rounded bg-surface-hover" />
+                  <div className="mt-3 h-3 w-72 animate-pulse rounded bg-surface-hover" />
                 </td>
                 <td className="p-6">
-                  <div className="h-4 w-28 animate-pulse rounded bg-neutral-800" />
+                  <div className="h-4 w-28 animate-pulse rounded bg-surface-hover" />
                 </td>
                 <td className="p-6">
-                  <div className="h-6 w-24 animate-pulse rounded-md bg-neutral-800" />
+                  <div className="h-6 w-24 animate-pulse rounded-md bg-surface-hover" />
                 </td>
                 <td className="p-6">
-                  <div className="ml-auto h-8 w-8 animate-pulse rounded-lg bg-neutral-800" />
+                  <div className="ml-auto h-8 w-8 animate-pulse rounded-[var(--radius-control)] bg-surface-hover" />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="p-6 border-t border-neutral-800 flex flex-col gap-4 text-sm md:flex-row md:items-center md:justify-between">
-        <div className="h-4 w-40 animate-pulse rounded bg-neutral-800" />
-        <div className="h-9 w-64 animate-pulse rounded-lg bg-neutral-800" />
+      <div className="p-6 border-t border-border flex flex-col gap-4 text-sm md:flex-row md:items-center md:justify-between">
+        <div className="h-4 w-40 animate-pulse rounded bg-surface-hover" />
+        <div className="h-9 w-64 animate-pulse rounded-[var(--radius-control)] bg-surface-hover" />
       </div>
     </>
   );
@@ -91,6 +91,15 @@ export function TicketsTableShell({
   const [optimisticFilter, setOptimisticFilter] = React.useState(filter);
   const navigationStarted = React.useRef(false);
   const current = React.useMemo<TicketRouteState>(() => ({ filter, q: query, page: requestedPage }), [filter, query, requestedPage]);
+
+  // The shell no longer remounts on navigation (so the search input keeps focus
+  // and the page-entrance animation does not re-fire). Instead, clear the
+  // skeleton once the new route state arrives from the server.
+  React.useEffect(() => {
+    navigationStarted.current = false;
+    setTableLoading(false);
+    setOptimisticFilter(filter);
+  }, [filter, query, requestedPage]);
 
   React.useEffect(() => {
     if (!tableLoading) return;
@@ -136,10 +145,10 @@ export function TicketsTableShell({
                 href={href}
                 onClick={(event) => handleNavigate(event, href, value)}
                 className={cn(
-                  "flex-1 rounded-lg border px-4 py-2 text-center text-sm font-semibold transition-all sm:flex-none",
+                  "flex-1 rounded-[var(--radius-control)] border px-4 py-2 text-center text-sm font-medium transition-colors sm:flex-none",
                   optimisticFilter === value
-                    ? "border-emerald-500/30 text-emerald-400"
-                    : "border-transparent text-neutral-500 hover:border-neutral-800 hover:text-neutral-200"
+                    ? "border-accent-border bg-accent-soft text-accent"
+                    : "border-transparent text-muted hover:border-border hover:text-fg"
                 )}
               >
                 {label}
@@ -151,7 +160,7 @@ export function TicketsTableShell({
         <TicketSearch query={query} onNavigate={handleSearchNavigate} />
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-neutral-800 bg-[#111111] shadow-xl shadow-black/10">
+      <div className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface">
         {tableLoading ? <TicketsTableSkeleton /> : children}
       </div>
     </div>
