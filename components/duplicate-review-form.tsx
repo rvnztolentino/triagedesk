@@ -28,17 +28,17 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
   }, [normalizedQuery, tickets]);
 
   return (
-    <section className="mt-6 border-t border-neutral-800 pt-6">
+    <section className="mt-6 border-t border-border pt-6">
       <div className="mb-4">
-        <h3 className="font-semibold text-white">Possible duplicate</h3>
-        <p className="text-sm text-neutral-500 mt-1">Link this request to an existing ticket instead of creating a new one.</p>
+        <h3 className="font-medium text-fg">Possible duplicate</h3>
+        <p className="text-sm text-muted mt-1">Link this request to an existing ticket instead of creating a new one.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-4">
         <div className="space-y-3">
           <label htmlFor="duplicate-search" className="sr-only">Search existing tickets</label>
           <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
             <input
               id="duplicate-search"
               type="search"
@@ -46,13 +46,13 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search tickets by ID, title, location, or department"
               disabled={isPreview || tickets.length === 0}
-              className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl py-3 pl-9 pr-3 text-sm text-white focus:outline-none focus:border-emerald-500 placeholder:text-neutral-700 disabled:cursor-not-allowed"
+              className="w-full bg-bg border border-border rounded-[var(--radius-control)] py-3 pl-9 pr-3 text-sm text-fg focus:outline-none focus:border-accent-border placeholder:text-faint disabled:cursor-not-allowed"
             />
           </div>
 
-          <div className="max-h-72 overflow-auto rounded-xl border border-neutral-800 bg-[#0a0a0a] divide-y divide-neutral-800">
+          <div className="max-h-72 overflow-auto rounded-[var(--radius-control)] border border-border bg-bg divide-y divide-border">
             {filteredTickets.length === 0 ? (
-              <div className="p-4 text-sm text-neutral-500">No matching tickets.</div>
+              <div className="p-4 text-sm text-muted">No matching tickets.</div>
             ) : (
               filteredTickets.map((ticket) => (
                 <button
@@ -60,33 +60,33 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
                   type="button"
                   disabled={isPreview}
                   onClick={() => setSelectedTicketId(ticket.id)}
-                  className={`w-full p-4 text-left hover:bg-[#151515] disabled:cursor-not-allowed ${selectedTicketId === ticket.id ? "bg-emerald-500/10" : ""}`}
+                  className={`w-full p-4 text-left hover:bg-surface-hover transition-colors disabled:cursor-not-allowed ${selectedTicketId === ticket.id ? "bg-accent-soft" : ""}`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-white truncate">{ticket.title}</span>
-                    <span className="text-[10px] font-bold text-neutral-500 shrink-0">{ticket.id}</span>
+                    <span className="text-sm font-medium text-fg truncate">{ticket.title}</span>
+                    <span className="font-mono text-[10px] font-medium text-muted shrink-0">{ticket.id}</span>
                   </div>
-                  <div className="mt-1 text-xs text-neutral-500 truncate">{ticket.location} · {ticket.status} · {ticket.department}</div>
+                  <div className="mt-1 text-xs text-muted truncate">{ticket.location} · {ticket.status} · {ticket.department}</div>
                 </button>
               ))
             )}
           </div>
         </div>
 
-        <div className="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-4">
-          <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Selected ticket</div>
+        <div className="rounded-[var(--radius-control)] border border-border bg-bg p-4">
+          <div className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em] mb-3">Selected ticket</div>
           {selectedTicket ? (
             <div className="space-y-2">
-              <div className="text-[10px] font-mono font-bold text-emerald-400">{selectedTicket.id}</div>
-              <div className="text-sm font-semibold text-white leading-snug">{selectedTicket.title}</div>
-              <div className="text-xs text-neutral-500">{selectedTicket.location}</div>
+              <div className="font-mono text-[10px] font-medium text-accent">{selectedTicket.id}</div>
+              <div className="text-sm font-medium text-fg leading-snug">{selectedTicket.title}</div>
+              <div className="text-xs text-muted">{selectedTicket.location}</div>
               <div className="flex flex-wrap gap-2 pt-2">
-                <span className="text-[10px] px-2 py-1 rounded-md bg-neutral-900 text-neutral-400 uppercase">{selectedTicket.status}</span>
-                <span className="text-[10px] px-2 py-1 rounded-md bg-neutral-900 text-neutral-400 uppercase">{selectedTicket.priority}</span>
+                <span className="font-mono text-[10px] px-2 py-1 rounded-md bg-surface-hover text-muted uppercase">{selectedTicket.status}</span>
+                <span className="font-mono text-[10px] px-2 py-1 rounded-md bg-surface-hover text-muted uppercase">{selectedTicket.priority}</span>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-neutral-500">Select a ticket to link.</p>
+            <p className="text-sm text-muted">Select a ticket to link.</p>
           )}
         </div>
       </div>
@@ -99,7 +99,7 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
           <SubmitButton
             pendingText="Marking duplicate..."
             disabled={isPreview || !selectedTicketId}
-            className="w-full bg-neutral-800 text-white border border-neutral-700 rounded-full px-5 py-3 text-sm font-bold hover:bg-neutral-700 transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:text-neutral-600 disabled:hover:bg-neutral-800"
+            className="w-full bg-surface text-fg border border-border rounded-[var(--radius-control)] px-5 py-3 text-sm font-medium hover:bg-surface-hover transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:text-faint disabled:hover:bg-surface"
           >
             <Copy size={18} /> Mark as duplicate
           </SubmitButton>
@@ -109,7 +109,7 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
           form={approveFormId}
           disabled={isPreview || createPending}
           onClick={() => setCreatePending(true)}
-          className="sm:flex-1 bg-emerald-500 text-black rounded-xl px-5 py-3 text-sm font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+          className="sm:flex-1 bg-accent text-accent-fg rounded-[var(--radius-control)] px-5 py-3 text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {createPending ? (
             <>

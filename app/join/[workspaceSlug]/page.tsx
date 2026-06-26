@@ -32,11 +32,11 @@ export default async function JoinWorkspacePage({
   if (workspace && membership) {
     return (
       <div className="max-w-xl mx-auto">
-        <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-8 text-center">
-          <ShieldCheck size={28} className="text-emerald-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-white font-space">You already belong to {workspace.name}</h1>
-          <p className="text-sm text-neutral-500 mt-2">Open the workspace instead of joining it again.</p>
-          <Link href={`/w/${workspace.slug}`} className="mt-6 inline-flex h-10 px-5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-black text-sm font-bold items-center justify-center">
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-8 text-center">
+          <ShieldCheck size={28} className="text-accent mx-auto mb-4" />
+          <h1 className="text-2xl font-semibold text-fg">You already belong to {workspace.name}</h1>
+          <p className="text-sm text-muted mt-2">Open the workspace instead of joining it again.</p>
+          <Link href={`/w/${workspace.slug}`} className="mt-6 inline-flex h-10 px-5 rounded-[var(--radius-control)] bg-accent hover:opacity-90 text-accent-fg text-sm font-medium items-center justify-center transition-opacity">
             Open workspace
           </Link>
         </div>
@@ -51,29 +51,29 @@ export default async function JoinWorkspacePage({
 
   return (
     <div className="max-w-xl mx-auto">
-      <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-8">
-        <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-5">
+      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-8">
+        <div className="w-12 h-12 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center mb-5">
           <Link2 size={22} />
         </div>
-        <h1 className="text-2xl font-bold text-white font-space">Join {workspace?.name || "workspace"}</h1>
-        <p className="text-sm text-neutral-500 mt-2">Membership requires an active invite code that matches this workspace.</p>
+        <h1 className="text-2xl font-semibold text-fg">Join {workspace?.name || "workspace"}</h1>
+        <p className="text-sm text-muted mt-2">Membership requires an active invite code that matches this workspace.</p>
 
         {isPreview ? (
-          <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-start gap-2">
-            <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
-            <p><span className="font-bold text-amber-300">Read-only preview.</span> Join to explore Demo Clinic&apos;s sample workflow. Creating, reviewing, and updating records stays locked.</p>
+          <div className="st-warn mt-6 rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
+            <LockKeyhole size={15} className="mt-0.5 shrink-0" />
+            <p><span className="font-semibold">Read-only preview.</span> Join to explore Demo Clinic&apos;s sample workflow. Creating, reviewing, and updating records stays locked.</p>
           </div>
         ) : null}
 
         {error ? (
-          <div className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</div>
+          <div className="st-danger mt-6 rounded-[var(--radius-control)] border px-4 py-3 text-sm">{error}</div>
         ) : (
           <form action={joinWorkspaceAction} className="mt-6 space-y-4">
             <input type="hidden" name="workspaceSlug" value={workspaceSlug} />
             <input type="hidden" name="code" value={code} />
-            <div className="rounded-xl border border-neutral-800 bg-[#0a0a0a] px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">Assigned workspace role</p>
-              <p className="text-sm text-white capitalize mt-1">{invite?.role}</p>
+            <div className="rounded-[var(--radius-control)] border border-border bg-bg px-4 py-3">
+              <p className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-muted">Assigned workspace role</p>
+              <p className="text-sm text-fg capitalize mt-1">{invite?.role}</p>
             </div>
             <SubmitButton pendingText="Joining workspace...">
               <LogIn size={16} /> Join workspace
@@ -81,7 +81,7 @@ export default async function JoinWorkspacePage({
           </form>
         )}
 
-        <Link href="/onboarding" className="inline-flex mt-6 text-sm text-neutral-500 hover:text-white">Back to workspace setup</Link>
+        <Link href="/onboarding" className="inline-flex mt-6 text-sm text-muted hover:text-fg transition-colors">Back to workspace setup</Link>
       </div>
     </div>
   );

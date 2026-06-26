@@ -78,20 +78,20 @@ async function TicketTable({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[#0d0d0d] border-b border-neutral-800 text-xs uppercase tracking-wider text-neutral-500">
-              <th className="font-semibold p-6 w-28">ID</th>
-              <th className="font-semibold p-6">Details</th>
-              <th className="font-semibold p-6">Status</th>
-              <th className="font-semibold p-6">Department</th>
-              <th className="font-semibold p-6 text-right">Action</th>
+            <tr className="bg-surface-2 border-b border-border font-mono text-xs uppercase tracking-[0.12em] text-muted">
+              <th className="font-medium p-6 w-28">ID</th>
+              <th className="font-medium p-6">Details</th>
+              <th className="font-medium p-6">Status</th>
+              <th className="font-medium p-6">Department</th>
+              <th className="font-medium p-6 text-right">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-800">
+          <tbody className="divide-y divide-border">
             {visibleTickets.length === 0 ? (
               <tr>
                 <td colSpan={5} className="p-10 text-center">
-                  <h3 className="font-semibold text-white">{isSetupRequired ? "Setup required" : query ? "No matching tickets" : "No tickets found"}</h3>
-                  <p className="text-sm text-neutral-500 mt-1">
+                  <h3 className="font-medium text-fg">{isSetupRequired ? "Setup required" : query ? "No matching tickets" : "No tickets found"}</h3>
+                  <p className="text-sm text-muted mt-1">
                     {isSetupRequired
                       ? "Database and AI triage configuration must be completed."
                       : query
@@ -104,17 +104,17 @@ async function TicketTable({
               </tr>
             ) : (
               visibleTickets.map((ticket) => (
-                <tr key={ticket.id} className="hover:bg-[#151515] transition-colors group">
+                <tr key={ticket.id} className="hover:bg-surface-hover transition-colors group">
                   <td className="p-6">
-                    <span className="text-sm font-mono font-medium text-neutral-500">{ticket.id}</span>
+                    <span className="text-sm font-mono font-medium text-muted">{ticket.id}</span>
                   </td>
                   <td className="p-6">
                     <Link href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="block">
-                      <div className="font-semibold text-white mb-1 group-hover:text-emerald-400 transition-colors">{ticket.title}</div>
-                      <div className="text-sm text-neutral-500 flex items-center gap-3">
+                      <div className="font-medium text-fg mb-1 group-hover:text-accent transition-colors">{ticket.title}</div>
+                      <div className="text-sm text-muted flex items-center gap-3">
                         <span>{ticket.location}</span>
-                        <span className="w-1 h-1 rounded-full bg-neutral-700" />
-                        <span className="flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-border-strong" />
+                        <span className="flex items-center gap-1 font-mono">
                           <Clock size={12} /> {new Date(ticket.createdAt).toLocaleDateString()}
                         </span>
                       </div>
@@ -127,16 +127,16 @@ async function TicketTable({
                       ) : (
                         <div className={cn("w-2 h-2 rounded-full", ticketStatusIndicatorClass(ticket.status))} />
                       )}
-                      <span className="text-sm font-medium capitalize text-neutral-300">{ticket.status.replace("-", " ")}</span>
+                      <span className="text-sm font-medium capitalize text-fg">{ticket.status.replace("-", " ")}</span>
                     </div>
                   </td>
                   <td className="p-6">
-                    <span className="bg-neutral-800 text-neutral-400 text-xs px-2 py-1 rounded-md font-medium tracking-wide uppercase">
+                    <span className="bg-surface-hover text-muted text-xs px-2 py-1 rounded-md font-medium tracking-wide uppercase">
                       {ticket.department}
                     </span>
                   </td>
                   <td className="p-6 text-right">
-                    <Link href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="inline-flex p-2 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded-full transition-colors">
+                    <Link href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="inline-flex p-2 text-muted hover:text-fg hover:bg-surface-hover rounded-[var(--radius-control)] transition-colors">
                       <ArrowUpRight size={18} />
                     </Link>
                   </td>
@@ -147,8 +147,8 @@ async function TicketTable({
         </table>
       </div>
 
-      <div className="p-6 border-t border-neutral-800 flex flex-col gap-4 text-sm text-neutral-500 md:flex-row md:items-center md:justify-between">
-        <span>
+      <div className="p-6 border-t border-border flex flex-col gap-4 text-sm text-muted md:flex-row md:items-center md:justify-between">
+        <span className="font-mono text-xs">
           Showing {visibleTickets.length === 0 ? 0 : pageStart + 1}-{Math.min(pageStart + visibleTickets.length, filteredTickets.length)} of {filteredTickets.length} tickets
         </span>
         <div className="flex items-center gap-3">
@@ -156,21 +156,21 @@ async function TicketTable({
             aria-disabled={currentPage <= 1}
             href={currentPage <= 1 ? ticketsHref(workspaceSlug, current, { page: 1 }) : ticketsHref(workspaceSlug, current, { page: currentPage - 1 })}
             className={cn(
-              "h-9 px-3 rounded-lg border border-neutral-800 text-xs font-bold inline-flex items-center gap-2 transition-colors",
-              currentPage <= 1 ? "pointer-events-none text-neutral-700" : "text-neutral-400 hover:bg-neutral-800 hover:text-white"
+              "h-9 px-3 rounded-[var(--radius-control)] border border-border text-xs font-medium inline-flex items-center gap-2 transition-colors",
+              currentPage <= 1 ? "pointer-events-none text-faint" : "text-muted hover:bg-surface-hover hover:text-fg"
             )}
           >
             <ArrowLeft size={14} /> Previous
           </Link>
-          <span className="text-xs text-neutral-500">
+          <span className="font-mono text-xs text-muted">
             Page {currentPage} of {totalPages}
           </span>
           <Link
             aria-disabled={currentPage >= totalPages}
             href={currentPage >= totalPages ? ticketsHref(workspaceSlug, current, { page: totalPages }) : ticketsHref(workspaceSlug, current, { page: currentPage + 1 })}
             className={cn(
-              "h-9 px-3 rounded-lg border border-neutral-800 text-xs font-bold inline-flex items-center gap-2 transition-colors",
-              currentPage >= totalPages ? "pointer-events-none text-neutral-700" : "text-neutral-400 hover:bg-neutral-800 hover:text-white"
+              "h-9 px-3 rounded-[var(--radius-control)] border border-border text-xs font-medium inline-flex items-center gap-2 transition-colors",
+              currentPage >= totalPages ? "pointer-events-none text-faint" : "text-muted hover:bg-surface-hover hover:text-fg"
             )}
           >
             Next <ArrowRight size={14} />
@@ -193,12 +193,12 @@ export async function TicketListView({ searchParams, workspaceSlug }: { searchPa
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white font-space">{isAdmin ? "All Tickets" : "My Tickets"}</h1>
-          <p className="text-neutral-500 mt-1">{isAdmin ? "Manage and track all operations requests." : "Track requests submitted from your account."}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-fg">{isAdmin ? "All Tickets" : "My Tickets"}</h1>
+          <p className="text-muted mt-1">{isAdmin ? "Manage and track all operations requests." : "Track requests submitted from your account."}</p>
         </div>
       </div>
 
-      <TicketsTableShell key={`${filter}:${query}:${requestedPage}`} filter={filter} query={query} requestedPage={requestedPage} workspaceSlug={workspaceSlug}>
+      <TicketsTableShell filter={filter} query={query} requestedPage={requestedPage} workspaceSlug={workspaceSlug}>
         <Suspense key={`${filter}:${query}:${requestedPage}`} fallback={<TicketsTableSkeleton />}>
           <TicketTable filter={filter} query={query} requestedPage={requestedPage} isAdmin={isAdmin} userId={user.id} workspaceId={workspace.id} workspaceSlug={workspaceSlug} />
         </Suspense>

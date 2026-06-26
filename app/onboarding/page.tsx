@@ -17,37 +17,37 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Workspace Dashboard</span>
-        <h1 className="text-3xl font-bold tracking-tight text-white font-space mt-2">Manage your TriageDesk workspaces</h1>
-        <p className="text-neutral-500 mt-2">Open an existing workspace, create one for your organization, or join with an invite code or link.</p>
+        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-accent">Workspace Dashboard</span>
+        <h1 className="text-2xl font-semibold tracking-tight text-fg mt-2">Manage your TriageDesk workspaces</h1>
+        <p className="text-muted mt-2">Open an existing workspace, create one for your organization, or join with an invite code or link.</p>
       </div>
 
       {params.error ? (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{params.error}</div>
+        <div className="st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm">{params.error}</div>
       ) : null}
 
       {activeWorkspace ? (
-        <section className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <section className="rounded-[var(--radius-card)] border border-accent-border bg-accent-soft px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center shrink-0">
               <Building2 size={19} />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Currently open workspace</p>
-              <h2 className="text-base font-semibold text-white truncate mt-1">{activeWorkspace.workspace.name}</h2>
-              {activeWorkspaceIsPreview ? <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mt-1">Read-only preview</p> : null}
+              <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-accent">Currently open workspace</p>
+              <h2 className="text-base font-medium text-fg truncate mt-1">{activeWorkspace.workspace.name}</h2>
+              {activeWorkspaceIsPreview ? <p className="font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--st-warn)] mt-1">Read-only preview</p> : null}
             </div>
           </div>
-          <p className="text-xs text-neutral-400 sm:text-right">Requests, tickets, and settings are scoped to this workspace.</p>
+          <p className="text-xs text-muted sm:text-right">Requests, tickets, and settings are scoped to this workspace.</p>
         </section>
       ) : null}
 
       {workspaces.length > 0 ? (
-        <section className="bg-[#111111] border border-neutral-800 rounded-2xl overflow-hidden">
-          <div className="p-6 border-b border-neutral-800 bg-[#151515]">
-            <h2 className="font-semibold text-white">Your workspaces ({workspaces.length})</h2>
+        <section className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
+          <div className="p-6 border-b border-border bg-surface-2">
+            <h2 className="font-medium text-fg">Your workspaces ({workspaces.length})</h2>
           </div>
-          <div className="divide-y divide-neutral-800">
+          <div className="divide-y divide-border">
             {workspaces.map(({ workspace, membership }) => {
               const isActive = activeWorkspace?.workspace.id === workspace.id;
               const isPreview = isWorkspacePreview(workspace.id);
@@ -66,22 +66,22 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
           </div>
         </section>
       ) : (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <div className="st-warn rounded-[var(--radius-control)] border px-4 py-3 text-sm">
           Create or join a workspace before using requests, tickets, review, and settings.
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-5">
+        <section className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
+          <div className="w-11 h-11 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center mb-5">
             <Building2 size={20} />
           </div>
-          <h2 className="text-xl font-bold text-white">Create workspace</h2>
-          <p className="text-sm text-neutral-500 mt-2 mb-6">Start a new organization workspace. You will become its owner.</p>
+          <h2 className="text-xl font-semibold text-fg">Create workspace</h2>
+          <p className="text-sm text-muted mt-2 mb-6">Start a new organization workspace. You will become its owner.</p>
           <form action={createWorkspaceAction} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-semibold text-neutral-300">Workspace name</label>
-              <input id="name" name="name" required minLength={2} maxLength={80} placeholder="Acme Clinic" className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm text-white placeholder:text-neutral-700 focus:outline-none focus:border-emerald-500" />
+              <label htmlFor="name" className="text-sm font-medium text-fg">Workspace name</label>
+              <input id="name" name="name" required minLength={2} maxLength={80} placeholder="Acme Clinic" className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm text-fg placeholder:text-faint focus:outline-none focus:border-accent-border" />
             </div>
             <SubmitButton pendingText="Creating workspace...">
               <PlusCircle size={16} /> Create workspace
@@ -89,16 +89,16 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
           </form>
         </section>
 
-        <section className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-5">
+        <section className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
+          <div className="w-11 h-11 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center mb-5">
             <Link2 size={20} />
           </div>
-          <h2 className="text-xl font-bold text-white">Join with invite</h2>
-          <p className="text-sm text-neutral-500 mt-2 mb-6">Enter a valid invite code or paste the full invite link from a workspace owner or admin.</p>
+          <h2 className="text-xl font-semibold text-fg">Join with invite</h2>
+          <p className="text-sm text-muted mt-2 mb-6">Enter a valid invite code or paste the full invite link from a workspace owner or admin.</p>
           <form action={joinWorkspaceAction} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="code" className="text-sm font-semibold text-neutral-300">Invite code or link</label>
-              <input id="code" name="code" required minLength={6} maxLength={500} placeholder={DEMO_WORKSPACE_INVITE_CODE} className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm text-white placeholder:text-neutral-700 focus:outline-none focus:border-emerald-500" />
+              <label htmlFor="code" className="text-sm font-medium text-fg">Invite code or link</label>
+              <input id="code" name="code" required minLength={6} maxLength={500} placeholder={DEMO_WORKSPACE_INVITE_CODE} className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm text-fg placeholder:text-faint focus:outline-none focus:border-accent-border font-mono" />
             </div>
             <SubmitButton pendingText="Joining workspace...">
               <Link2 size={16} /> Join workspace

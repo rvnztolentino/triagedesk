@@ -11,6 +11,8 @@ import {
   LockKeyhole,
   LogOut,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   PlusCircle,
   Settings,
   Ticket,
@@ -19,8 +21,6 @@ import {
 } from "lucide-react";
 import { signOutAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
-import { PageLoadingSkeleton } from "@/components/page-loading-skeleton";
-import { PageLoadingSpinner } from "@/components/page-loading-spinner";
 import { ThemeToggle } from "@/components/theme-controls";
 import type { AppUser, UserRole } from "@/lib/schema";
 import { cn } from "@/lib/utils";
@@ -60,16 +60,23 @@ function isModifiedClick(event: React.MouseEvent<HTMLAnchorElement>) {
   return event.metaKey || event.altKey || event.ctrlKey || event.shiftKey || event.button !== 0;
 }
 
-function isNewRequestPath(path: string) {
-  return path === "/submit" || path === "/requests/new" || /^\/w\/[^/]+\/requests\/new$/.test(path);
-}
-
 function isAuthPath(path: string) {
   return path === "/login" || path.startsWith("/signup") || path.startsWith("/auth");
 }
 
 function isPublicPath(path: string) {
   return path === "/" || isAuthPath(path);
+}
+
+const SIDEBAR_COLLAPSED_KEY = "triagedesk-sidebar-collapsed";
+
+function RouteProgress({ active }: { active: boolean }) {
+  if (!active) return null;
+  return (
+    <div className="pointer-events-none fixed left-0 right-0 top-0 z-[200] h-0.5 overflow-hidden" aria-hidden>
+      <div className="app-route-progress h-full w-2/5 rounded-full bg-accent" />
+    </div>
+  );
 }
 
 export function AppLayout({
@@ -86,7 +93,29 @@ export function AppLayout({
   const [profileOpen, setProfileOpen] = React.useState(false);
   const [pendingPath, setPendingPath] = React.useState<string | null>(null);
   const [isScrolled, setIsScrolled] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(false);
   const mainRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+      React.startTransition(() => setCollapsed(stored));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const toggleCollapsed = React.useCallback(() => {
+    setCollapsed((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   const isAuthPage = isAuthPath(pathname);
   const operationalNavItems = activeWorkspace?.isPreview
@@ -185,51 +214,58 @@ export function AppLayout({
 
   if (isAuthPage) {
     return (
-      <div className="bg-[#0a0a0a] text-neutral-200 min-h-screen w-full" onClickCapture={handlePublicNavigate}>
-        {pendingPath ? <PageLoadingSpinner fullScreen /> : children}
+      <div className="bg-bg text-fg min-h-screen w-full" onClickCapture={handlePublicNavigate}>
+        <RouteProgress active={!!pendingPath} />
+        <div key={pathname} className="app-page-in">{children}</div>
       </div>
     );
   }
 
   if (!currentUser && pathname === "/") {
     return (
-      <div className="bg-[#0a0a0a] text-neutral-200 min-h-screen w-full" onClickCapture={handlePublicNavigate}>
-        {pendingPath ? <PageLoadingSpinner fullScreen /> : children}
+      <div className="bg-bg text-fg min-h-screen w-full" onClickCapture={handlePublicNavigate}>
+        <RouteProgress active={!!pendingPath} />
+        <div key={pathname} className="app-page-in">{children}</div>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#0a0a0a] text-neutral-200 h-dvh w-full flex overflow-hidden font-sans">
-      {/* Mobile overlay */}
-      {sidebarOpen ? (
-        <button
-          type="button"
-          aria-label="Close sidebar"
-          className="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm md:hidden transition-opacity duration-300"
-          onClick={() => setSidebarOpen(false)}
-        />
-      ) : null}
+    <div className="bg-bg text-fg h-dvh w-full flex overflow-hidden font-sans">
+      <RouteProgress active={!!pendingPath} />
+      {/* Mobile overlay — kept mounted so it can fade in/out with the sidebar */}
+      <button
+        type="button"
+        aria-label="Close sidebar"
+        tabIndex={sidebarOpen ? 0 : -1}
+        aria-hidden={sidebarOpen ? undefined : true}
+        className={cn(
+          "fixed inset-0 z-[110] bg-black/40 md:hidden transition-opacity duration-300 ease-out",
+          sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        onClick={() => setSidebarOpen(false)}
+      />
 
       {/* ── Sidebar ── */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-[120] w-72 shrink-0 overscroll-contain flex flex-col overflow-hidden transition-transform duration-300 ease-out md:static md:z-auto md:w-[17rem] md:translate-x-0",
-          "bg-[#0a0a0a] border-r border-neutral-800/60",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-[120] w-72 shrink-0 overscroll-contain flex flex-col overflow-hidden transition-[transform,width] duration-300 ease-out md:static md:z-auto md:w-[17rem] md:translate-x-0",
+          "bg-bg border-r border-border",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          collapsed && "md:w-[4.25rem]"
         )}
       >
         {/* Brand area */}
-        <div className="px-5 pt-5 pb-4">
-          <div className="flex items-center justify-between gap-3">
+        <div className={cn("px-5 pt-5 pb-4", collapsed && "md:px-0")}>
+          <div className={cn("flex items-center justify-between gap-3", collapsed && "md:justify-center")}>
             <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
-              <BrandIcon size={28} className="rounded-md" />
-              <span className="text-base font-semibold tracking-tight text-white lg:text-lg">TriageDesk</span>
+              <BrandIcon size={26} className="rounded-md" />
+              <span className={cn("text-[15px] font-semibold tracking-tight text-fg", collapsed && "md:hidden")}>TriageDesk</span>
             </Link>
             <button
               type="button"
               aria-label="Close sidebar"
-              className="md:hidden h-9 w-9 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors inline-flex items-center justify-center"
+              className="md:hidden h-9 w-9 rounded-[var(--radius-control)] text-muted hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center justify-center"
               onClick={() => setSidebarOpen(false)}
             >
               <X size={18} />
@@ -239,28 +275,32 @@ export function AppLayout({
 
         {/* Workspace indicator — compact pill */}
         {currentUser ? (
-          <div className="px-4 pb-3">
+          <div className={cn("px-4 pb-3", collapsed && "md:px-2")}>
             <Link
               href="/onboarding"
-              className="flex items-center gap-2.5 rounded-full border border-neutral-800/60 bg-[#111111] px-3 py-2.5 transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-800/50 group"
+              title={collapsed ? activeWorkspace?.name ?? "Choose workspace" : undefined}
+              className={cn(
+                "group flex items-center gap-2.5 rounded-[var(--radius-control)] border border-border bg-surface px-3 py-2.5 transition-colors duration-200 hover:border-border-strong hover:bg-surface-hover",
+                collapsed && "md:justify-center md:px-0"
+              )}
             >
               <div
                 className={cn(
-                  "h-7 w-7 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                  activeWorkspace ? "bg-emerald-500/15 text-emerald-400" : "bg-neutral-800 text-neutral-500"
+                  "h-7 w-7 rounded-md flex items-center justify-center shrink-0",
+                  activeWorkspace ? "bg-accent-soft text-accent" : "bg-surface-hover text-muted"
                 )}
               >
                 <Building2 size={14} />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 leading-none">
+              <div className={cn("min-w-0 flex-1", collapsed && "md:hidden")}>
+                <div className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-faint leading-none">
                   {activeWorkspace?.isPreview ? "Preview" : "Workspace"}
                 </div>
-                <div className="mt-0.5 truncate text-sm font-medium text-neutral-200 leading-tight group-hover:text-white transition-colors">
+                <div className="mt-1 truncate text-sm font-medium text-fg leading-tight transition-colors">
                   {activeWorkspace?.name ?? "Choose workspace"}
                 </div>
               </div>
-              <ChevronDown size={14} className="text-neutral-600 shrink-0" />
+              <ChevronDown size={14} className={cn("text-faint shrink-0", collapsed && "md:hidden")} />
             </Link>
           </div>
         ) : null}
@@ -278,24 +318,26 @@ export function AppLayout({
                       key={item.href}
                       href={href}
                       prefetch={false}
+                      title={collapsed ? item.label : undefined}
                       onClick={(event) => handleSidebarNavigate(event, href)}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                        "group flex items-center gap-3 px-3 py-2 rounded-[var(--radius-control)] text-sm font-medium transition-colors duration-200",
                         active
-                          ? "bg-emerald-500/10 text-emerald-400"
-                          : "text-neutral-400 hover:text-white hover:bg-neutral-800/60"
+                          ? "bg-accent-soft text-accent"
+                          : "text-muted hover:text-fg hover:bg-surface-hover",
+                        collapsed && "md:justify-center md:gap-0 md:px-0"
                       )}
                     >
                       <item.icon
-                        size={18}
+                        size={17}
                         className={cn(
                           "shrink-0 transition-colors duration-200",
-                          active ? "text-emerald-400" : "text-neutral-500 group-hover:text-neutral-300"
+                          active ? "text-accent" : "text-faint group-hover:text-fg"
                         )}
                       />
-                      {item.label}
+                      <span className={cn(collapsed && "md:hidden")}>{item.label}</span>
                       {active ? (
-                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        <span className={cn("ml-auto h-1.5 w-1.5 rounded-full bg-accent", collapsed && "md:hidden")} />
                       ) : null}
                     </Link>
                   );
@@ -304,16 +346,29 @@ export function AppLayout({
         </nav>
 
         {/* Bottom section */}
-        <div className="mt-auto px-4 pb-5 pt-3 border-t border-neutral-800/40">
+        <div className={cn("mt-auto px-4 pb-5 pt-3 border-t border-border", collapsed && "md:px-2")}>
           {activeWorkspace?.isPreview ? (
-            <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2 mb-3">
-              <LockKeyhole size={12} className="text-amber-400 shrink-0" />
-              <span className="text-[11px] font-medium text-amber-300">Preview — read-only</span>
+            <div
+              className={cn(
+                "st-warn flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 mb-3",
+                collapsed && "md:justify-center md:px-0"
+              )}
+              title={collapsed ? "Preview — read-only" : undefined}
+            >
+              <LockKeyhole size={12} className="shrink-0" />
+              <span className={cn("text-[11px] font-medium", collapsed && "md:hidden")}>Preview — read-only</span>
             </div>
           ) : null}
-          <div className="px-3 py-2 text-center text-xs uppercase text-neutral-600 font-semibold tracking-wider">
-            Operational helpdesk
-          </div>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="hidden md:flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] px-2 py-1.5 text-[11px] font-medium text-faint hover:text-fg hover:bg-surface-hover transition-colors"
+          >
+            {collapsed ? <PanelLeftOpen size={14} className="shrink-0" /> : <PanelLeftClose size={14} className="shrink-0" />}
+            <span className={cn(collapsed && "md:hidden")}>Collapse</span>
+          </button>
         </div>
       </aside>
 
@@ -322,9 +377,9 @@ export function AppLayout({
         {/* Header */}
         <header
           className={cn(
-            "absolute top-0 left-0 right-0 z-[90] shrink-0 flex items-center justify-between gap-4 px-4 md:px-6 h-16 transition-all duration-200",
+            "absolute top-0 left-0 right-0 z-[90] shrink-0 flex items-center justify-between gap-4 px-4 md:px-6 h-16 transition-colors duration-200",
             isScrolled
-              ? "bg-[#0a0a0a]/80 backdrop-blur-md border-b border-neutral-800/40"
+              ? "bg-bg/70 backdrop-blur-md border-b border-border"
               : "bg-transparent border-b border-transparent"
           )}
         >
@@ -333,7 +388,7 @@ export function AppLayout({
             <button
               type="button"
               aria-label="Open sidebar"
-              className="md:hidden h-9 w-9 rounded-full bg-transparent text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors inline-flex items-center justify-center"
+              className="md:hidden h-9 w-9 rounded-[var(--radius-control)] bg-transparent text-muted hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center justify-center"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu size={18} />
@@ -341,8 +396,8 @@ export function AppLayout({
 
             {/* Mobile brand */}
             <Link href="/" className="flex items-center gap-2 md:hidden" aria-label="TriageDesk home">
-              <BrandIcon size={24} className="rounded-md" />
-              <span className="text-sm font-semibold tracking-tight text-white">TriageDesk</span>
+              <BrandIcon size={22} className="rounded-md" />
+              <span className="text-sm font-semibold tracking-tight text-fg">TriageDesk</span>
             </Link>
           </div>
 
@@ -353,10 +408,10 @@ export function AppLayout({
               <Link
                 href="/onboarding"
                 aria-label={activeWorkspace ? `Current ${activeWorkspace.isPreview ? "preview " : ""}workspace: ${activeWorkspace.name}` : "Choose a workspace"}
-                className="hidden sm:inline-flex items-center gap-2 h-9 rounded-full border border-neutral-800/60 bg-[#111111] px-3 text-left hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-200"
+                className="hidden sm:inline-flex items-center gap-2 h-9 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-left hover:border-border-strong hover:bg-surface-hover transition-colors duration-200"
               >
-                <Building2 size={14} className={activeWorkspace ? "text-emerald-400 shrink-0" : "text-neutral-500 shrink-0"} />
-                <span className="max-w-[10rem] truncate text-xs font-medium text-neutral-300">
+                <Building2 size={14} className={activeWorkspace ? "text-accent shrink-0" : "text-muted shrink-0"} />
+                <span className="max-w-[10rem] truncate text-xs font-medium text-muted">
                   {activeWorkspace?.name ?? "Choose workspace"}
                 </span>
               </Link>
@@ -373,36 +428,36 @@ export function AppLayout({
                   aria-haspopup="menu"
                   onClick={() => setProfileOpen((open) => !open)}
                   className={cn(
-                    "flex items-center gap-2 py-1 pl-1 pr-2 rounded-full border transition-all duration-200",
+                    "flex items-center gap-2 py-1 pl-1 pr-2 rounded-[var(--radius-control)] border transition-colors duration-200",
                     profileOpen
-                      ? "border-neutral-700 bg-[#111111]"
-                      : "border-transparent hover:border-neutral-800 hover:bg-[#111111]"
+                      ? "border-border-strong bg-surface"
+                      : "border-transparent hover:border-border hover:bg-surface"
                   )}
                 >
-                  <div className="w-8 h-8 bg-emerald-500/15 rounded-full border border-emerald-500/30 flex items-center justify-center text-xs font-bold text-emerald-400">
+                  <div className="w-8 h-8 bg-accent-soft rounded-md border border-accent-border flex items-center justify-center font-mono text-xs font-semibold text-accent">
                     {initials(currentUser)}
                   </div>
-                  <span className="hidden sm:block text-sm font-medium text-neutral-300 max-w-[8rem] truncate">
+                  <span className="hidden sm:block text-sm font-medium text-muted max-w-[8rem] truncate">
                     {currentUser.displayName}
                   </span>
-                  <ChevronDown size={14} className={cn("text-neutral-500 transition-transform duration-200", profileOpen ? "rotate-180" : "")} />
+                  <ChevronDown size={14} className={cn("text-faint transition-transform duration-200", profileOpen ? "rotate-180" : "")} />
                 </button>
 
                 {profileOpen ? (
                   <div
                     id="app-profile-menu"
                     role="menu"
-                    className="absolute right-0 top-12 z-[100] w-60 rounded-2xl border border-neutral-800 bg-[#111111] p-1.5 shadow-2xl shadow-black/20 app-dropdown-enter"
+                    className="absolute right-0 top-12 z-[100] w-60 rounded-[var(--radius-card)] border border-border bg-surface p-1.5 app-dropdown-enter"
                   >
-                    <div className="px-3 py-2.5 border-b border-neutral-800/60 mb-1">
-                      <div className="text-sm font-semibold text-white truncate">{currentUser.displayName}</div>
-                      <div className="text-xs text-neutral-500 truncate mt-0.5">{currentUser.email}</div>
-                      <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
+                    <div className="px-3 py-2.5 border-b border-border mb-1">
+                      <div className="text-sm font-medium text-fg truncate">{currentUser.displayName}</div>
+                      <div className="font-mono text-xs text-muted truncate mt-0.5">{currentUser.email}</div>
+                      <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-accent-soft border border-accent-border px-2 py-0.5 font-mono text-[10px] font-medium text-accent uppercase tracking-[0.1em]">
                         {activeWorkspace?.isPreview ? "preview" : activeWorkspace?.role ?? currentUser.role}
                       </div>
                     </div>
                     <form action={signOutAction}>
-                      <button className="w-full h-9 px-3 rounded-full text-sm font-medium text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors flex items-center gap-2">
+                      <button className="w-full h-9 px-3 rounded-[var(--radius-control)] text-sm font-medium text-muted hover:text-fg hover:bg-surface-hover transition-colors flex items-center gap-2">
                         <LogOut size={15} /> Sign out
                       </button>
                     </form>
@@ -410,7 +465,7 @@ export function AppLayout({
                 ) : null}
               </div>
             ) : (
-              <Link href="/login" className="rounded-full px-4 py-2 text-sm font-medium text-neutral-300 transition-colors hover:text-white">Sign in</Link>
+              <Link href="/login" className="rounded-[var(--radius-control)] px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-fg">Sign in</Link>
             )}
           </div>
         </header>
@@ -422,17 +477,17 @@ export function AppLayout({
           aria-busy={pendingPath ? true : undefined}
         >
           {activeWorkspace?.isPreview ? (
-            <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+            <div className="st-warn mb-6 rounded-[var(--radius-card)] border p-4">
               <div className="flex items-start gap-2 text-sm">
-                <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
-                <p className="text-amber-100">
-                  <span className="font-bold text-amber-300">Preview locked.</span>{" "}
+                <LockKeyhole size={15} className="mt-0.5 shrink-0" />
+                <p>
+                  <span className="font-semibold">Preview locked.</span>{" "}
                   Demo Clinic is read-only. Explore the sample workflow, then create your own workspace to use actions.
                 </p>
               </div>
             </div>
           ) : null}
-          {pendingPath ? (isNewRequestPath(pendingPath) || isAuthPath(pendingPath) ? <PageLoadingSpinner /> : <PageLoadingSkeleton />) : children}
+          <div key={pathname} className="app-page-in">{children}</div>
         </main>
       </div>
     </div>

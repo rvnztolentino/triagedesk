@@ -37,27 +37,27 @@ export function WorkspaceOpenLink({
       }}
       className={cn(
         "p-5 flex flex-col gap-3 transition-colors border-l-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4",
-        pending ? "pointer-events-none border-emerald-500 bg-emerald-500/10" : isActive ? "border-emerald-500 bg-emerald-500/5" : "border-transparent hover:bg-[#151515]"
+        pending ? "pointer-events-none border-accent bg-accent-soft" : isActive ? "border-accent bg-accent-soft" : "border-transparent hover:bg-surface-hover"
       )}
     >
       <div className="min-w-0">
-        <h3 className="font-semibold text-white truncate">{name}</h3>
-        <p className="text-xs text-neutral-500 font-mono mt-1 truncate">{slug}</p>
+        <h3 className="font-medium text-fg truncate">{name}</h3>
+        <p className="text-xs text-muted font-mono mt-1 truncate">{slug}</p>
       </div>
       <div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto sm:justify-end">
         {pending ? (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+          <span className="inline-flex items-center gap-1 font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-accent">
             <LoaderCircle size={13} className="animate-spin" /> Opening
           </span>
         ) : isActive ? (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+          <span className="inline-flex items-center gap-1 font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-accent">
             <CheckCircle2 size={13} /> Open
           </span>
         ) : null}
-        <span className={isPreview ? "text-[10px] font-bold uppercase tracking-wider text-amber-400" : "text-[10px] font-bold uppercase tracking-wider text-neutral-500"}>
+        <span className={isPreview ? "font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--st-warn)]" : "font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-muted"}>
           {isPreview ? "Preview locked" : role}
         </span>
-        {pending ? null : <ArrowRight size={16} className="text-neutral-500" />}
+        {pending ? null : <ArrowRight size={16} className="text-muted" />}
       </div>
     </Link>
   );

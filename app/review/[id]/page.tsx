@@ -28,44 +28,44 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-4">
-      <Link href={href("/review")} className="text-sm font-medium text-neutral-500 hover:text-white flex items-center gap-2 mb-6 w-fit">
+      <Link href={href("/review")} className="text-sm font-medium text-muted hover:text-fg flex items-center gap-2 mb-6 w-fit transition-colors">
         <ArrowLeft size={16} /> Back to Queue
       </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="col-span-1 space-y-6">
-          <div className="bg-[#111111] rounded-2xl p-6 shadow-xl border border-neutral-800">
-            <h2 className="font-semibold text-white mb-6">Raw Submission</h2>
+          <div className="bg-surface rounded-[var(--radius-card)] p-6 border border-border">
+            <h2 className="font-medium text-fg mb-6">Raw Submission</h2>
 
             <div className="space-y-4">
               <div>
-                <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Original Description</div>
-                <div className="text-sm text-neutral-300 bg-[#0a0a0a] border border-neutral-800 p-3 rounded-xl">{request.description}</div>
+                <div className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em] mb-1">Original Description</div>
+                <div className="text-sm text-fg bg-bg border border-border p-3 rounded-[var(--radius-control)]">{request.description}</div>
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Location</div>
-                <div className="text-sm text-neutral-300">{request.location}</div>
+                <div className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em] mb-1">Location</div>
+                <div className="text-sm text-fg">{request.location}</div>
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Contact</div>
-                <div className="text-sm text-neutral-300">{request.contactName || "Anonymous"}</div>
+                <div className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em] mb-1">Contact</div>
+                <div className="text-sm text-fg">{request.contactName || "Anonymous"}</div>
               </div>
 
               {request.urgencyNote ? (
                 <div>
-                  <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <div className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em] mb-1 flex items-center gap-1">
                     <AlertTriangle size={12} /> User Urgency
                   </div>
-                  <div className="text-sm font-medium text-rose-400 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">{request.urgencyNote}</div>
+                  <div className="st-danger text-sm font-medium p-3 rounded-[var(--radius-control)] border">{request.urgencyNote}</div>
                 </div>
               ) : null}
 
               {request.imageUrl ? (
                 <div>
-                  <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Photo</div>
-                  <a href={request.imageUrl} className="block text-sm text-emerald-400 hover:text-emerald-300">
+                  <div className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em] mb-1">Photo</div>
+                  <a href={request.imageUrl} className="block text-sm text-accent hover:opacity-90">
                     View uploaded image
                   </a>
                 </div>
@@ -73,12 +73,12 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
 
               {attachments.length > 0 ? (
                 <div>
-                  <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <div className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em] mb-2 flex items-center gap-1">
                     <Paperclip size={12} /> Attachments
                   </div>
                   <div className="space-y-2">
                     {attachments.map((attachment) => (
-                      <a key={attachment.id} href={href(`/attachments/${attachment.id}`)} className="flex min-w-0 items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300">
+                      <a key={attachment.id} href={href(`/attachments/${attachment.id}`)} className="flex min-w-0 items-center gap-2 text-sm text-accent hover:opacity-90">
                         <FileText size={14} className="shrink-0" /> <AttachmentFileName fileName={attachment.fileName} className="flex-1" />
                       </a>
                     ))}
@@ -87,23 +87,23 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
               ) : null}
 
               {request.status === "duplicate" && request.duplicateOfTicketId ? (
-                <div className="rounded-xl border border-neutral-800 bg-[#0a0a0a] p-3 text-sm font-semibold text-neutral-300">
+                <div className="rounded-[var(--radius-control)] border border-border bg-bg p-3 text-sm font-medium text-fg">
                   Duplicate · Linked to {request.duplicateOfTicketId}
                 </div>
               ) : null}
             </div>
           </div>
 
-          <div className="bg-[#111111] rounded-2xl p-6 shadow-xl border border-neutral-800">
-            <h2 className="font-semibold text-white mb-4">Similar Tickets</h2>
+          <div className="bg-surface rounded-[var(--radius-card)] p-6 border border-border">
+            <h2 className="font-medium text-fg mb-4">Similar Tickets</h2>
             <div className="space-y-3">
               {similarTickets.length === 0 ? (
-                <p className="text-sm text-neutral-500">No close matches found.</p>
+                <p className="text-sm text-muted">No close matches found.</p>
               ) : (
                 similarTickets.map((ticket) => (
-                  <Link key={ticket.id} href={href(`/tickets/${ticket.id}`)} className="block bg-[#0a0a0a] border border-neutral-800 p-3 rounded-xl hover:border-neutral-700">
-                    <div className="text-sm font-semibold text-white">{ticket.title}</div>
-                    <div className="text-xs text-neutral-500 mt-1">{ticket.id} &middot; {ticket.reason}</div>
+                  <Link key={ticket.id} href={href(`/tickets/${ticket.id}`)} className="block bg-bg border border-border p-3 rounded-[var(--radius-control)] hover:border-border-strong transition-colors">
+                    <div className="text-sm font-medium text-fg">{ticket.title}</div>
+                    <div className="text-xs text-muted mt-1">{ticket.id} &middot; {ticket.reason}</div>
                   </Link>
                 ))
               )}
@@ -111,21 +111,17 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
           </div>
         </div>
 
-        <div className="col-span-1 md:col-span-2 bg-[#111111] rounded-2xl p-8 shadow-xl border border-neutral-800 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 text-neutral-800">
-            <Sparkles size={120} className="opacity-20 rotate-12" />
+        <div className="col-span-1 md:col-span-2 bg-surface rounded-[var(--radius-card)] p-8 border border-border">
+          <div className="flex items-center gap-2 mb-8">
+            <Sparkles size={20} className="text-accent" />
+            <h2 className="text-xl font-semibold text-fg">AI Triage Output</h2>
           </div>
 
-          <div className="flex items-center gap-2 mb-8 relative">
-            <Sparkles size={20} className="text-emerald-500" />
-            <h2 className="text-xl font-bold font-space text-white">AI Triage Output</h2>
-          </div>
-
-          <form id={approveFormId} action={approveRequestAction} className="space-y-6 relative">
+          <form id={approveFormId} action={approveRequestAction} className="space-y-6">
             {isPreview ? (
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-start gap-2">
-                <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
-                <p><span className="font-bold text-amber-300">Preview locked.</span> Review fields are visible for evaluation, but approval actions are disabled.</p>
+              <div className="st-warn rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
+                <LockKeyhole size={15} className="mt-0.5 shrink-0" />
+                <p><span className="font-semibold">Preview locked.</span> Review fields are visible for evaluation, but approval actions are disabled.</p>
               </div>
             ) : null}
             <fieldset disabled={isPreview} className="space-y-6 disabled:opacity-60">
@@ -133,26 +129,26 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
             <input type="hidden" name="requestId" value={request.id} />
 
             <div className="space-y-2">
-              <label htmlFor="title" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Suggested Title</label>
+              <label htmlFor="title" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Suggested Title</label>
               <input
                 id="title"
                 name="title"
                 type="text"
                 defaultValue={triage.title}
-                className="w-full text-lg font-semibold text-white bg-transparent border-b-2 border-dashed border-neutral-700 focus:border-emerald-500 focus:outline-none pb-2 transition-colors"
+                className="w-full text-lg font-medium text-fg bg-transparent border-b border-dashed border-border-strong focus:border-accent focus:outline-none pb-2 transition-colors"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label htmlFor="priority" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider flex items-center gap-1">
+                <label htmlFor="priority" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em] flex items-center gap-1">
                   <AlertTriangle size={12} /> Priority
                 </label>
                 <select
                   id="priority"
                   name="priority"
                   defaultValue={triage.priority}
-                  className="w-full appearance-none bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer uppercase tracking-wider text-white"
+                  className="w-full appearance-none bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm font-medium focus:outline-none focus:border-accent-border cursor-pointer uppercase tracking-wider text-fg"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -162,14 +158,14 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="department" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider flex items-center gap-1">
+                <label htmlFor="department" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em] flex items-center gap-1">
                   <Building2 size={12} /> Department
                 </label>
                 <select
                   id="department"
                   name="department"
                   defaultValue={triage.department}
-                  className="w-full appearance-none bg-[#0a0a0a] border border-neutral-800 rounded-xl p-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer uppercase tracking-wider text-white"
+                  className="w-full appearance-none bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm font-medium focus:outline-none focus:border-accent-border cursor-pointer uppercase tracking-wider text-fg"
                 >
                   {departments.map((department) => (
                     <option key={department.id} value={department.id}>{department.name}</option>
@@ -179,32 +175,32 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">AI Reasoning</label>
-              <div className="text-sm text-neutral-400 italic bg-[#0a0a0a] p-4 rounded-xl border border-neutral-800">
+              <label className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">AI Reasoning</label>
+              <div className="text-sm text-muted italic bg-bg p-4 rounded-[var(--radius-control)] border border-border">
                 &quot;{triage.priorityReasoning}&quot;
               </div>
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="summary" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Edited Summary</label>
+              <label htmlFor="summary" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Edited Summary</label>
               <textarea
                 id="summary"
                 name="summary"
                 defaultValue={triage.summary}
                 rows={4}
-                className="w-full text-sm text-white bg-[#0a0a0a] border border-neutral-800 rounded-xl p-4 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none shadow-sm placeholder-neutral-600"
+                className="w-full text-sm text-fg bg-bg border border-border rounded-[var(--radius-control)] p-4 focus:outline-none focus:border-accent-border resize-none placeholder:text-faint"
               />
             </div>
 
-            <div className="pt-6 border-t border-neutral-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <SubmitButton pendingText="Approving..." className="h-auto w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-bold text-black transition-all hover:bg-emerald-600 sm:w-auto">
-                {isPreview ? <><LockKeyhole size={18} /> Preview locked</> : <><Check size={18} /> Approve & Dispatch</>}
+            <div className="pt-6 border-t border-border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <SubmitButton pendingText="Approving..." className="h-auto w-full rounded-[var(--radius-control)] bg-accent px-6 py-3 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 sm:w-auto">
+                {isPreview ? <><LockKeyhole size={18} /> Preview locked</> : <><Check size={18} /> Approve &amp; Dispatch</>}
               </SubmitButton>
               <SubmitButton
                 disabled={isPreview}
                 formAction={rejectRequestAction}
                 pendingText="Rejecting..."
-                className="h-auto w-full rounded-xl border border-rose-500/20 bg-rose-500/10 px-5 py-3 text-sm font-bold text-rose-500 transition-all hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                className="st-danger h-auto w-full rounded-[var(--radius-control)] border px-5 py-3 text-sm font-medium transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 <X size={18} /> Reject
               </SubmitButton>

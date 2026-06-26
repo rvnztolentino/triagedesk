@@ -45,28 +45,28 @@ export default async function WorkspaceLandingPage({
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <Link href="/onboarding" className="inline-flex items-center gap-2 text-sm font-medium text-neutral-500 hover:text-white">
+      <Link href="/onboarding" className="inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-fg transition-colors">
         <ArrowLeft size={16} /> Back to workspace dashboard
       </Link>
 
-      <section className="bg-[#111111] border border-neutral-800 rounded-2xl p-6 md:p-8">
+      <section className="bg-surface border border-border rounded-[var(--radius-card)] p-6 md:p-8">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+            <div className="flex items-center gap-2 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-accent">
               <Building2 size={14} /> Workspace overview
             </div>
-            <h1 className="text-3xl font-bold text-white font-space mt-3">{workspace.name}</h1>
-            <p className="text-sm text-neutral-500 mt-2">
-              Workspace slug: <span className="font-mono text-neutral-300">{workspace.slug}</span>
+            <h1 className="text-2xl font-semibold text-fg mt-3">{workspace.name}</h1>
+            <p className="text-sm text-muted mt-2">
+              Workspace slug: <span className="font-mono text-fg">{workspace.slug}</span>
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="h-9 px-3 rounded-lg bg-neutral-800 border border-neutral-700 text-xs font-bold uppercase tracking-wider text-neutral-300 inline-flex items-center">
+            <span className="h-9 px-3 rounded-[var(--radius-control)] bg-surface-hover border border-border font-mono text-xs font-medium uppercase tracking-[0.1em] text-muted inline-flex items-center">
               {isPreview ? "Preview locked" : membership.role}
             </span>
             <form action={activateWorkspaceAction}>
               <input type="hidden" name="workspaceSlug" value={workspace.slug} />
-              <SubmitButton pendingText={isPreview ? "Opening preview..." : "Opening operations..."} className="w-auto h-10 px-4 rounded-full">
+              <SubmitButton pendingText={isPreview ? "Opening preview..." : "Opening operations..."} className="w-auto h-10 px-4">
                 {isPreview ? "Open preview" : "Open operations"} <ArrowRight size={15} />
               </SubmitButton>
             </form>
@@ -75,31 +75,31 @@ export default async function WorkspaceLandingPage({
       </section>
 
       {query.error ? (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{query.error}</div>
+        <div className="st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm">{query.error}</div>
       ) : null}
 
       {isPreview ? (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-start gap-2">
-          <LockKeyhole size={15} className="mt-0.5 shrink-0 text-amber-400" />
-          <p><span className="font-bold text-amber-300">Read-only preview.</span> Demo Clinic shows the full sample workflow, but requests, reviews, updates, invitations, and workspace management actions are locked.</p>
+        <div className="st-warn rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
+          <LockKeyhole size={15} className="mt-0.5 shrink-0" />
+          <p><span className="font-semibold">Read-only preview.</span> Demo Clinic shows the full sample workflow, but requests, reviews, updates, invitations, and workspace management actions are locked.</p>
         </div>
       ) : null}
 
       {query.invite ? (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-          Invite created: <span className="font-mono font-bold">{query.invite}</span>
+        <div className="rounded-[var(--radius-control)] border border-accent-border bg-accent-soft px-4 py-3 text-sm text-accent">
+          Invite created: <span className="font-mono font-medium">{query.invite}</span>
         </div>
       ) : null}
 
       {canManageUsers ? (
-        <section className="bg-[#111111] border border-neutral-800 rounded-2xl p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <section className="bg-surface border border-border rounded-[var(--radius-card)] p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="font-semibold text-white flex items-center gap-2">
-              <Users size={17} className="text-emerald-400" /> Workspace users
+            <h2 className="font-medium text-fg flex items-center gap-2">
+              <Users size={17} className="text-accent" /> Workspace users
             </h2>
-            <p className="text-sm text-neutral-500 mt-1">Review members, roles, and removals from User Management.</p>
+            <p className="text-sm text-muted mt-1">Review members, roles, and removals from User Management.</p>
           </div>
-          <Link href={`/w/${workspace.slug}/users`} className="h-10 px-4 rounded-lg bg-neutral-800 border border-neutral-700 text-sm font-bold text-white hover:bg-neutral-700 inline-flex items-center justify-center gap-2">
+          <Link href={`/w/${workspace.slug}/users`} className="h-10 px-4 rounded-[var(--radius-control)] bg-surface-hover border border-border text-sm font-medium text-fg hover:bg-surface transition-colors inline-flex items-center justify-center gap-2">
             Manage users <ArrowRight size={15} />
           </Link>
         </section>
@@ -107,18 +107,18 @@ export default async function WorkspaceLandingPage({
 
       {canManageInvites ? (
         <section className="grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-6">
-          <div className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
+          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
             <div className="flex items-center gap-2 mb-5">
-              <PlusCircle size={17} className="text-emerald-400" />
-              <h2 className="font-semibold text-white">Share workspace</h2>
+              <PlusCircle size={17} className="text-accent" />
+              <h2 className="font-medium text-fg">Share workspace</h2>
             </div>
-            <p className="text-sm text-neutral-500 mb-5">Create a seven-day, one-time invite link. Membership role always comes from the invite.</p>
+            <p className="text-sm text-muted mb-5">Create a seven-day, one-time invite link. Membership role always comes from the invite.</p>
             <form action={createWorkspaceInviteAction} className="space-y-4">
               <input type="hidden" name="workspaceId" value={workspace.id} />
               <input type="hidden" name="workspaceSlug" value={workspace.slug} />
               <div className="space-y-2">
-                <label htmlFor="role" className="text-sm font-semibold text-neutral-300">Invite role</label>
-                <select id="role" name="role" className="w-full h-11 bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-emerald-500">
+                <label htmlFor="role" className="text-sm font-medium text-fg">Invite role</label>
+                <select id="role" name="role" className="w-full h-11 bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-accent-border">
                   <option value="requester">Requester</option>
                   {membership.role === "owner" ? <option value="admin">Admin</option> : null}
                 </select>
@@ -129,15 +129,15 @@ export default async function WorkspaceLandingPage({
             </form>
           </div>
 
-          <div className="bg-[#111111] border border-neutral-800 rounded-2xl overflow-hidden">
-            <div className="p-6 border-b border-neutral-800 bg-[#151515]">
-              <h2 className="font-semibold text-white flex items-center gap-2">
-                <ShieldCheck size={17} className="text-emerald-400" /> Workspace invites ({invites.length})
+          <div className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
+            <div className="p-6 border-b border-border bg-surface-2">
+              <h2 className="font-medium text-fg flex items-center gap-2">
+                <ShieldCheck size={17} className="text-accent" /> Workspace invites ({invites.length})
               </h2>
             </div>
-            <div className="divide-y divide-neutral-800">
+            <div className="divide-y divide-border">
               {invites.length === 0 ? (
-                <div className="p-8 text-sm text-neutral-500">No workspace invites yet.</div>
+                <div className="p-8 text-sm text-muted">No workspace invites yet.</div>
               ) : (
                 invites.map((invite) => {
                   const link = workspaceInviteLink(workspace.slug, invite.code);
@@ -147,13 +147,13 @@ export default async function WorkspaceLandingPage({
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm text-white">{invite.code}</span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">{invite.role}</span>
-                            <span className={active ? "text-[10px] font-bold uppercase tracking-wider text-emerald-400" : "text-[10px] font-bold uppercase tracking-wider text-neutral-600"}>
+                            <span className="font-mono text-sm text-fg">{invite.code}</span>
+                            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-muted">{invite.role}</span>
+                            <span className={active ? "font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-accent" : "font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-faint"}>
                               {inviteStatus(invite)}
                             </span>
                           </div>
-                          <p className="text-xs text-neutral-600 mt-1">{invite.isReusable ? "Reusable demo invite" : `Expires ${invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : "never"}`}</p>
+                          <p className="text-xs text-faint mt-1">{invite.isReusable ? "Reusable demo invite" : `Expires ${invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : "never"}`}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <CopyInviteButton value={link} />
@@ -162,7 +162,7 @@ export default async function WorkspaceLandingPage({
                               <input type="hidden" name="workspaceId" value={workspace.id} />
                               <input type="hidden" name="workspaceSlug" value={workspace.slug} />
                               <input type="hidden" name="inviteId" value={invite.id} />
-                              <button className="h-9 px-3 rounded-full border border-rose-500/30 text-xs font-bold text-rose-300 hover:bg-rose-500/10 inline-flex items-center gap-2">
+                              <button className="st-danger h-9 px-3 rounded-[var(--radius-control)] border text-xs font-medium hover:opacity-90 transition-opacity inline-flex items-center gap-2">
                                 <Trash2 size={14} /> Revoke
                               </button>
                             </form>
@@ -172,14 +172,14 @@ export default async function WorkspaceLandingPage({
                               <input type="hidden" name="workspaceId" value={workspace.id} />
                               <input type="hidden" name="workspaceSlug" value={workspace.slug} />
                               <input type="hidden" name="inviteId" value={invite.id} />
-                              <ConfirmSubmitButton confirmation={`Remove invite ${invite.code}? This cannot be undone.`} className="h-9 px-3 rounded-full border border-neutral-700 text-xs font-bold text-neutral-300 hover:bg-neutral-800 inline-flex items-center gap-2">
+                              <ConfirmSubmitButton confirmation={`Remove invite ${invite.code}? This cannot be undone.`} className="h-9 px-3 rounded-[var(--radius-control)] border border-border text-xs font-medium text-muted hover:bg-surface-hover hover:text-fg transition-colors inline-flex items-center gap-2">
                                 <Trash2 size={14} /> Remove
                               </ConfirmSubmitButton>
                             </form>
                           ) : null}
                         </div>
                       </div>
-                      <p className="font-mono text-xs text-neutral-500 break-all">{link}</p>
+                      <p className="font-mono text-xs text-muted break-all">{link}</p>
                     </div>
                   );
                 })
@@ -188,9 +188,9 @@ export default async function WorkspaceLandingPage({
           </div>
         </section>
       ) : (
-        <section className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
-          <h2 className="font-semibold text-white">Workspace access</h2>
-          <p className="text-sm text-neutral-500 mt-2">
+        <section className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
+          <h2 className="font-medium text-fg">Workspace access</h2>
+          <p className="text-sm text-muted mt-2">
             {isPreview
               ? "Demo Clinic is a read-only preview. Create your own workspace to invite members and use workspace management actions."
               : "Requesters can submit requests and view their own tickets. Workspace invite sharing is available to admins and owners."}
@@ -199,16 +199,16 @@ export default async function WorkspaceLandingPage({
       )}
 
       {membership.role !== "owner" ? (
-        <section className="bg-[#111111] border border-neutral-800 rounded-2xl p-6">
+        <section className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
           <div className="flex items-center gap-2 mb-3">
-            <LogOut size={17} className="text-neutral-400" />
-            <h2 className="font-semibold text-white">Leave workspace</h2>
+            <LogOut size={17} className="text-muted" />
+            <h2 className="font-medium text-fg">Leave workspace</h2>
           </div>
-          <p className="text-sm text-neutral-500">Remove your membership from this workspace. You will need a new valid invite to join again.</p>
+          <p className="text-sm text-muted">Remove your membership from this workspace. You will need a new valid invite to join again.</p>
           <form action={leaveWorkspaceAction} className="mt-5">
             <input type="hidden" name="workspaceId" value={workspace.id} />
             <input type="hidden" name="workspaceSlug" value={workspace.slug} />
-            <ConfirmSubmitButton confirmation={`Leave ${workspace.name}? You will need a new valid invite to join again.`} className="h-11 px-4 rounded-full text-sm font-bold inline-flex items-center justify-center gap-2 sm:w-auto border border-neutral-700 bg-neutral-800 text-white hover:bg-neutral-700">
+            <ConfirmSubmitButton confirmation={`Leave ${workspace.name}? You will need a new valid invite to join again.`} className="h-11 px-4 rounded-[var(--radius-control)] text-sm font-medium inline-flex items-center justify-center gap-2 sm:w-auto border border-border bg-surface-hover text-fg hover:bg-surface transition-colors">
               <LogOut size={16} /> Leave workspace
             </ConfirmSubmitButton>
           </form>
@@ -216,24 +216,24 @@ export default async function WorkspaceLandingPage({
       ) : null}
 
       {membership.role === "owner" && !isPreview ? (
-        <section className="bg-[#111111] border border-rose-500/30 rounded-2xl p-6">
+        <section className="bg-surface border border-[var(--st-danger)]/40 rounded-[var(--radius-card)] p-6">
           <div className="flex items-center gap-2 mb-3">
-            <Trash2 size={17} className="text-rose-300" />
-            <h2 className="font-semibold text-white">Delete workspace</h2>
+            <Trash2 size={17} className="text-[var(--st-danger)]" />
+            <h2 className="font-medium text-fg">Delete workspace</h2>
           </div>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-muted">
             Permanently delete this workspace and its associated requests, tickets, activity, metadata, invitations, memberships, and tracked uploads.
           </p>
           <form action={deleteWorkspaceAction} className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <input type="hidden" name="workspaceId" value={workspace.id} />
             <input type="hidden" name="workspaceSlug" value={workspace.slug} />
             <div className="space-y-2 flex-1">
-              <label htmlFor="confirmation" className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                Type <span className="font-mono text-rose-300">{workspace.slug}</span> to confirm
+              <label htmlFor="confirmation" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">
+                Type <span className="font-mono text-[var(--st-danger)]">{workspace.slug}</span> to confirm
               </label>
-              <input id="confirmation" name="confirmation" required autoComplete="off" className="h-11 w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 text-sm text-white focus:outline-none focus:border-rose-500" />
+              <input id="confirmation" name="confirmation" required autoComplete="off" className="h-11 w-full bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-[var(--st-danger)]" />
             </div>
-            <SubmitButton pendingText="Deleting workspace..." className="sm:w-auto sm:min-w-48 bg-rose-500 hover:bg-rose-600 text-white">
+            <SubmitButton pendingText="Deleting workspace..." className="st-danger sm:w-auto sm:min-w-48 border">
               <Trash2 size={16} /> Delete permanently
             </SubmitButton>
           </form>

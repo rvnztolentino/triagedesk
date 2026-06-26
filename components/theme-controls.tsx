@@ -103,14 +103,9 @@ function hsvToHex(h: number, s: number, v: number) {
 }
 
 function applyAccentVariables(accent: string) {
-  const root = document.documentElement;
-  const hsv = hexToHsv(accent);
-  root.dataset.accent = "custom";
-  root.style.setProperty("--accent", accent);
-  const saturationBoost = hsv.s < 0.04 ? 0 : 0.08 * Math.min(1, (hsv.s - 0.04) / 0.06);
-  root.style.setProperty("--accent-strong", hsvToHex(hsv.h, Math.min(1, hsv.s + saturationBoost), Math.max(0.62, hsv.v - 0.1)));
-  root.style.setProperty("--accent-text", accent);
-  root.style.setProperty("--accent-border", `color-mix(in srgb, ${accent} 30%, transparent)`);
+  // Single source of truth: globals.css derives --accent-soft / --accent-border
+  // from --accent, so the highlight propagates system-wide in both themes.
+  document.documentElement.style.setProperty("--accent", accent);
 }
 
 let cachedTheme: ThemeMode | null = null;
@@ -276,30 +271,30 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
         title={label}
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          "h-10 w-10 shrink-0 rounded-full border transition-colors inline-flex items-center justify-center",
+          "h-9 w-9 shrink-0 rounded-[var(--radius-control)] border transition-colors inline-flex items-center justify-center",
           open
-            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-            : "border-neutral-800 bg-[#111111] text-neutral-400 hover:bg-neutral-800 hover:text-white"
+            ? "border-accent-border bg-accent-soft text-accent"
+            : "border-border bg-surface text-muted hover:bg-surface-hover hover:text-fg"
         )}
       >
-        <Paintbrush size={17} />
+        <Paintbrush size={16} />
       </button>
 
       {open ? (
         <div
           role="dialog"
           aria-label="Appearance"
-          className="fixed left-4 right-4 top-[4.5rem] z-[100] rounded-2xl border border-neutral-800 bg-[#111111] p-4 shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-[min(22rem,calc(100vw-2rem))]"
+          className="app-dropdown-enter fixed left-4 right-4 top-[4.25rem] z-[100] rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-[min(21rem,calc(100vw-2rem))]"
         >
           <div className="mb-4">
-            <div className="text-sm font-semibold text-white">Appearance</div>
-            <div className="text-xs text-neutral-500 mt-0.5">Theme and accent color</div>
+            <div className="text-sm font-medium text-fg">Appearance</div>
+            <div className="text-xs text-muted mt-0.5">Theme and accent color</div>
           </div>
 
-          <div className="relative mb-4 grid grid-cols-2 gap-1 overflow-hidden rounded-full border border-neutral-800 bg-[#0a0a0a] p-1">
+          <div className="relative mb-4 grid grid-cols-2 gap-1 overflow-hidden rounded-[var(--radius-control)] border border-border bg-bg p-1">
             <div
               className={cn(
-                "pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-emerald-500 transition-transform duration-300 ease-out",
+                "pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-[6px] bg-accent transition-transform duration-300 ease-out",
                 theme === "light" ? "translate-x-full" : "translate-x-0"
               )}
             />
@@ -314,21 +309,21 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
                   type="button"
                   onClick={() => applyPreferences(option.value, accent)}
                   className={cn(
-                    "relative z-10 h-10 rounded-full text-sm font-semibold transition-colors duration-200 inline-flex items-center justify-center gap-2",
-                    theme === option.value ? "text-black" : "text-neutral-500 hover:text-white"
+                    "relative z-10 h-9 rounded-[6px] text-sm font-medium transition-colors duration-200 inline-flex items-center justify-center gap-2",
+                    theme === option.value ? "text-accent-fg" : "text-muted hover:text-fg"
                   )}
                 >
-                  <Icon size={15} />
+                  <Icon size={14} />
                   {option.label}
                 </button>
               );
             })}
           </div>
 
-          <div className="rounded-2xl border border-neutral-800 bg-[#0a0a0a] p-3">
-            <div className="mb-3 rounded-xl border border-neutral-800 bg-[#111111] px-3 py-2">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">RGB color</div>
-              <div className="text-xs text-neutral-500 mt-0.5">Drag the picker or edit the values directly.</div>
+          <div className="rounded-[var(--radius-control)] border border-border bg-bg p-3">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted">Accent</div>
+              <div className="text-xs text-faint">Drag or type a value</div>
             </div>
 
             <div
@@ -354,19 +349,19 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
               }}
               onPointerCancel={endAccentDrag}
               onLostPointerCapture={endAccentDrag}
-              className="relative h-48 cursor-crosshair overflow-hidden rounded-xl border border-neutral-800 shadow-inner"
+              className="relative h-44 cursor-crosshair overflow-hidden rounded-[6px] ring-1 ring-inset ring-border"
               style={{
                 background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hueColor})`,
               }}
             >
               <span
-                className="absolute h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
+                className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white shadow-[0_1px_4px_rgba(0,0,0,0.4)]"
                 style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, backgroundColor: accent }}
               />
             </div>
 
             <div className="mt-3 flex items-center gap-3">
-              <Pipette size={18} className="shrink-0 text-neutral-500" />
+              <Pipette size={16} className="shrink-0 text-muted" />
               <div
                 ref={hueTrackRef}
                 role="slider"
@@ -389,11 +384,11 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
                 }}
                 onPointerCancel={endAccentDrag}
                 onLostPointerCapture={endAccentDrag}
-                className="relative h-7 flex-1 cursor-pointer rounded-full border border-neutral-800"
+                className="relative h-3 flex-1 cursor-pointer rounded-full ring-1 ring-inset ring-border"
                 style={{ background: "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)" }}
               >
                 <span
-                  className="absolute top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
+                  className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_1px_4px_rgba(0,0,0,0.4)]"
                   style={{ left: `${(hsv.h / 359) * 100}%`, backgroundColor: hueColor }}
                 />
               </div>
@@ -408,7 +403,7 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
                   onChange={(event) => updateFromHexInput(event.target.value)}
                   onBlur={() => setHexDraft(null)}
                   spellCheck={false}
-                  className="h-10 rounded-xl border border-neutral-800 bg-[#111111] px-3 font-mono text-sm text-white focus:outline-none focus:border-emerald-500"
+                  className="h-9 rounded-[6px] border border-border bg-surface px-3 font-mono text-sm text-fg focus:outline-none focus:border-accent-border"
                   aria-label="Hex color"
                 />
                 <div className="grid grid-cols-3 gap-2">
@@ -417,8 +412,8 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
                     ["g", "G", rgb.g],
                     ["b", "B", rgb.b],
                   ] as const).map(([channel, label, value]) => (
-                    <label key={channel} className="flex h-10 items-center gap-1 rounded-xl border border-neutral-800 bg-[#111111] px-2 text-sm text-neutral-500">
-                      <span className="font-bold">{label}</span>
+                    <label key={channel} className="flex h-9 items-center gap-1 rounded-[6px] border border-border bg-surface px-2 font-mono text-sm text-muted">
+                      <span className="font-medium">{label}</span>
                       <input
                         value={value}
                         type="number"
@@ -426,14 +421,14 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
                         max={255}
                         inputMode="numeric"
                         onChange={(event) => updateRgbChannel(channel, event.target.value)}
-                        className="min-w-0 flex-1 bg-transparent text-right text-white focus:outline-none"
+                        className="min-w-0 flex-1 bg-transparent text-right text-fg focus:outline-none"
                         aria-label={`${label} channel`}
                       />
                     </label>
                   ))}
                 </div>
               </div>
-              <div className="h-10 w-10 rounded-xl border border-neutral-800 shadow-sm" style={{ backgroundColor: accent }} />
+              <div className="h-9 w-9 rounded-[6px] border border-border" style={{ backgroundColor: accent }} />
             </div>
           </div>
 
@@ -444,7 +439,7 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
                 setHexDraft(null);
                 applyPreferences(theme, DEFAULT_ACCENT);
               }}
-              className="w-full h-9 rounded-xl border border-neutral-800 bg-[#0a0a0a] hover:bg-neutral-800/60 text-xs font-medium text-neutral-400 hover:text-white transition-all duration-200"
+              className="w-full h-9 rounded-[var(--radius-control)] border border-border bg-bg hover:bg-surface-hover text-xs font-medium text-muted hover:text-fg transition-colors duration-200"
             >
               Set to default
             </button>
