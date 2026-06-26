@@ -20,8 +20,8 @@ export function ReviewDecisionForm({
   // Two actions share one form: approve via the form action, reject via the
   // reject button's formAction. Each keeps its own state; we surface whichever
   // failed so the admin stays on the page with an inline message.
-  const [approveState, approveAction] = useActionState(approveRequestAction, initialState);
-  const [rejectState, rejectAction] = useActionState(rejectRequestAction, initialState);
+  const [approveState, approveAction, approvePending] = useActionState(approveRequestAction, initialState);
+  const [rejectState, rejectAction, rejectPending] = useActionState(rejectRequestAction, initialState);
   const error = approveState.error ?? rejectState.error;
 
   return (
@@ -42,12 +42,13 @@ export function ReviewDecisionForm({
         {children}
 
         <div className="pt-6 border-t border-border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <SubmitButton pendingText="Approving..." className="h-auto w-full rounded-[var(--radius-control)] bg-accent px-6 py-3 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 sm:w-auto">
+          <SubmitButton pending={approvePending} pendingText="Approving..." className="h-auto w-full rounded-[var(--radius-control)] bg-accent px-6 py-3 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 sm:w-auto">
             {isPreview ? <><LockKeyhole size={18} /> Preview locked</> : <><Check size={18} /> Approve &amp; Dispatch</>}
           </SubmitButton>
           <SubmitButton
             disabled={isPreview}
             formAction={rejectAction}
+            pending={rejectPending}
             pendingText="Rejecting..."
             className="st-danger h-auto w-full rounded-[var(--radius-control)] border px-5 py-3 text-sm font-medium transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >

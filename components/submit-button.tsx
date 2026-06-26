@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 interface SubmitButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   pendingText?: string;
   loadingIcon?: React.ReactNode;
+  // When set, overrides the form-wide status. Use this to scope the pending
+  // state to a single action when multiple submit buttons share one form.
+  pending?: boolean;
 }
 
 export function SubmitButton({
@@ -15,9 +18,11 @@ export function SubmitButton({
   loadingIcon = <LoaderCircle size={16} className="animate-spin" />,
   className,
   disabled,
+  pending: pendingProp,
   ...props
 }: SubmitButtonProps) {
-  const { pending } = useFormStatus();
+  const { pending: formPending } = useFormStatus();
+  const pending = pendingProp ?? formPending;
 
   return (
     <button
