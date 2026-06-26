@@ -36,8 +36,8 @@ export function WorkspaceOpenLink({
         }
       }}
       className={cn(
-        "p-5 flex flex-col gap-3 transition-colors border-l-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4",
-        pending ? "pointer-events-none border-accent bg-accent-soft" : isActive ? "border-accent bg-accent-soft" : "border-transparent hover:bg-surface-hover"
+        "p-5 flex flex-col gap-3 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
+        pending ? "pointer-events-none bg-accent-soft" : isActive ? "bg-accent-soft" : "hover:bg-surface-hover"
       )}
     >
       <div className="min-w-0">
