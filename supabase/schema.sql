@@ -290,6 +290,9 @@ create index if not exists requests_workspace_status_created_at_idx on requests 
 create index if not exists requests_requester_created_at_idx on requests (requester_user_id, created_at desc);
 create index if not exists tickets_status_created_at_idx on tickets (status, created_at desc);
 create unique index if not exists tickets_workspace_id_id_idx on tickets (workspace_id, id);
+-- One approved request maps to at most one ticket. This blocks duplicate tickets
+-- from concurrent approvals (TOCTOU on the read-then-insert in approveRequest).
+create unique index if not exists tickets_workspace_request_unique_idx on tickets (workspace_id, request_id) where request_id is not null;
 create index if not exists tickets_workspace_status_created_at_idx on tickets (workspace_id, status, created_at desc);
 create index if not exists tickets_requester_created_at_idx on tickets (requester_user_id, created_at desc);
 create index if not exists ai_triage_results_workspace_request_created_at_idx on ai_triage_results (workspace_id, request_id, created_at desc);
@@ -516,6 +519,10 @@ declare
   matched_invite_id uuid;
   matched_invite_role text;
 begin
+  -- Lock the matched invite row so two users cannot redeem the same single-use
+  -- invite concurrently. Under READ COMMITTED, a second waiter re-evaluates the
+  -- predicate after the lock is released and sees used_at populated, so it falls
+  -- through to the "invalid or expired" error below.
   select w.id, w.name, w.slug, i.id, i.role
   into matched_workspace_id, matched_workspace_name, matched_workspace_slug, matched_invite_id, matched_invite_role
   from workspaces w
@@ -525,7 +532,8 @@ begin
     and i.revoked_at is null
     and (i.expires_at is null or i.expires_at > now())
     and (i.is_reusable or i.used_at is null)
-  limit 1;
+  limit 1
+  for update of i;
 
   if not found then
     raise exception 'Workspace invite is invalid or expired.';

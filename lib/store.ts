@@ -1126,7 +1126,23 @@ export async function approveRequest(input: {
   if (!updatedRequest) throw new Error("Request not found.");
 
   const { error: insertError } = await client.from("tickets").insert(ticketToRow(ticket));
-  requireNoError(insertError, "Create ticket");
+  if (insertError) {
+    // A concurrent approval may have created the ticket between our existence
+    // check and this insert. The unique index on (workspace_id, request_id)
+    // turns that race into a 23505; treat it as idempotent by returning the
+    // ticket the winning request already created.
+    if ((insertError as { code?: string }).code === "23505") {
+      const { data: racedData, error: racedError } = await client
+        .from("tickets")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("request_id", request.id)
+        .maybeSingle();
+      requireNoError(racedError, "Load concurrently created ticket");
+      if (racedData) return ticketFromRow(racedData as SupabaseRow);
+    }
+    requireNoError(insertError, "Create ticket");
+  }
 
   await addActivity(client, {
     workspaceId,
