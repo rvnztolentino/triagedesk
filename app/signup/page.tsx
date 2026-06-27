@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import { signUpAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
+import { GoogleSignIn } from "@/components/google-sign-in";
 import { SubmitButton } from "@/components/submit-button";
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
@@ -39,6 +40,15 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
               <UserPlus size={16} /> Create account
             </SubmitButton>
           </form>
+
+          <div className="my-6 flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs font-medium text-muted">or</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <GoogleSignIn next={params.next} label="Sign up with Google" />
+
           <p className="text-sm text-muted mt-6 text-center">
             Already have an account? <Link href={params.next ? `/login?next=${encodeURIComponent(params.next)}` : "/login"} className="text-accent hover:opacity-90 font-medium">Sign in</Link>
           </p>

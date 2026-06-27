@@ -14,7 +14,10 @@ export default async function CheckEmailPage({ searchParams }: { searchParams: P
           </div>
           <h1 className="text-xl font-semibold tracking-tight text-fg">Check your email</h1>
           <p className="text-sm text-muted mt-3 leading-relaxed">
-            We sent a verification link to <span className="text-fg">{email}</span>. Confirm that email before signing in or using TriageDesk.
+            If no account exists for <span className="text-fg">{email}</span>, we&apos;ve sent a verification link. It can take a minute to arrive — check your spam folder too. Confirm that email before signing in.
+          </p>
+          <p className="text-sm text-muted mt-3 leading-relaxed">
+            Already have an account? <Link href="/login" className="text-accent hover:opacity-90 font-medium">Sign in</Link>
           </p>
           <Link href="/login" className="mt-6 inline-flex h-10 px-5 bg-accent hover:opacity-90 text-accent-fg rounded-[var(--radius-control)] text-sm font-medium items-center justify-center transition-opacity">
             Back to sign in

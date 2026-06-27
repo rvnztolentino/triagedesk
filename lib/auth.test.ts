@@ -1,8 +1,22 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assertEmailVerificationRequired, getPostVerificationRedirect, roleForEmail, sanitizeInternalRedirect, validateLoginInput, validateSignupInput } from "./auth";
+import { assertEmailVerificationRequired, getGoogleOAuthUrl, getPostVerificationRedirect, isExistingUserSignupError, roleForEmail, sanitizeInternalRedirect, signUpWithEmail, validateLoginInput, validateSignupInput } from "./auth";
+
+const signInWithOAuth = vi.fn();
+const signUp = vi.fn();
+
+vi.mock("@/lib/supabase", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/supabase")>();
+  return {
+    ...actual,
+    requireSupabaseOAuthClient: () => ({ auth: { signInWithOAuth } }),
+    requireSupabaseAuthClient: () => ({ auth: { signUp } }),
+  };
+});
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  signInWithOAuth.mockReset();
+  signUp.mockReset();
 });
 
 describe("auth role policy", () => {
@@ -57,5 +71,71 @@ describe("auth role policy", () => {
   it("lands ordinary verification on the workspace dashboard while preserving explicit invite handoffs", () => {
     expect(getPostVerificationRedirect()).toBe("/onboarding");
     expect(getPostVerificationRedirect("/join/demo-clinic?code=DEMO-CLINIC-2026")).toBe("/join/demo-clinic?code=DEMO-CLINIC-2026");
+  });
+});
+
+describe("google oauth", () => {
+  it("requests Google with a fixed callback and round-trips a sanitized internal next", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://triagedesk.test");
+    signInWithOAuth.mockResolvedValue({ data: { url: "https://supabase.test/authorize?provider=google" }, error: null });
+
+    const url = await getGoogleOAuthUrl("/join/demo-clinic?code=DEMO-CLINIC-2026");
+
+    expect(url).toBe("https://supabase.test/authorize?provider=google");
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: "google",
+      options: {
+        redirectTo: "https://triagedesk.test/auth/callback?next=%2Fjoin%2Fdemo-clinic%3Fcode%3DDEMO-CLINIC-2026",
+        skipBrowserRedirect: true,
+        queryParams: { prompt: "select_account" },
+      },
+    });
+  });
+
+  it("drops an external next so the OAuth callback cannot become an open redirect", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://triagedesk.test");
+    signInWithOAuth.mockResolvedValue({ data: { url: "https://supabase.test/authorize" }, error: null });
+
+    await getGoogleOAuthUrl("https://evil.example.com");
+
+    expect(signInWithOAuth).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({ redirectTo: "https://triagedesk.test/auth/callback" }),
+      })
+    );
+  });
+
+  it("surfaces a user-facing error when the provider URL cannot be built", async () => {
+    signInWithOAuth.mockResolvedValue({ data: { url: null }, error: { message: "provider disabled" } });
+
+    await expect(getGoogleOAuthUrl()).rejects.toThrow("provider disabled");
+  });
+});
+
+describe("signup account enumeration", () => {
+  it("recognizes existing-user signup errors by code or message", () => {
+    expect(isExistingUserSignupError({ code: "user_already_exists" })).toBe(true);
+    expect(isExistingUserSignupError({ code: "email_exists" })).toBe(true);
+    expect(isExistingUserSignupError({ message: "User already registered" })).toBe(true);
+    expect(isExistingUserSignupError({ message: "Password should be at least 8 characters" })).toBe(false);
+    expect(isExistingUserSignupError(null)).toBe(false);
+  });
+
+  it("returns the generic verification outcome instead of leaking that the email is taken", async () => {
+    vi.stubEnv("SEED_ADMIN_EMAIL", "admin@triagedesk.test");
+    signUp.mockResolvedValue({ data: { user: null, session: null }, error: { code: "user_already_exists", message: "User already registered" } });
+
+    const result = await signUpWithEmail({ email: "existing@triagedesk.test", password: "password123", displayName: "Existing" });
+
+    expect(result).toEqual({ email: "existing@triagedesk.test", needsVerification: true });
+  });
+
+  it("still surfaces genuine signup failures", async () => {
+    vi.stubEnv("SEED_ADMIN_EMAIL", "admin@triagedesk.test");
+    signUp.mockResolvedValue({ data: { user: null, session: null }, error: { code: "over_email_send_rate_limit", message: "Email rate limit exceeded" } });
+
+    await expect(
+      signUpWithEmail({ email: "new@triagedesk.test", password: "password123", displayName: "New" })
+    ).rejects.toThrow("Email rate limit exceeded");
   });
 });

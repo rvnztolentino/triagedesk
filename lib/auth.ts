@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { authCredentialsSchema, loginCredentialsSchema, workspaceSlugSchema, type AppUser, type AuthCredentials, type UserProfileRecord, type UserRole } from "@/lib/schema";
-import { getSupabaseAdminClient, getSupabaseAuthClient, getRuntimeSetupStatus, requireSupabaseAdminClient, requireSupabaseAuthClient, SetupRequiredError } from "@/lib/supabase";
+import { getSupabaseAdminClient, getSupabaseAuthClient, getRuntimeSetupStatus, requireSupabaseAdminClient, requireSupabaseAuthClient, requireSupabaseOAuthClient, SetupRequiredError } from "@/lib/supabase";
 import { PublicError } from "@/lib/errors";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { getPostAuthWorkspacePath, isWorkspaceAdmin, isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
@@ -23,6 +23,14 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+// OAuth providers (Google) carry the user's name in different metadata keys than
+// our email signup, which sets `display_name`. Fall back across the common keys so
+// social sign-ins get a real name instead of the email prefix.
+function displayNameFromMetadata(metadata?: Record<string, unknown> | null) {
+  if (!metadata) return "";
+  return asString(metadata.display_name) || asString(metadata.full_name) || asString(metadata.name);
+}
+
 export function getSeedAdminEmail() {
   return normalizeEmail(process.env.SEED_ADMIN_EMAIL || "");
 }
@@ -36,6 +44,18 @@ export function assertEmailVerificationRequired(hasImmediateSession: boolean) {
   if (hasImmediateSession) {
     throw new SetupRequiredError("Email confirmation must be enabled before signup.", ["Supabase Auth Confirm email"]);
   }
+}
+
+// Detects Supabase's "this email already has an account" signup result so we can
+// swallow it and return the same generic response a brand-new signup gets. Surfacing
+// it would let anyone probe the signup form to learn which emails are registered
+// (account enumeration). Supabase already obfuscates this when enumeration
+// protection is on, but the setting is project-configurable, so we never rely on it.
+export function isExistingUserSignupError(error: { message?: string; code?: string } | null | undefined) {
+  if (!error) return false;
+  const code = error.code ?? "";
+  const message = error.message ?? "";
+  return code === "user_already_exists" || code === "email_exists" || /already\s+(registered|exists|in use)/i.test(message);
 }
 
 function profileFromRow(row: ProfileRow): UserProfileRecord {
@@ -102,7 +122,7 @@ async function completeVerifiedSession(input: {
   const profile = await upsertUserProfile({
     id: input.user.id,
     email: input.user.email,
-    displayName: asString(input.user.user_metadata?.display_name),
+    displayName: displayNameFromMetadata(input.user.user_metadata),
     role: roleForEmail(input.user.email),
   });
   await setSessionCookies(input.accessToken, input.refreshToken);
@@ -300,6 +320,33 @@ export function sanitizeInternalRedirect(value?: string) {
   return value?.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : undefined;
 }
 
+// Builds the Google sign-in URL without redirecting the browser, so the caller
+// (a same-origin server action) can issue the redirect itself. `next` is sanitized
+// to an internal path before being round-tripped through the OAuth callback, and
+// the fixed redirectTo must be allowlisted in the Supabase Auth dashboard.
+export async function getGoogleOAuthUrl(next?: string) {
+  const authClient = requireSupabaseOAuthClient();
+  const safeNext = sanitizeInternalRedirect(next);
+  const redirectTo = `${getSiteUrl()}/auth/callback${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`;
+
+  const { data, error } = await authClient.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo,
+      skipBrowserRedirect: true,
+      queryParams: {
+        prompt: "select_account",
+      },
+    },
+  });
+
+  if (error || !data?.url) {
+    throw new PublicError(error?.message || "Google sign-in is unavailable right now.");
+  }
+
+  return data.url;
+}
+
 export async function signUpWithEmail(input: AuthCredentials, next?: string) {
   const credentials = validateSignupInput(input);
   const authClient = requireSupabaseAuthClient();
@@ -320,6 +367,12 @@ export async function signUpWithEmail(input: AuthCredentials, next?: string) {
   });
 
   if (error) {
+    // Never disclose that the email is already registered. Return the same
+    // "check your email" outcome as a new signup so the form can't be used to
+    // enumerate accounts; any other failure is still surfaced.
+    if (isExistingUserSignupError(error)) {
+      return { email: credentials.email, needsVerification: true };
+    }
     throw new PublicError(error.message || "Create account failed.");
   }
 

@@ -8,6 +8,7 @@ import {
   clearActiveWorkspaceCookie,
   completeEmailVerificationFromTokens,
   getActiveWorkspaceAccess,
+  getGoogleOAuthUrl,
   getPostVerificationRedirect,
   requireAdmin,
   requireOperationalWorkspace,
@@ -89,12 +90,12 @@ async function requireTrustedActionRequest() {
   await assertSameOriginRequest();
 }
 
-async function enforceAuthAttemptLimit(scope: "signin" | "signup", email?: string) {
+async function enforceAuthAttemptLimit(scope: "signin" | "signup" | "oauth", email?: string) {
   const identity = await requestIdentity();
   await enforceRateLimit({
     scope: `auth_${scope}`,
     keyParts: scope === "signin" ? [identity.ip, email || "unknown-email"] : [identity.ip],
-    limit: scope === "signin" ? 5 : 3,
+    limit: scope === "signin" ? 5 : scope === "signup" ? 3 : 10,
     windowSeconds: scope === "signin" ? 10 * 60 : 60 * 60,
     message: "Too many authentication attempts. Try again later.",
   });
@@ -489,6 +490,21 @@ export async function signUpAction(formData: FormData) {
     redirectTo = `/signup/check-email?email=${encodeURIComponent(result.email)}`;
   } catch (error) {
     redirectWithError(`/signup${next ? `?next=${encodeURIComponent(next)}` : ""}`, error);
+  }
+  redirect(redirectTo);
+}
+
+export async function signInWithGoogleAction(formData: FormData) {
+  await requireTrustedActionRequest();
+  const next = sanitizeInternalRedirect(formText(formData, "next"));
+  const fallback = `/login${next ? `?next=${encodeURIComponent(next)}` : ""}`;
+  let redirectTo = fallback;
+  try {
+    await enforceAuthAttemptLimit("oauth");
+    redirectTo = await getGoogleOAuthUrl(next);
+  } catch (error) {
+    captureOperationalError(error, { area: "oauth_google" });
+    redirectWithError(fallback, error);
   }
   redirect(redirectTo);
 }

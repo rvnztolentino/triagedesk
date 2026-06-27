@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { signInAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
+import { GoogleSignIn } from "@/components/google-sign-in";
 import { SubmitButton } from "@/components/submit-button";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
@@ -35,6 +36,15 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               <LockKeyhole size={16} /> Sign in
             </SubmitButton>
           </form>
+
+          <div className="my-6 flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs font-medium text-muted">or</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <GoogleSignIn next={params.next} label="Continue with Google" />
+
           <p className="text-sm text-muted mt-6 text-center">
             Need an account? <Link href={params.next ? `/signup?next=${encodeURIComponent(params.next)}` : "/signup"} className="text-accent hover:opacity-90 font-medium">Create one</Link>
           </p>
