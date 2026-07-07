@@ -193,7 +193,7 @@ describe("workspace foundation", () => {
   it("keeps the active workspace visible in the shell and workspace dashboard", () => {
     expect(appLayoutSource).toContain("Current ${activeWorkspace.isPreview ? \"preview \" : \"\"}workspace: ${activeWorkspace.name}");
     expect(appLayoutSource).toContain('{activeWorkspace?.name ?? "Choose workspace"}');
-    expect(appLayoutSource).toContain("px-3 py-2 text-center text-xs uppercase");
+    expect(appLayoutSource).toContain('href="/onboarding"');
     expect(workspaceDashboardSource).toContain("Currently open workspace");
     expect(workspaceDashboardSource).toContain("Requests, tickets, and settings are scoped to this workspace.");
     expect(workspaceOpenLinkSource).toContain("<CheckCircle2 size={13} /> Open");
@@ -207,11 +207,12 @@ describe("workspace foundation", () => {
     expect(settingsSource).not.toContain("Signup default role");
     expect(settingsSource).not.toContain("Seed owner email");
     expect(settingsSource).not.toContain("getSeedAdminEmail");
-    expect(globalStylesSource).toContain('html[data-theme="light"] .bg-amber-500\\/10');
-    expect(globalStylesSource).toContain('html[data-theme="light"] .text-amber-300');
-    expect(globalStylesSource).toContain("color: #92400e;");
-    expect(globalStylesSource).toContain('html[data-theme="light"][data-accent="yellow"]');
-    expect(globalStylesSource).toContain("--accent-text: #a16207;");
+    // Light theme redefines status hues to darker, WCAG-readable values via the
+    // --st-* tokens (the design system replaced the old amber utility overrides
+    // and data-accent presets with a live --accent picker + status tokens).
+    expect(globalStylesSource).toContain('html[data-theme="light"]');
+    expect(globalStylesSource).toContain("--st-warn: #b45309;");
+    expect(globalStylesSource).toContain("--st-danger: #b91c1c;");
   });
 
   it("disables transition lag while dragging custom accent colors", () => {

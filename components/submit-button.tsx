@@ -28,10 +28,7 @@ export function SubmitButton({
     <button
       type="submit"
       disabled={disabled || pending}
-      className={cn(
-        "w-full h-11 bg-accent hover:opacity-90 text-accent-fg rounded-[var(--radius-control)] text-sm font-medium transition-opacity inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed",
-        className
-      )}
+      className={cn("btn btn--primary btn--block", className)}
       {...props}
     >
       {pending ? (

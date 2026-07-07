@@ -233,7 +233,7 @@ export default async function WorkspaceLandingPage({
               </label>
               <input id="confirmation" name="confirmation" required autoComplete="off" className="h-11 w-full bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-[var(--st-danger)]" />
             </div>
-            <SubmitButton pendingText="Deleting workspace..." className="st-danger sm:w-auto sm:min-w-48 border">
+            <SubmitButton pendingText="Deleting workspace..." className="btn--danger btn--block sm:w-auto sm:min-w-48">
               <Trash2 size={16} /> Delete permanently
             </SubmitButton>
           </form>
