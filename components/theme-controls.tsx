@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Moon, Paintbrush, Pipette, Sun } from "lucide-react";
+import { Moon, Paintbrush, RotateCcw, Sun, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const THEME_KEY = "triagedesk-theme";
 const ACCENT_KEY = "triagedesk-accent";
 const PREFERENCE_EVENT = "triagedesk-preferences";
 const DEFAULT_ACCENT = "#879D5A";
+const ACCENT_PRESETS = ["#879D5A", "#35d0ab", "#5b9dff", "#f2685f", "#e8b23a", "#a78bfa"];
 
 export type ThemeMode = "dark" | "light";
 
@@ -284,165 +285,180 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
         <div
           role="dialog"
           aria-label="Appearance"
-          className="app-dropdown-enter fixed left-4 right-4 top-[4.25rem] z-[100] rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-[min(21rem,calc(100vw-2rem))]"
+          className="popover"
+          style={{ right: 0, top: "calc(100% + 8px)", maxWidth: "calc(100vw - 2rem)" }}
         >
-          <div className="mb-4">
-            <div className="text-sm font-medium text-fg">Appearance</div>
-            <div className="text-xs text-muted mt-0.5">Theme and accent color</div>
-          </div>
-
-          <div className="relative mb-4 grid grid-cols-2 gap-1 overflow-hidden rounded-[var(--radius-control)] border border-border bg-bg p-1">
-            <div
-              className={cn(
-                "pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-[6px] bg-accent transition-transform duration-300 ease-out",
-                theme === "light" ? "translate-x-full" : "translate-x-0"
-              )}
-            />
-            {([
-              { value: "dark", label: "Dark", icon: Moon },
-              { value: "light", label: "Light", icon: Sun },
-            ] as const).map((option) => {
-              const Icon = option.icon;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => applyPreferences(option.value, accent)}
-                  className={cn(
-                    "relative z-10 h-9 rounded-[6px] text-sm font-medium transition-colors duration-200 inline-flex items-center justify-center gap-2",
-                    theme === option.value ? "text-accent-fg" : "text-muted hover:text-fg"
-                  )}
-                >
-                  <Icon size={14} />
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="rounded-[var(--radius-control)] border border-border bg-bg p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted">Accent</div>
-              <div className="text-xs text-faint">Drag or type a value</div>
-            </div>
-
-            <div
-              ref={colorFieldRef}
-              role="slider"
-              tabIndex={0}
-              aria-label="Accent saturation and brightness"
-              aria-valuenow={Math.round(hsv.s * 100)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuetext={accent}
-              onPointerDown={(event) => {
-                event.currentTarget.setPointerCapture(event.pointerId);
-                beginAccentDrag();
-                updateFromColorField(event);
-              }}
-              onPointerMove={(event) => {
-                if (event.buttons === 1) updateFromColorField(event);
-              }}
-              onPointerUp={(event) => {
-                updateFromColorField(event);
-                endAccentDrag();
-              }}
-              onPointerCancel={endAccentDrag}
-              onLostPointerCapture={endAccentDrag}
-              className="relative h-44 cursor-crosshair overflow-hidden rounded-[6px] ring-1 ring-inset ring-border"
-              style={{
-                background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hueColor})`,
-              }}
-            >
-              <span
-                className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white shadow-[0_1px_4px_rgba(0,0,0,0.4)]"
-                style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, backgroundColor: accent }}
-              />
-            </div>
-
-            <div className="mt-3 flex items-center gap-3">
-              <Pipette size={16} className="shrink-0 text-muted" />
-              <div
-                ref={hueTrackRef}
-                role="slider"
-                tabIndex={0}
-                aria-label="Accent hue"
-                aria-valuenow={hsv.h}
-                aria-valuemin={0}
-                aria-valuemax={359}
-                onPointerDown={(event) => {
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  beginAccentDrag();
-                  updateFromHueTrack(event);
-                }}
-                onPointerMove={(event) => {
-                  if (event.buttons === 1) updateFromHueTrack(event);
-                }}
-                onPointerUp={(event) => {
-                  updateFromHueTrack(event);
-                  endAccentDrag();
-                }}
-                onPointerCancel={endAccentDrag}
-                onLostPointerCapture={endAccentDrag}
-                className="relative h-3 flex-1 cursor-pointer rounded-full ring-1 ring-inset ring-border"
-                style={{ background: "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)" }}
-              >
-                <span
-                  className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_1px_4px_rgba(0,0,0,0.4)]"
-                  style={{ left: `${(hsv.h / 359) * 100}%`, backgroundColor: hueColor }}
-                />
-              </div>
-            </div>
-
-            <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-              <div className="grid grid-cols-1 gap-2">
-                <label className="sr-only" htmlFor="accent-hex">Hex color</label>
-                <input
-                  id="accent-hex"
-                  value={hexInput}
-                  onChange={(event) => updateFromHexInput(event.target.value)}
-                  onBlur={() => setHexDraft(null)}
-                  spellCheck={false}
-                  className="h-9 rounded-[6px] border border-border bg-surface px-3 font-mono text-sm text-fg focus:outline-none focus:border-accent-border"
-                  aria-label="Hex color"
-                />
-                <div className="grid grid-cols-3 gap-2">
-                  {([
-                    ["r", "R", rgb.r],
-                    ["g", "G", rgb.g],
-                    ["b", "B", rgb.b],
-                  ] as const).map(([channel, label, value]) => (
-                    <label key={channel} className="flex h-9 items-center gap-1 rounded-[6px] border border-border bg-surface px-2 font-mono text-sm text-muted">
-                      <span className="font-medium">{label}</span>
-                      <input
-                        value={value}
-                        type="number"
-                        min={0}
-                        max={255}
-                        inputMode="numeric"
-                        onChange={(event) => updateRgbChannel(channel, event.target.value)}
-                        className="min-w-0 flex-1 bg-transparent text-right text-fg focus:outline-none"
-                        aria-label={`${label} channel`}
-                      />
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div className="h-9 w-9 rounded-[6px] border border-border" style={{ backgroundColor: accent }} />
-            </div>
-          </div>
-
-          <div className="mt-3">
+          <div className="between" style={{ marginBottom: 14 }}>
+            <div className="eyebrow">Appearance</div>
             <button
               type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Close appearance"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-control)] text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+            >
+              <X size={15} />
+            </button>
+          </div>
+
+          <div className="eyebrow">Theme</div>
+          <div className="seg" data-on={theme} style={{ marginTop: 8, marginBottom: 18 }}>
+            <div className="seg-thumb" />
+            <button
+              type="button"
+              className={cn("seg-btn", theme === "dark" && "on")}
+              onClick={() => applyPreferences("dark", accent)}
+            >
+              <Moon size={15} /> Dark
+            </button>
+            <button
+              type="button"
+              className={cn("seg-btn", theme === "light" && "on")}
+              onClick={() => applyPreferences("light", accent)}
+            >
+              <Sun size={15} /> Light
+            </button>
+          </div>
+
+          <div className="between" style={{ marginBottom: 8 }}>
+            <div className="eyebrow">Accent color</div>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              style={{ padding: "4px 8px", fontSize: 11.5 }}
               onClick={() => {
                 setHexDraft(null);
                 applyPreferences(theme, DEFAULT_ACCENT);
               }}
-              className="w-full h-9 rounded-[var(--radius-control)] border border-border bg-bg hover:bg-surface-hover text-xs font-medium text-muted hover:text-fg transition-colors duration-200"
             >
-              Set to default
+              <RotateCcw size={13} /> Set to default
             </button>
+          </div>
+
+          <div
+            ref={colorFieldRef}
+            role="slider"
+            tabIndex={0}
+            aria-label="Accent saturation and brightness"
+            aria-valuenow={Math.round(hsv.s * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuetext={accent}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              beginAccentDrag();
+              updateFromColorField(event);
+            }}
+            onPointerMove={(event) => {
+              if (event.buttons === 1) updateFromColorField(event);
+            }}
+            onPointerUp={(event) => {
+              updateFromColorField(event);
+              endAccentDrag();
+            }}
+            onPointerCancel={endAccentDrag}
+            onLostPointerCapture={endAccentDrag}
+            className="color-field"
+            style={{ background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hueColor})` }}
+          >
+            <span
+              className="color-field-thumb"
+              style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, background: accent }}
+            />
+          </div>
+
+          <div
+            ref={hueTrackRef}
+            role="slider"
+            tabIndex={0}
+            aria-label="Accent hue"
+            aria-valuenow={hsv.h}
+            aria-valuemin={0}
+            aria-valuemax={359}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              beginAccentDrag();
+              updateFromHueTrack(event);
+            }}
+            onPointerMove={(event) => {
+              if (event.buttons === 1) updateFromHueTrack(event);
+            }}
+            onPointerUp={(event) => {
+              updateFromHueTrack(event);
+              endAccentDrag();
+            }}
+            onPointerCancel={endAccentDrag}
+            onLostPointerCapture={endAccentDrag}
+            className="hue-slider"
+          >
+            <span
+              className="hue-thumb"
+              style={{ left: `${(hsv.h / 359) * 100}%`, background: hueColor }}
+            />
+          </div>
+
+          <div className="cluster" style={{ marginTop: 14, gap: 12 }}>
+            <div className="swatch" style={{ background: accent }} />
+            <div className="grow">
+              <label htmlFor="accent-hex" className="label" style={{ display: "block", marginBottom: 5 }}>Hex</label>
+              <input
+                id="accent-hex"
+                value={hexInput}
+                onChange={(event) => updateFromHexInput(event.target.value)}
+                onBlur={() => setHexDraft(null)}
+                spellCheck={false}
+                maxLength={7}
+                className="mini-input"
+                style={{ textAlign: "left", paddingLeft: 11 }}
+                aria-label="Hex color"
+              />
+            </div>
+          </div>
+
+          <div className="rgb-grid" style={{ marginTop: 12 }}>
+            {([
+              ["r", "R", rgb.r],
+              ["g", "G", rgb.g],
+              ["b", "B", rgb.b],
+            ] as const).map(([channel, channelLabel, value]) => (
+              <div key={channel}>
+                <label className="label" style={{ display: "block", textAlign: "center", marginBottom: 5 }}>{channelLabel}</label>
+                <input
+                  value={value}
+                  type="number"
+                  min={0}
+                  max={255}
+                  inputMode="numeric"
+                  onChange={(event) => updateRgbChannel(channel, event.target.value)}
+                  className="mini-input"
+                  aria-label={`${channelLabel} channel`}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="cluster wrap" style={{ marginTop: 16, gap: 7 }}>
+            {ACCENT_PRESETS.map((preset) => {
+              const isCurrent = accent.toLowerCase() === preset.toLowerCase();
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => {
+                    setHexDraft(null);
+                    applyPreferences(theme, preset);
+                  }}
+                  aria-label={`Use ${preset}`}
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 7,
+                    background: preset,
+                    border: isCurrent ? "2px solid var(--fg)" : "1px solid var(--border-strong)",
+                    boxShadow: preset === DEFAULT_ACCENT ? "0 0 0 2px var(--accent-soft)" : "none",
+                  }}
+                />
+              );
+            })}
           </div>
         </div>
       ) : null}
