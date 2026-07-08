@@ -1,4 +1,4 @@
-import { Building2, CheckCircle2, Settings, Trash2 } from "lucide-react";
+import { Lock, Paintbrush, Plus, Trash2 } from "lucide-react";
 import { createWorkspaceDepartmentAction, deleteWorkspaceDepartmentAction } from "@/app/actions";
 import { requireWorkspaceContext } from "@/lib/auth";
 import { listDepartments } from "@/lib/store";
@@ -8,144 +8,193 @@ import { isWorkspacePreview } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
-function setupLabel(value: string) {
-  const labels: Record<string, string> = {
-    NEXT_PUBLIC_SUPABASE_URL: "database URL",
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: "browser auth key",
-    SUPABASE_SERVICE_ROLE_KEY: "server database key",
-    SEED_ADMIN_EMAIL: "seed owner email",
-    GROQ_API_KEY: "AI service key",
-    "AI_PROVIDER=groq": "AI triage provider",
-  };
-  return labels[value] ?? value;
-}
-
 export async function SettingsPageView({ searchParams, workspaceSlug }: { searchParams: Promise<{ error?: string }>; workspaceSlug?: string }) {
   const { membership, workspace } = await requireWorkspaceContext(workspaceSlug);
   const isPreview = isWorkspacePreview(workspace.id);
   const isAdmin = isPreview || membership.role === "admin" || membership.role === "owner";
-  const setup = isAdmin ? getRuntimeSetupStatus() : null;
-  const missing = setup ? setup.missing.map(setupLabel) : [];
-  const departments = isAdmin ? await listDepartments(workspace.id) : [];
   const params = await searchParams;
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-fg">Settings</h1>
-          <p className="text-muted mt-1">
-            {isAdmin ? "Review workspace configuration and access policy." : "Manage your personal appearance preferences."}
-          </p>
+  if (!isAdmin) {
+    return (
+      <div className="mx-auto w-full max-w-[720px] space-y-5">
+        <div className="page-head">
+          <div className="eyebrow">Settings</div>
+          <h1 className="page-title" style={{ marginTop: 8 }}>
+            Appearance
+          </h1>
+          <p className="page-sub">Only admins can manage system settings and departments.</p>
         </div>
+        <div className="card card-pad">
+          <div className="cluster" style={{ gap: 12 }}>
+            <span className="metric-icon">
+              <Paintbrush size={18} />
+            </span>
+            <div>
+              <div style={{ fontWeight: 600 }}>Customize your view</div>
+              <p className="muted" style={{ fontSize: 13.5, marginTop: 2 }}>
+                Use the paintbrush in the header to switch theme and pick an accent color. Your preferences are saved on
+                this device.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const setup = getRuntimeSetupStatus();
+  const departments = await listDepartments(workspace.id);
+  const allUp = setup.supabaseConfigured && setup.groqConfigured;
+  const healthRows = [
+    { label: "Database", hue: setup.supabaseConfigured ? "done" : "warn", value: setup.supabaseConfigured ? "Configured" : "Missing setup" },
+    { label: "AI triage", hue: setup.groqConfigured ? "done" : "warn", value: setup.groqConfigured ? "Configured" : "Missing setup" },
+    { label: "Attachment bucket", hue: "done", value: setup.storageBucket },
+  ] as const;
+  const policies = [
+    { label: "Workspace entry", value: "Invite only" },
+    { label: "Assigned role", value: "From invite" },
+    { label: "Invite creation", value: isPreview ? "Locked in preview" : membership.role === "owner" ? "Requester or admin" : "Requester only" },
+  ];
+
+  return (
+    <div className="mx-auto w-full max-w-[1120px] space-y-5">
+      <div className="page-head">
+        <div className="eyebrow">Settings</div>
+        <h1 className="page-title" style={{ marginTop: 8 }}>
+          Workspace settings
+        </h1>
+        <p className="page-sub">System status, access policy, and department routing for {workspace.name}.</p>
       </div>
 
-      {isAdmin && setup ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <Settings size={17} className="text-accent" />
-              <h2 className="font-medium text-fg">System Health</h2>
+      {params.error ? (
+        <div className="st-danger rounded-[var(--radius-card)] border px-4 py-3 text-sm">{params.error}</div>
+      ) : null}
+
+      <div className="split" style={{ gridTemplateColumns: "1fr 1fr", alignItems: "start" }}>
+        <div className="stack" style={{ gap: 16 }}>
+          <div className="card">
+            <div className="panel-head">
+              <div className="section-title">System health</div>
+              <span className="badge" data-hue={allUp ? "done" : "warn"}>
+                <span className="dot" /> {allUp ? "All core systems up" : "Action needed"}
+              </span>
             </div>
-            <div className="space-y-4 text-sm">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <span className="text-muted">Database</span>
-                <span className="text-fg">{setup.supabaseConfigured ? "Configured" : "Missing setup"}</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <span className="text-muted">AI triage</span>
-                <span className="text-fg">{setup.groqConfigured ? "Configured" : "Missing setup"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted">Attachment bucket</span>
-                <span className="text-fg">{setup.storageBucket}</span>
-              </div>
+            <div className="card-pad stack" style={{ gap: 2 }}>
+              {healthRows.map((row) => (
+                <div key={row.label} className="between" style={{ padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
+                  <div className="cluster" style={{ gap: 10 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 999, background: `var(--${row.hue})`, boxShadow: `0 0 8px var(--${row.hue})` }} />
+                    <span style={{ fontWeight: 550, fontSize: 14 }}>{row.label}</span>
+                  </div>
+                  <span className="badge" data-hue={row.hue}>
+                    {row.value}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <CheckCircle2 size={17} className="text-accent" />
-              <h2 className="font-medium text-fg">Access Policy</h2>
+          <div className="card">
+            <div className="panel-head">
+              <div className="section-title">Access policy</div>
+              <Lock size={16} className="faint" />
             </div>
-            <div className="space-y-4 text-sm">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <span className="text-muted">Workspace entry</span>
-                <span className="text-fg">Invite only</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <span className="text-muted">Assigned role</span>
-                <span className="text-fg">From invite</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted">Invite creation</span>
-                <span className="text-fg">{isPreview ? "Locked in preview" : membership.role === "owner" ? "Requester or admin" : "Requester only"}</span>
-              </div>
+            <div className="card-pad stack" style={{ gap: 12 }}>
+              {policies.map((policy) => (
+                <div key={policy.label} className="between">
+                  <span style={{ fontSize: 14, fontWeight: 550 }}>{policy.label}</span>
+                  <span className="badge" data-hue="neutral">
+                    {policy.value}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
-      ) : null}
 
-      {params.error ? (
-        <div className="st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm">{params.error}</div>
-      ) : null}
-
-      {isAdmin ? (
-        <div className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
-          <div className="p-6 border-b border-border bg-surface-2">
-            <h2 className="font-medium text-fg flex items-center gap-2">
-              <Building2 size={17} className="text-accent" /> Departments
-            </h2>
-            <p className="text-sm text-muted mt-1">Request creation and AI triage use this workspace list.</p>
+        <div className="card" style={{ alignSelf: "start" }}>
+          <div className="panel-head">
+            <div className="section-title">Departments</div>
+            <span className="eyebrow">{departments.length} total</span>
           </div>
-
-          <div className="divide-y divide-border">
-            {departments.map((department) => (
-              <div key={department.id} className="p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <div className="font-medium text-fg">{department.name}</div>
-                  <div className="font-mono text-xs text-muted mt-1">{department.id}{department.description ? ` · ${department.description}` : ""}</div>
+          <div className="list">
+            {departments.map((department) => {
+              const isDefault = (defaultDepartmentIds as readonly string[]).includes(department.id);
+              return (
+                <div key={department.id} className="row-link" style={{ cursor: "default" }}>
+                  <div className="between" style={{ gap: 12 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="cluster" style={{ gap: 8 }}>
+                        <span style={{ fontWeight: 600 }}>{department.name}</span>
+                        <span className="mono faint" style={{ fontSize: 11 }}>
+                          {department.id}
+                        </span>
+                        {isDefault ? (
+                          <span className="badge" data-hue="neutral">
+                            Default
+                          </span>
+                        ) : null}
+                      </div>
+                      {department.description ? (
+                        <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
+                          {department.description}
+                        </div>
+                      ) : null}
+                    </div>
+                    {!isPreview && !isDefault ? (
+                      <form action={deleteWorkspaceDepartmentAction}>
+                        {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
+                        <input type="hidden" name="id" value={department.id} />
+                        <button className="btn btn--danger btn--sm">
+                          <Trash2 size={14} />
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
                 </div>
-                {!isPreview && !(defaultDepartmentIds as readonly string[]).includes(department.id) ? (
-                  <form action={deleteWorkspaceDepartmentAction}>
-                    {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
-                    <input type="hidden" name="id" value={department.id} />
-                    <button className="st-danger h-9 px-3 rounded-[var(--radius-control)] border text-xs font-medium hover:opacity-90 transition-opacity inline-flex items-center gap-2">
-                      <Trash2 size={14} /> Remove
-                    </button>
-                  </form>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {!isPreview ? (
-            <form action={createWorkspaceDepartmentAction} className="p-6 border-t border-border grid grid-cols-1 gap-3 lg:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
-              {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
-              <div className="space-y-2">
-                <label htmlFor="department-id" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">ID</label>
-                <input id="department-id" name="id" required placeholder="transport" className="input" />
+            <div className="card-pad" style={{ borderTop: "1px solid var(--border)" }}>
+              <div className="eyebrow">Add department</div>
+              <form action={createWorkspaceDepartmentAction}>
+                {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
+                <div className="cols-2" style={{ gap: 10, marginTop: 10 }}>
+                  <div className="field">
+                    <label htmlFor="department-name" className="label">
+                      Name
+                    </label>
+                    <input id="department-name" name="name" required placeholder="Transport" className="input" />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="department-id" className="label">
+                      ID
+                    </label>
+                    <input id="department-id" name="id" required placeholder="transport" className="input" />
+                  </div>
+                </div>
+                <div className="field" style={{ marginTop: 10 }}>
+                  <label htmlFor="department-description" className="label">
+                    Description
+                  </label>
+                  <input id="department-description" name="description" placeholder="Vehicle and shuttle requests" className="input" />
+                </div>
+                <button className="btn btn--primary btn--block" style={{ marginTop: 12 }}>
+                  <Plus size={15} /> Add department
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="card-pad" style={{ borderTop: "1px solid var(--border)" }}>
+              <div className="banner">
+                <Lock size={15} /> Departments can&apos;t be changed in the read-only preview.
               </div>
-              <div className="space-y-2">
-                <label htmlFor="department-name" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Name</label>
-                <input id="department-name" name="name" required placeholder="Transport" className="input" />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="department-description" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Description</label>
-                <input id="department-description" name="description" placeholder="Vehicle and shuttle requests" className="input" />
-              </div>
-              <button className="btn btn--neutral">Add</button>
-            </form>
-          ) : null}
+            </div>
+          )}
         </div>
-      ) : null}
-
-      {missing.length > 0 ? (
-        <div className="bg-surface border border-[var(--st-warn)]/40 rounded-[var(--radius-card)] p-6">
-          <h2 className="font-medium text-[var(--st-warn)]">Missing configuration</h2>
-          <p className="text-sm text-muted mt-1">{missing.join(", ")}</p>
-        </div>
-      ) : null}
+      </div>
     </div>
   );
 }
