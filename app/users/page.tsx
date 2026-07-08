@@ -1,4 +1,4 @@
-import { ShieldCheck, UserCog, UserMinus } from "lucide-react";
+import { Check, ShieldCheck, UserMinus } from "lucide-react";
 import { removeWorkspaceMemberAction, updateUserRoleAction } from "@/app/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { SubmitButton } from "@/components/submit-button";
@@ -7,32 +7,77 @@ import { listWorkspaceMembers, canRemoveWorkspaceMember } from "@/lib/workspaces
 
 export const dynamic = "force-dynamic";
 
+const ROLE_HUE: Record<string, string> = {
+  owner: "active",
+  admin: "info",
+  requester: "neutral",
+};
+
+function initials(label: string) {
+  return (
+    label
+      .split(/\s+|@/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "?"
+  );
+}
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+const rolePolicies = [
+  { role: "owner", points: ["Full control of the workspace", "Edits any role, removes any member", "Protected — cannot be removed"] },
+  { role: "admin", points: ["Reviews and resolves tickets", "Manages settings & departments", "Can remove requesters"] },
+  { role: "requester", points: ["Submits new requests", "Tracks their own tickets", "No management access"] },
+];
+
+function Policy({ role, points }: { role: string; points: string[] }) {
+  return (
+    <div className="callout">
+      <span className="badge" data-hue={ROLE_HUE[role] ?? "neutral"}>
+        {capitalize(role)}
+      </span>
+      <ul style={{ listStyle: "none", marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+        {points.map((point) => (
+          <li key={point} className="cluster" style={{ gap: 8, alignItems: "flex-start" }}>
+            <Check size={14} style={{ color: "var(--done)", marginTop: 3, flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: "var(--muted)" }}>{point}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string } = {}) {
   const { user: currentUser, workspace, membership } = await requireWorkspaceAdminContext(workspaceSlug);
   const users = await listWorkspaceMembers(workspace.id, currentUser.id);
   const canEditRoles = membership.role === "owner";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-fg">User Management</h1>
-          <p className="text-muted mt-1">Manage active members and workspace roles for {workspace.name}.</p>
-        </div>
+    <div className="mx-auto w-full max-w-[1120px] space-y-5">
+      <div className="page-head">
+        <div className="eyebrow">Members</div>
+        <h1 className="page-title" style={{ marginTop: 8 }}>
+          People in {workspace.name}
+        </h1>
+        <p className="page-sub">
+          {users.length} member{users.length === 1 ? "" : "s"}. Owners manage roles; admins can remove requesters.
+        </p>
       </div>
 
-      <div className="bg-surface rounded-[var(--radius-card)] border border-border overflow-hidden">
-        <div className="p-6 border-b border-border bg-surface-2">
-          <h2 className="font-medium text-fg flex items-center gap-2">
-            <UserCog size={17} className="text-accent" /> Accounts ({users.length})
-          </h2>
-        </div>
-
-        <div className="divide-y divide-border">
+      <div className="split">
+        <div className="card list">
           {users.length === 0 ? (
-            <div className="p-10 text-center">
-              <h3 className="font-medium text-fg">No accounts found</h3>
-              <p className="text-sm text-muted mt-1">Users will appear here after signup.</p>
+            <div className="empty">
+              <div className="empty-glyph">
+                <ShieldCheck size={22} />
+              </div>
+              <div style={{ fontWeight: 600, color: "var(--fg)" }}>No accounts found</div>
+              <div style={{ fontSize: 13.5 }}>Members will appear here after they sign up or accept an invite.</div>
             </div>
           ) : (
             users.map((user) => {
@@ -41,75 +86,82 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
               const roleLocked = !canEditRoles || isSelf || isOwner;
               const canRemove = !isSelf && canRemoveWorkspaceMember(membership.role, user.role);
               return (
-                <div key={user.id} className="p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="font-medium text-fg truncate">{user.displayName || user.email}</h3>
-                      <span className="bg-surface-hover text-muted text-[10px] px-2 py-0.5 rounded-md font-medium tracking-wide uppercase">
-                        {user.role}
-                      </span>
-                      {isSelf ? (
-                        <span className="bg-accent-soft text-accent border border-accent-border text-[10px] px-2 py-0.5 rounded-md font-medium tracking-wide uppercase">
-                          You
+                <div key={user.id} className="row-link" style={{ cursor: "default" }}>
+                  <div className="between wrap" style={{ gap: 12 }}>
+                    <div className="cluster" style={{ gap: 12, minWidth: 0 }}>
+                      <span className="avatar lg">{initials(user.displayName || user.email)}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div className="cluster wrap" style={{ gap: 8 }}>
+                          <span style={{ fontWeight: 600 }}>{user.displayName || user.email}</span>
+                          {isSelf ? (
+                            <span className="badge" data-hue="accent">
+                              You
+                            </span>
+                          ) : null}
+                          {isOwner ? (
+                            <span className="badge" data-hue="active">
+                              <ShieldCheck size={11} /> Protected
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="muted" style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {user.email} · joined {new Date(user.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="cluster" style={{ gap: 10 }}>
+                      {!roleLocked ? (
+                        <form action={updateUserRoleAction} className="cluster" style={{ gap: 8 }}>
+                          {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
+                          <input type="hidden" name="userId" value={user.userId} />
+                          <select name="role" defaultValue={user.role} className="select" style={{ width: "auto" }}>
+                            <option value="requester">Requester</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                          <SubmitButton pendingText="Saving…" className="btn--neutral btn--sm">
+                            Save
+                          </SubmitButton>
+                        </form>
+                      ) : (
+                        <span className="badge" data-hue={ROLE_HUE[user.role] ?? "neutral"}>
+                          {user.role}
                         </span>
-                      ) : null}
-                      {isOwner ? (
-                        <span className="st-warn border text-[10px] px-2 py-0.5 rounded-md font-medium tracking-wide uppercase">
-                          Protected
-                        </span>
+                      )}
+                      {canRemove ? (
+                        <form action={removeWorkspaceMemberAction}>
+                          {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
+                          <input type="hidden" name="workspaceId" value={workspace.id} />
+                          <input type="hidden" name="memberUserId" value={user.userId} />
+                          <ConfirmSubmitButton
+                            confirmation={`Remove ${user.displayName || user.email || "this member"} from ${workspace.name}?`}
+                            pendingText="Removing…"
+                            className="btn btn--danger btn--sm"
+                          >
+                            <UserMinus size={14} />
+                          </ConfirmSubmitButton>
+                        </form>
                       ) : null}
                     </div>
-                    <p className="text-sm text-muted">{user.email}</p>
-                    <p className="font-mono text-xs text-faint mt-1">Joined {new Date(user.createdAt).toLocaleDateString()}</p>
-                  </div>
-
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <form action={updateUserRoleAction} className="flex items-center gap-3">
-                      {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
-                      <input type="hidden" name="userId" value={user.userId} />
-                      <select
-                        name="role"
-                        defaultValue={user.role}
-                        disabled={roleLocked}
-                        className="select disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <option value="requester">Requester</option>
-                        <option value="admin">Admin</option>
-                        {isOwner ? <option value="owner">Owner</option> : null}
-                      </select>
-                      <SubmitButton
-                        pendingText="Saving role..."
-                        disabled={roleLocked}
-                        className="btn--neutral"
-                      >
-                        Save Role
-                      </SubmitButton>
-                    </form>
-                    {canRemove ? (
-                      <form action={removeWorkspaceMemberAction}>
-                        {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
-                        <input type="hidden" name="workspaceId" value={workspace.id} />
-                        <input type="hidden" name="memberUserId" value={user.userId} />
-                        <ConfirmSubmitButton confirmation={`Remove ${user.displayName || user.email || "this member"} from ${workspace.name}?`} pendingText="Removing..." className="st-danger h-10 px-4 rounded-[var(--radius-control)] border text-sm font-medium hover:opacity-90 transition-opacity inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-75">
-                          <UserMinus size={15} /> Remove
-                        </ConfirmSubmitButton>
-                      </form>
-                    ) : null}
                   </div>
                 </div>
               );
             })
           )}
         </div>
-      </div>
 
-      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 flex gap-4">
-        <ShieldCheck size={20} className="text-accent flex-shrink-0 mt-0.5" />
-        <div>
-          <h2 className="font-medium text-fg">Role policy</h2>
-          <p className="text-sm text-muted mt-1">
-            Workspace owners can assign requester/admin roles. Admins can remove requester members. Owner access cannot be changed here.
+        <div className="card card-pad" style={{ alignSelf: "start" }}>
+          <div className="section-title" style={{ marginBottom: 4 }}>
+            Role policy
+          </div>
+          <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+            What each role can do in this workspace.
           </p>
+          <div className="stack" style={{ gap: 14 }}>
+            {rolePolicies.map((policy) => (
+              <Policy key={policy.role} role={policy.role} points={policy.points} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
