@@ -2,11 +2,9 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
-  BarChart3,
   Building2,
   CheckCircle2,
   Clock,
-  Database,
   History,
   Inbox,
   Layers,
@@ -18,34 +16,15 @@ import {
   Wrench,
 } from "lucide-react";
 import { BrandIcon } from "@/components/brand-icon";
+import { DashboardView } from "@/components/dashboard-view";
 import { HomeHeader } from "@/components/home-header";
-import { getCurrentUser, requireWorkspaceAdminContext } from "@/lib/auth";
-import { getDashboardData } from "@/lib/store";
+import { getCurrentUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 
 export const dynamic = "force-dynamic";
 
-function metricLabel(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
-function barWidth(count: number, total: number) {
-  if (total <= 0) return "0%";
-  return `${Math.max(8, Math.round((count / total) * 100))}%`;
-}
-
-function setupRequirementLabel(value: string) {
-  const labels: Record<string, string> = {
-    NEXT_PUBLIC_SUPABASE_URL: "database URL",
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: "browser auth key",
-    SUPABASE_SERVICE_ROLE_KEY: "server database key",
-    SEED_ADMIN_EMAIL: "seed owner email",
-    GROQ_API_KEY: "AI service key",
-    "AI_PROVIDER=groq": "AI triage provider",
-  };
-  return labels[value] ?? value;
-}
+// Re-exported so `@/app/page` importers (workspace-scoped dashboard route) keep working.
+export { DashboardView };
 
 const workflowSteps = [
   {
@@ -360,272 +339,6 @@ function SignedOutLandingPage() {
           <span>© {new Date().getFullYear()} TriageDesk. All rights reserved.</span>
         </div>
       </footer>
-    </div>
-  );
-}
-
-export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string } = {}) {
-  const { workspace } = await requireWorkspaceAdminContext(workspaceSlug);
-  const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
-  const data = await getDashboardData(workspace.id);
-  const { counts, recentActivity, featuredReview, priorityDistribution, departmentWorkload, resolutionTrend } = data;
-  const featured = featuredReview;
-  const setupMissing = data.setupRequired ?? [];
-  const isSetupRequired = setupMissing.length > 0;
-  const setupMissingLabels = setupMissing.map(setupRequirementLabel);
-  const priorityTotal = priorityDistribution.reduce((sum, item) => sum + item.count, 0);
-  const departmentMax = Math.max(1, ...departmentWorkload.map((item) => item.count));
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-fg">TriageDesk</h1>
-          <p className="text-muted mt-1">AI operations triage with review workflows, ticket tracking, and resolution analytics.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Link href={href("/submit")} className="h-10 px-4 bg-accent hover:opacity-90 text-accent-fg rounded-[var(--radius-control)] text-sm font-medium transition-opacity inline-flex items-center justify-center gap-2">
-            <span aria-hidden>+</span> New Request
-          </Link>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-12 gap-6 overflow-hidden">
-        {isSetupRequired ? (
-          <div className="col-span-12 st-warn bg-surface border rounded-[var(--radius-card)] p-6 flex flex-col lg:flex-row gap-5 lg:items-center lg:justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle size={16} />
-                <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em]">Manual Setup Required</span>
-              </div>
-              <h2 className="text-lg font-semibold text-fg mb-2">Complete system setup to use TriageDesk.</h2>
-              <p className="text-sm text-muted leading-relaxed">
-                Missing configuration: <span className="text-fg">{setupMissingLabels.join(", ")}</span>. Requests, uploads,
-                activity, and AI triage require the setup in <span className="font-mono text-fg">.codex/setup.md</span>.
-              </p>
-            </div>
-            <Link href="/api/health" className="px-4 py-2 bg-bg border border-border rounded-[var(--radius-control)] text-sm font-medium text-fg hover:bg-surface-hover transition-colors text-center">
-              Check Health
-            </Link>
-          </div>
-        ) : null}
-
-        <div className="col-span-12 bg-surface border border-accent-border rounded-[var(--radius-card)] p-6 flex flex-col lg:flex-row gap-6 justify-between">
-          <div className="max-w-3xl">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={16} className="text-accent" />
-              <span className="font-mono text-[10px] font-medium text-accent uppercase tracking-[0.14em]">Workflow Overview</span>
-            </div>
-            <h2 className="text-lg font-semibold text-fg mb-2">Manage the full request-to-resolution loop from one workspace.</h2>
-            <p className="text-sm text-muted leading-relaxed">
-              Start with a pending high-risk request, review the AI triage, approve it into a ticket, update status and notes,
-              then return here to see workload and SLA metrics recalculate from workspace data.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-3 min-w-full lg:min-w-[320px]">
-            <Link href={href("/review")} className="bg-bg border border-border rounded-[var(--radius-control)] p-4 hover:border-accent-border transition-colors">
-              <Inbox size={18} className="text-accent mb-3" />
-              <div className="text-sm font-medium text-fg">1. Review Queue</div>
-              <div className="text-xs text-muted mt-1">Approve triage</div>
-            </Link>
-            <Link href={href("/tickets")} className="bg-bg border border-border rounded-[var(--radius-control)] p-4 hover:border-accent-border transition-colors">
-              <Ticket size={18} className="text-accent mb-3" />
-              <div className="text-sm font-medium text-fg">2. Track Tickets</div>
-              <div className="text-xs text-muted mt-1">Update status</div>
-            </Link>
-          </div>
-        </div>
-
-        <div className="col-span-12 grid grid-cols-2 md:grid-cols-7 gap-4">
-          {[
-            ["Pending Triage", counts.newRequests, "text-fg"],
-            ["Open Tickets", counts.openTickets, "text-fg"],
-            ["High Priority", counts.highPriority, "text-[var(--st-danger)]"],
-            ["SLA Risk", counts.slaRisk, "text-[var(--st-warn)]"],
-            ["Aging", counts.agingTickets, "text-[var(--st-warn)]"],
-            ["Assigned", counts.assigned, "text-accent"],
-            ["Resolved", counts.resolved, "text-fg"],
-          ].map(([label, value, color]) => (
-            <div key={label} className="bg-surface border border-border rounded-[var(--radius-card)] p-5 flex flex-col justify-center">
-              <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted font-medium mb-2">{label}</span>
-              <span className={cn("font-mono text-3xl font-semibold", color as string)}>{value}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="col-span-12 lg:col-span-7 bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden flex h-[520px] min-h-0 flex-col lg:h-auto lg:[contain:size]">
-          <div className="p-5 border-b border-border flex justify-between items-center bg-surface-2">
-            <h3 className="font-medium text-fg flex items-center gap-2">
-              <Clock size={16} className="text-muted" /> Recent Activity
-            </h3>
-            <Link href={href("/tickets")} className="text-xs text-accent hover:opacity-90">
-              View Tickets &rarr;
-            </Link>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            {recentActivity.length === 0 ? (
-              <div className="p-10 text-center">
-                <h4 className="font-medium text-fg text-sm">No activity yet</h4>
-                <p className="text-xs text-muted mt-1">Request and ticket updates will appear here.</p>
-              </div>
-            ) : (
-              recentActivity.map((activity) => (
-                <div key={activity.id} className="p-5 border-b border-border flex items-center justify-between hover:bg-surface-hover transition-colors">
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] px-2 py-0.5 bg-surface-hover text-muted font-medium rounded uppercase">
-                        {activity.ticketId ?? activity.requestId}
-                      </span>
-                      <h4 className="font-medium text-fg text-sm truncate">{activity.action}</h4>
-                    </div>
-                    <p className="text-xs text-muted truncate max-w-xl">
-                      {activity.actor} &middot; {activity.details}
-                    </p>
-                  </div>
-                  <span className="font-mono text-xs text-muted whitespace-nowrap">
-                    {new Date(activity.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="col-span-12 lg:col-span-5 flex flex-col gap-6">
-          <div className="bg-surface border border-accent-border rounded-[var(--radius-card)] p-8 relative overflow-hidden">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-2 h-2 rounded-full bg-accent" />
-              <span className="font-mono text-[10px] font-medium text-accent uppercase tracking-[0.14em]">AI Triage Result</span>
-            </div>
-
-            {featured ? (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-fg mb-1">{featured.triage.title}</h2>
-                  <p className="font-mono text-xs text-muted">
-                    Request #{featured.request.id} &middot; Submitted by {featured.request.contactName || "Anonymous"}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-bg p-4 rounded-[var(--radius-control)] border border-border">
-                    <span className="font-mono text-[10px] text-muted uppercase font-medium block mb-1">Department</span>
-                    <span className="text-sm text-fg capitalize">{featured.triage.department}</span>
-                  </div>
-                  <div className="bg-bg p-4 rounded-[var(--radius-control)] border border-border">
-                    <span className="font-mono text-[10px] text-muted uppercase font-medium block mb-1">Priority</span>
-                    <span className="text-sm text-[var(--st-danger)] font-medium uppercase">{featured.triage.priority}</span>
-                  </div>
-                </div>
-
-                <div className="bg-bg p-5 rounded-[var(--radius-control)] border border-border">
-                  <span className="font-mono text-[10px] text-accent uppercase font-medium block mb-2">Suggested Action</span>
-                  <p className="text-sm text-fg leading-relaxed">{featured.triage.priorityReasoning}</p>
-                </div>
-
-                <div className="flex gap-3 pt-2 mt-auto">
-                  <Link href={href(`/review/${featured.request.id}`)} className="flex-1 py-3 bg-accent hover:opacity-90 text-accent-fg font-medium rounded-[var(--radius-control)] text-xs transition-opacity text-center">
-                    APPROVE &amp; ASSIGN
-                  </Link>
-                  <Link href={href(`/review/${featured.request.id}`)} className="px-6 py-3 bg-surface hover:bg-surface-hover text-fg font-medium rounded-[var(--radius-control)] text-xs transition-colors border border-border">
-                    Edit
-                  </Link>
-                </div>
-              </div>
-            ) : isSetupRequired ? (
-              <div className="h-full flex flex-col items-center justify-center text-center py-10">
-                <AlertTriangle className="text-[var(--st-warn)] mb-4" size={32} />
-                <h2 className="text-base font-semibold text-fg">Setup required</h2>
-                <p className="text-sm text-muted mt-1">Database and AI triage configuration must be completed before review items appear.</p>
-              </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center py-10">
-                <CheckCircle2 className="text-accent mb-4" size={32} />
-                <h2 className="text-base font-semibold text-fg">Queue clear</h2>
-                <p className="text-sm text-muted mt-1">No requests are waiting for review.</p>
-              </div>
-            )}
-          </div>
-
-          <div className="grid shrink-0 grid-cols-2 gap-4">
-            <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5">
-              <Database className="text-accent mb-4" size={20} />
-              <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted font-medium">Data Store</div>
-              <div className="text-2xl font-semibold text-fg mt-1">{isSetupRequired ? "Setup" : "Live"}</div>
-            </div>
-            <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5">
-              <BarChart3 className="text-accent mb-4" size={20} />
-              <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted font-medium">Avg Resolution</div>
-              <div className="font-mono text-2xl font-semibold text-fg mt-1">{metricLabel(counts.averageResolutionHours)}h</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-span-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
-            <h3 className="font-medium text-fg mb-5 flex items-center gap-2">
-              <AlertTriangle size={16} className="text-[var(--st-warn)]" /> Priority Distribution
-            </h3>
-            <div className="space-y-4">
-              {priorityDistribution.map((item) => (
-                <div key={item.priority}>
-                  <div className="flex justify-between text-xs mb-2">
-                    <span className="text-muted capitalize">{item.priority}</span>
-                    <span className="font-mono text-muted">{item.count}</span>
-                  </div>
-                  <div className="h-2 bg-bg rounded-full overflow-hidden border border-border">
-                    <div className="app-grow-x h-full bg-accent" style={{ width: barWidth(item.count, priorityTotal) }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
-            <h3 className="font-medium text-fg mb-5">Department Workload</h3>
-            <div className="space-y-4">
-              {departmentWorkload.filter((item) => item.count > 0).map((item) => (
-                <div key={item.department}>
-                  <div className="flex justify-between text-xs mb-2">
-                    <span className="text-muted capitalize">{item.department}</span>
-                    <span className="font-mono text-muted">{item.count}</span>
-                  </div>
-                  <div className="h-2 bg-bg rounded-full overflow-hidden border border-border">
-                    <div className="app-grow-x h-full bg-muted" style={{ width: barWidth(item.count, departmentMax) }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
-            <h3 className="font-medium text-fg mb-5">Resolution Trend</h3>
-            <div className="flex items-end gap-3 h-36">
-              {resolutionTrend.map((item) => (
-                <div key={item.label} className="flex-1 flex flex-col items-center gap-2">
-                  <div className="w-full bg-bg border border-border rounded-t-md flex items-end h-24 overflow-hidden">
-                    <div className="app-grow-y w-full bg-accent" style={{ height: `${Math.max(10, item.resolved * 34)}%` }} />
-                  </div>
-                  <span className="font-mono text-[10px] text-muted">{item.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <Link href={href("/review")} className="col-span-12 bg-surface border border-border rounded-[var(--radius-card)] p-5 flex items-center justify-between hover:bg-surface-hover transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-[var(--radius-control)] bg-accent-soft text-accent flex items-center justify-center">
-              <Sparkles size={18} />
-            </div>
-            <div>
-              <div className="font-medium text-fg">Review AI triage suggestions</div>
-              <div className="text-sm text-muted">Approve, edit, reject, or mark a request as duplicate.</div>
-            </div>
-          </div>
-          <ArrowRight className="text-muted" size={18} />
-        </Link>
-      </div>
     </div>
   );
 }
