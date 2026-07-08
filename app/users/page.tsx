@@ -80,7 +80,7 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
                       <SubmitButton
                         pendingText="Saving role..."
                         disabled={roleLocked}
-                        className="w-auto h-10 px-4 bg-surface-hover border border-border rounded-[var(--radius-control)] text-sm font-medium text-fg hover:bg-surface transition-colors disabled:cursor-not-allowed disabled:text-faint disabled:hover:bg-surface-hover"
+                        className="btn--neutral"
                       >
                         Save Role
                       </SubmitButton>

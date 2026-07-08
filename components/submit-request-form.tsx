@@ -98,7 +98,7 @@ export function SubmitRequestForm({
           <Link href={ticketsHref} className="text-sm font-medium text-muted hover:text-fg px-4 py-2 transition-colors">
             Cancel
           </Link>
-          <SubmitButton pendingText="Uploading..." className="w-auto h-auto px-8 py-3">
+          <SubmitButton pendingText="Uploading..." className="w-auto">
             {isPreview ? <><LockKeyhole size={16} /> Preview locked</> : <>Submit Request <ArrowRight size={16} /></>}
           </SubmitButton>
         </div>

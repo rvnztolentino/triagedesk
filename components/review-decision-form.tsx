@@ -42,17 +42,17 @@ export function ReviewDecisionForm({
         {children}
 
         <div className="pt-6 border-t border-border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <SubmitButton pending={approvePending} pendingText="Approving..." className="h-auto w-full rounded-[var(--radius-control)] bg-accent px-6 py-3 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 sm:w-auto">
-            {isPreview ? <><LockKeyhole size={18} /> Preview locked</> : <><Check size={18} /> Approve &amp; Dispatch</>}
+          <SubmitButton pending={approvePending} pendingText="Approving..." className="sm:w-auto">
+            {isPreview ? <><LockKeyhole size={16} /> Preview locked</> : <><Check size={16} /> Approve &amp; Dispatch</>}
           </SubmitButton>
           <SubmitButton
             disabled={isPreview}
             formAction={rejectAction}
             pending={rejectPending}
             pendingText="Rejecting..."
-            className="st-danger h-auto w-full rounded-[var(--radius-control)] border px-5 py-3 text-sm font-medium transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            className="btn--danger btn--block sm:w-auto"
           >
-            <X size={18} /> Reject
+            <X size={16} /> Reject
           </SubmitButton>
         </div>
       </fieldset>

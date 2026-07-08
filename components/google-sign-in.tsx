@@ -30,7 +30,7 @@ export function GoogleSignIn({ next, label = "Continue with Google" }: { next?: 
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <SubmitButton
         pendingText="Redirecting to Google..."
-        className="bg-surface text-fg border border-border hover:bg-bg hover:opacity-100"
+        className="btn--neutral btn--block"
       >
         <GoogleIcon /> {label}
       </SubmitButton>
