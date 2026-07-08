@@ -5,14 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
   Building2,
   Inbox,
   LayoutDashboard,
   LockKeyhole,
   LogOut,
   Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
   PlusCircle,
   Settings,
   Ticket,
@@ -44,6 +44,12 @@ const requesterNavItems = [
 ];
 
 const workspaceNavItem = { href: "/onboarding", icon: Building2, label: "Workspace" };
+
+function roleHue(role: string): "active" | "info" | "neutral" {
+  if (role === "owner") return "active";
+  if (role === "admin") return "info";
+  return "neutral";
+}
 
 function initials(user: AppUser | null) {
   if (!user) return "TD";
@@ -364,9 +370,12 @@ export function AppLayout({
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="hidden md:flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] px-2 py-1.5 text-[11px] font-medium text-faint hover:text-fg hover:bg-surface-hover transition-colors"
+            className={cn(
+              "hidden md:flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 py-2 text-[12.5px] font-medium text-faint hover:text-fg hover:bg-surface-hover transition-colors",
+              collapsed && "md:justify-center md:px-0"
+            )}
           >
-            {collapsed ? <PanelLeftOpen size={14} className="shrink-0" /> : <PanelLeftClose size={14} className="shrink-0" />}
+            {collapsed ? <ChevronsRight size={17} className="shrink-0" /> : <ChevronsLeft size={17} className="shrink-0" />}
             <span className={cn(collapsed && "md:hidden")}>Collapse</span>
           </button>
         </div>
@@ -434,9 +443,9 @@ export function AppLayout({
                       : "border-transparent hover:border-border hover:bg-surface"
                   )}
                 >
-                  <div className="w-8 h-8 bg-accent-soft rounded-md border border-accent-border flex items-center justify-center font-mono text-xs font-semibold text-accent">
+                  <span className="avatar" style={{ width: 30, height: 30, fontSize: 11 }}>
                     {initials(currentUser)}
-                  </div>
+                  </span>
                   <span className="hidden sm:block text-sm font-medium text-muted max-w-[8rem] truncate">
                     {currentUser.displayName}
                   </span>
@@ -447,17 +456,39 @@ export function AppLayout({
                   <div
                     id="app-profile-menu"
                     role="menu"
-                    className="absolute right-0 top-12 z-[100] w-60 rounded-[var(--radius-card)] border border-border bg-surface p-1.5 app-dropdown-enter"
+                    className="menu"
+                    style={{ right: 0, top: "calc(100% + 10px)", width: 264 }}
                   >
-                    <div className="px-3 py-2.5 border-b border-border mb-1">
-                      <div className="text-sm font-medium text-fg truncate">{currentUser.displayName}</div>
-                      <div className="font-mono text-xs text-muted truncate mt-0.5">{currentUser.email}</div>
-                      <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-accent-soft border border-accent-border px-2 py-0.5 font-mono text-[10px] font-medium text-accent uppercase tracking-[0.1em]">
-                        {activeWorkspace?.isPreview ? "preview" : activeWorkspace?.role ?? currentUser.role}
+                    <div className="menu-head">
+                      <div className="cluster" style={{ gap: 11 }}>
+                        <span className="avatar lg">{initials(currentUser)}</span>
+                        <div style={{ minWidth: 0 }}>
+                          <div className="truncate" style={{ fontWeight: 650 }}>{currentUser.displayName}</div>
+                          <div className="muted truncate" style={{ fontSize: 12.5 }}>{currentUser.email}</div>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 10 }}>
+                        <span className="badge" data-hue={activeWorkspace?.isPreview ? "warn" : roleHue(activeWorkspace?.role ?? currentUser.role)}>
+                          {activeWorkspace?.isPreview ? "Preview" : activeWorkspace?.role ?? currentUser.role}
+                        </span>
                       </div>
                     </div>
+                    <Link href="/onboarding" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
+                      <Building2 size={15} className="text-muted" /> Workspaces
+                    </Link>
+                    {activeWorkspace ? (
+                      <Link
+                        href={scopedWorkspaceHref(activeWorkspace.slug, "/settings")}
+                        role="menuitem"
+                        className="menu-item"
+                        onClick={() => setProfileOpen(false)}
+                      >
+                        <Settings size={15} className="text-muted" /> Workspace settings
+                      </Link>
+                    ) : null}
+                    <div className="divider" style={{ margin: "6px 4px" }} />
                     <form action={signOutAction}>
-                      <button className="w-full h-9 px-3 rounded-[var(--radius-control)] text-sm font-medium text-muted hover:text-fg hover:bg-surface-hover transition-colors flex items-center gap-2">
+                      <button type="submit" role="menuitem" className="menu-item danger">
                         <LogOut size={15} /> Sign out
                       </button>
                     </form>
