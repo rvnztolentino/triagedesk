@@ -118,7 +118,7 @@ export default async function WorkspaceLandingPage({
               <input type="hidden" name="workspaceSlug" value={workspace.slug} />
               <div className="space-y-2">
                 <label htmlFor="role" className="text-sm font-medium text-fg">Invite role</label>
-                <select id="role" name="role" className="w-full h-11 bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-accent-border">
+                <select id="role" name="role" className="select">
                   <option value="requester">Requester</option>
                   {membership.role === "owner" ? <option value="admin">Admin</option> : null}
                 </select>
@@ -231,7 +231,7 @@ export default async function WorkspaceLandingPage({
               <label htmlFor="confirmation" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">
                 Type <span className="font-mono text-[var(--st-danger)]">{workspace.slug}</span> to confirm
               </label>
-              <input id="confirmation" name="confirmation" required autoComplete="off" className="h-11 w-full bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-[var(--st-danger)]" />
+              <input id="confirmation" name="confirmation" required autoComplete="off" className="input" />
             </div>
             <SubmitButton pendingText="Deleting workspace..." className="btn--danger btn--block sm:w-auto sm:min-w-48">
               <Trash2 size={16} /> Delete permanently

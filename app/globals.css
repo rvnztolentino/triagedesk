@@ -530,8 +530,9 @@ html[data-accent-dragging="true"] *::after {
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: var(--r-ctrl);
-    padding: 10px 12px;
-    font-size: 14px;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.4;
     color: var(--fg);
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   }
@@ -550,8 +551,8 @@ html[data-accent-dragging="true"] *::after {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' stroke='%23929e98' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 34px;
+    background-position: right 10px center;
+    padding-right: 30px;
     cursor: pointer;
   }
   .field-hint { font-size: 12px; color: var(--faint); }
@@ -569,6 +570,11 @@ html[data-accent-dragging="true"] *::after {
     align-items: center;
     margin-bottom: 16px;
   }
+  /* Filter-bar controls: auto width for the dropdowns; sizing/text come from the
+     shared .input/.select so the whole app stays consistent. */
+  .filter-bar .select {
+    width: auto;
+  }
   .seg-filter {
     display: inline-flex;
     gap: 2px;
@@ -577,7 +583,11 @@ html[data-accent-dragging="true"] *::after {
     border: 1px solid var(--border);
     border-radius: var(--r-pill);
   }
-  .seg-filter button {
+  .seg-filter button,
+  .seg-filter a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 5px 12px;
     border-radius: var(--r-pill);
     font-size: 12.5px;
@@ -588,8 +598,10 @@ html[data-accent-dragging="true"] *::after {
     cursor: pointer;
     transition: background 0.14s, color 0.14s;
   }
-  .seg-filter button:hover { color: var(--fg); }
-  .seg-filter button.on { background: var(--accent-soft); color: var(--accent-text); }
+  .seg-filter button:hover,
+  .seg-filter a:hover { color: var(--fg); }
+  .seg-filter button.on,
+  .seg-filter a.on { background: var(--accent-soft); color: var(--accent-text); }
 
   /* ── metrics ── */
   .metric {

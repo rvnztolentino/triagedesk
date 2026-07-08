@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowLeft, ArrowRight, ArrowUpRight, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Ticket } from "lucide-react";
 import { requireWorkspaceContext } from "@/lib/auth";
-import { listTickets } from "@/lib/store";
+import { listDepartments, listTickets } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
-import { ticketStatusIndicatorClass } from "@/lib/ticket-status";
-import { cn } from "@/lib/utils";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { isWorkspacePreview } from "@/lib/workspaces";
 import { ticketsHref } from "@/lib/ticket-links";
@@ -15,10 +13,28 @@ export const dynamic = "force-dynamic";
 
 const TICKETS_PER_PAGE = 10;
 
+const PRIORITY_HUE: Record<string, string> = {
+  low: "neutral",
+  medium: "info",
+  high: "warn",
+  critical: "danger",
+};
+
+const STATUS_HUE: Record<string, string> = {
+  new: "neutral",
+  "needs-review": "warn",
+  open: "info",
+  "in-progress": "active",
+  resolved: "done",
+  closed: "neutral",
+};
+
 interface TicketParams {
   filter?: string;
   q?: string;
   page?: string;
+  priority?: string;
+  dept?: string;
 }
 
 function normalizeSearch(value: string | undefined) {
@@ -30,10 +46,17 @@ function pageNumber(value: string | undefined) {
   return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
 }
 
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 async function TicketTable({
   filter,
   query,
   requestedPage,
+  priority,
+  dept,
+  deptNames,
   isAdmin,
   userId,
   workspaceId,
@@ -42,6 +65,9 @@ async function TicketTable({
   filter: string;
   query: string;
   requestedPage: number;
+  priority: string;
+  dept: string;
+  deptNames: Record<string, string>;
   isAdmin: boolean;
   userId: string;
   workspaceId: string;
@@ -49,134 +75,111 @@ async function TicketTable({
 }) {
   const tickets = await listTickets(filter, isAdmin ? undefined : userId, workspaceId);
   const normalizedQuery = query.toLowerCase();
-  const filteredTickets = normalizedQuery
-    ? tickets.filter((ticket) =>
-        [
-          ticket.id,
-          ticket.title,
-          ticket.description,
-          ticket.location,
-          ticket.status,
-          ticket.department,
-          ticket.priority,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery)
-      )
-    : tickets;
+  const filteredTickets = tickets
+    .filter((ticket) => priority === "all" || ticket.priority === priority)
+    .filter((ticket) => dept === "all" || ticket.department === dept)
+    .filter((ticket) =>
+      !normalizedQuery
+        ? true
+        : [ticket.id, ticket.title, ticket.description, ticket.location, ticket.status, ticket.department, ticket.priority]
+            .join(" ")
+            .toLowerCase()
+            .includes(normalizedQuery)
+    );
   const totalPages = Math.max(1, Math.ceil(filteredTickets.length / TICKETS_PER_PAGE));
   const currentPage = Math.min(requestedPage, totalPages);
   const pageStart = (currentPage - 1) * TICKETS_PER_PAGE;
   const visibleTickets = filteredTickets.slice(pageStart, pageStart + TICKETS_PER_PAGE);
   const setup = getRuntimeSetupStatus();
   const isSetupRequired = setup.missing.length > 0;
-  const current = { filter, q: query, page: currentPage };
+  const hasFilters = query.length > 0 || priority !== "all" || dept !== "all" || filter !== "all";
+  const current = { filter, q: query, page: currentPage, priority, dept };
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-surface-2 border-b border-border font-mono text-xs uppercase tracking-[0.12em] text-muted">
-              <th className="font-medium p-6 w-28">ID</th>
-              <th className="font-medium p-6">Details</th>
-              <th className="font-medium p-6">Status</th>
-              <th className="font-medium p-6">Department</th>
-              <th className="font-medium p-6 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {visibleTickets.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-10 text-center">
-                  <h3 className="font-medium text-fg">{isSetupRequired ? "Setup required" : query ? "No matching tickets" : "No tickets found"}</h3>
-                  <p className="text-sm text-muted mt-1">
-                    {isSetupRequired
-                      ? "Database and AI triage configuration must be completed."
-                      : query
-                        ? "Try a different ID, title, location, status, or department."
-                        : isAdmin
-                          ? "Tickets will appear here after requests are approved."
-                          : "Your approved requests will appear here as tickets."}
-                  </p>
-                </td>
-              </tr>
-            ) : (
-              visibleTickets.map((ticket) => (
-                <tr key={ticket.id} className="hover:bg-surface-hover transition-colors group">
-                  <td className="p-6">
-                    <span className="text-sm font-mono font-medium text-muted">{ticket.id}</span>
-                  </td>
-                  <td className="p-6">
-                    <Link href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="block">
-                      <div className="font-medium text-fg mb-1 group-hover:text-accent transition-colors">{ticket.title}</div>
-                      <div className="text-sm text-muted flex items-center gap-3">
-                        <span>{ticket.location}</span>
-                        <span className="w-1 h-1 rounded-full bg-border-strong" />
-                        <span className="flex items-center gap-1 font-mono">
-                          <Clock size={12} /> {new Date(ticket.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </Link>
-                  </td>
-                  <td className="p-6">
-                    <div className="flex items-center gap-2">
-                      {ticket.status === "resolved" || ticket.status === "closed" ? (
-                        <CheckCircle2 size={16} className={ticketStatusIndicatorClass(ticket.status)} />
-                      ) : (
-                        <div className={cn("w-2 h-2 rounded-full", ticketStatusIndicatorClass(ticket.status))} />
-                      )}
-                      <span className="text-sm font-medium capitalize text-fg">{ticket.status.replace("-", " ")}</span>
-                    </div>
-                  </td>
-                  <td className="p-6">
-                    <span className="bg-surface-hover text-muted text-xs px-2 py-1 rounded-md font-medium tracking-wide uppercase">
-                      {ticket.department}
-                    </span>
-                  </td>
-                  <td className="p-6 text-right">
-                    <Link href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="inline-flex p-2 text-muted hover:text-fg hover:bg-surface-hover rounded-[var(--radius-control)] transition-colors">
-                      <ArrowUpRight size={18} />
-                    </Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="p-6 border-t border-border flex flex-col gap-4 text-sm text-muted md:flex-row md:items-center md:justify-between">
-        <span className="font-mono text-xs">
-          Showing {visibleTickets.length === 0 ? 0 : pageStart + 1}-{Math.min(pageStart + visibleTickets.length, filteredTickets.length)} of {filteredTickets.length} tickets
-        </span>
-        <div className="flex items-center gap-3">
-          <Link
-            aria-disabled={currentPage <= 1}
-            href={currentPage <= 1 ? ticketsHref(workspaceSlug, current, { page: 1 }) : ticketsHref(workspaceSlug, current, { page: currentPage - 1 })}
-            className={cn(
-              "h-9 px-3 rounded-[var(--radius-control)] border border-border text-xs font-medium inline-flex items-center gap-2 transition-colors",
-              currentPage <= 1 ? "pointer-events-none text-faint" : "text-muted hover:bg-surface-hover hover:text-fg"
-            )}
-          >
-            <ArrowLeft size={14} /> Previous
-          </Link>
-          <span className="font-mono text-xs text-muted">
-            Page {currentPage} of {totalPages}
-          </span>
-          <Link
-            aria-disabled={currentPage >= totalPages}
-            href={currentPage >= totalPages ? ticketsHref(workspaceSlug, current, { page: totalPages }) : ticketsHref(workspaceSlug, current, { page: currentPage + 1 })}
-            className={cn(
-              "h-9 px-3 rounded-[var(--radius-control)] border border-border text-xs font-medium inline-flex items-center gap-2 transition-colors",
-              currentPage >= totalPages ? "pointer-events-none text-faint" : "text-muted hover:bg-surface-hover hover:text-fg"
-            )}
-          >
-            Next <ArrowRight size={14} />
-          </Link>
+      {visibleTickets.length === 0 ? (
+        <div className="card">
+          <div className="empty">
+            <div className="empty-glyph">
+              <Ticket size={22} />
+            </div>
+            <div style={{ fontWeight: 600, color: "var(--fg)" }}>
+              {isSetupRequired ? "Setup required" : hasFilters ? "No tickets match" : "No tickets found"}
+            </div>
+            <div style={{ maxWidth: "40ch", fontSize: 13.5 }}>
+              {isSetupRequired
+                ? "Database and AI triage configuration must be completed."
+                : hasFilters
+                  ? "Try clearing filters or a different search."
+                  : isAdmin
+                    ? "Tickets will appear here after requests are approved."
+                    : "Your approved requests will appear here as tickets."}
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="card list">
+          {visibleTickets.map((ticket) => (
+            <Link key={ticket.id} href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="row-link">
+              <div className="data-row" style={{ gridTemplateColumns: "84px 1fr auto" }}>
+                <span className="mono faint" style={{ fontSize: 12 }}>
+                  {ticket.id}
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600 }}>{ticket.title}</div>
+                  <div className="cluster wrap" style={{ gap: 10, marginTop: 5 }}>
+                    <span className="chip" style={{ padding: "2px 8px", fontSize: 11 }}>
+                      <Building2 size={11} /> {deptNames[ticket.department] ?? capitalize(ticket.department)}
+                    </span>
+                    <span className="faint" style={{ fontSize: 11.5 }}>
+                      {ticket.location || "No location"} · updated {new Date(ticket.updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="cluster" style={{ gap: 10 }}>
+                  <span className="hide-sm">
+                    <span className="badge" data-hue={PRIORITY_HUE[ticket.priority] ?? "neutral"}>
+                      <span className="dot" /> {ticket.priority}
+                    </span>
+                  </span>
+                  <span className="badge" data-hue={STATUS_HUE[ticket.status] ?? "neutral"}>
+                    <span className="dot" /> {ticket.status.replace("-", " ")}
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {totalPages > 1 ? (
+        <div className="between wrap" style={{ marginTop: 6, gap: 12 }}>
+          <span className="mono faint" style={{ fontSize: 12 }}>
+            Showing {pageStart + 1}-{Math.min(pageStart + visibleTickets.length, filteredTickets.length)} of {filteredTickets.length}
+          </span>
+          <div className="cluster" style={{ gap: 8 }}>
+            <Link
+              aria-disabled={currentPage <= 1}
+              href={ticketsHref(workspaceSlug, current, { page: Math.max(1, currentPage - 1) })}
+              className="btn btn--sm"
+              style={currentPage <= 1 ? { opacity: 0.5, pointerEvents: "none" } : undefined}
+            >
+              <ArrowLeft size={14} /> Prev
+            </Link>
+            <span className="mono faint" style={{ fontSize: 12 }}>
+              Page {currentPage} of {totalPages}
+            </span>
+            <Link
+              aria-disabled={currentPage >= totalPages}
+              href={ticketsHref(workspaceSlug, current, { page: Math.min(totalPages, currentPage + 1) })}
+              className="btn btn--sm"
+              style={currentPage >= totalPages ? { opacity: 0.5, pointerEvents: "none" } : undefined}
+            >
+              Next <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -187,20 +190,47 @@ export async function TicketListView({ searchParams, workspaceSlug }: { searchPa
   const filter = params.filter || "all";
   const query = normalizeSearch(params.q);
   const requestedPage = pageNumber(params.page);
+  const priority = params.priority || "all";
+  const dept = params.dept || "all";
   const isAdmin = isWorkspacePreview(workspace.id) || membership.role === "admin" || membership.role === "owner";
+  const departments = await listDepartments(workspace.id);
+  const deptOptions = departments.map((d) => ({ id: d.id, name: d.name }));
+  const deptNames = Object.fromEntries(deptOptions.map((d) => [d.id, d.name]));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-fg">{isAdmin ? "All Tickets" : "My Tickets"}</h1>
-          <p className="text-muted mt-1">{isAdmin ? "Manage and track all operations requests." : "Track requests submitted from your account."}</p>
-        </div>
+    <div className="mx-auto w-full max-w-[1280px] space-y-5">
+      <div className="page-head">
+        <div className="eyebrow">{isAdmin ? "All tickets" : "My tickets"}</div>
+        <h1 className="page-title" style={{ marginTop: 8 }}>
+          {isAdmin ? "Ticket board" : "Tickets you submitted"}
+        </h1>
+        <p className="page-sub">
+          {isAdmin ? "Manage and track all operations requests." : "Track requests submitted from your account."}
+        </p>
       </div>
 
-      <TicketsTableShell filter={filter} query={query} requestedPage={requestedPage} workspaceSlug={workspaceSlug}>
-        <Suspense key={`${filter}:${query}:${requestedPage}`} fallback={<TicketsTableSkeleton />}>
-          <TicketTable filter={filter} query={query} requestedPage={requestedPage} isAdmin={isAdmin} userId={user.id} workspaceId={workspace.id} workspaceSlug={workspaceSlug} />
+      <TicketsTableShell
+        filter={filter}
+        query={query}
+        requestedPage={requestedPage}
+        priority={priority}
+        dept={dept}
+        departments={deptOptions}
+        workspaceSlug={workspaceSlug}
+      >
+        <Suspense key={`${filter}:${query}:${requestedPage}:${priority}:${dept}`} fallback={<TicketsTableSkeleton />}>
+          <TicketTable
+            filter={filter}
+            query={query}
+            requestedPage={requestedPage}
+            priority={priority}
+            dept={dept}
+            deptNames={deptNames}
+            isAdmin={isAdmin}
+            userId={user.id}
+            workspaceId={workspace.id}
+            workspaceSlug={workspaceSlug}
+          />
         </Suspense>
       </TicketsTableShell>
     </div>
