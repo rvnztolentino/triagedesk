@@ -46,7 +46,7 @@ export function SubmitRequestForm({
             minLength={10}
             rows={5}
             placeholder="E.g., Aircon in Room 304 is leaking again. Floor is wet near the outlet."
-            className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-4 text-sm focus:outline-none focus:border-accent-border text-fg transition-colors resize-none placeholder:text-faint"
+            className="textarea"
           />
         </div>
 
@@ -61,7 +61,7 @@ export function SubmitRequestForm({
               required
               type="text"
               placeholder="Building A, Room 304"
-              className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm focus:outline-none focus:border-accent-border text-fg transition-colors placeholder:text-faint"
+              className="input"
             />
           </div>
 
@@ -74,7 +74,7 @@ export function SubmitRequestForm({
               name="contactName"
               type="text"
               placeholder="Jane Doe"
-              className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm focus:outline-none focus:border-accent-border text-fg transition-colors placeholder:text-faint"
+              className="input"
             />
           </div>
         </div>
@@ -88,7 +88,7 @@ export function SubmitRequestForm({
             name="urgencyNote"
             type="text"
             placeholder="Why is it urgent?"
-            className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm focus:outline-none focus:border-accent-border text-fg transition-colors pr-10 placeholder:text-faint"
+            className="input"
           />
         </div>
 

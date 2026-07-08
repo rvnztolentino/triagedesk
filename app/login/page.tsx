@@ -26,11 +26,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             {params.next ? <input type="hidden" name="next" value={params.next} /> : null}
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium text-fg">Email</label>
-              <input id="email" name="email" type="email" required className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm text-fg focus:outline-none focus:border-accent-border" />
+              <input id="email" name="email" type="email" required className="input" />
             </div>
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium text-fg">Password</label>
-              <input id="password" name="password" type="password" required minLength={8} className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm text-fg focus:outline-none focus:border-accent-border" />
+              <input id="password" name="password" type="password" required minLength={8} className="input" />
             </div>
             <SubmitButton pendingText="Signing in...">
               <LockKeyhole size={16} /> Sign in

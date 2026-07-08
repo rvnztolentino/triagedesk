@@ -51,7 +51,7 @@ export function TicketUpdateForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label htmlFor="status" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Status</label>
-            <select id="status" name="status" defaultValue={status} className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm text-fg focus:outline-none focus:border-accent-border">
+            <select id="status" name="status" defaultValue={status} className="select">
               {ticketStatuses.map((value) => (
                 <option key={value} value={value}>{value.replace("-", " ")}</option>
               ))}
@@ -59,7 +59,7 @@ export function TicketUpdateForm({
           </div>
           <div className="space-y-2">
             <label htmlFor="department" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Department</label>
-            <select id="department" name="department" defaultValue={department} className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm text-fg focus:outline-none focus:border-accent-border">
+            <select id="department" name="department" defaultValue={department} className="select">
               {departments.map((item) => (
                 <option key={item.id} value={item.id}>{item.name}</option>
               ))}
@@ -69,16 +69,16 @@ export function TicketUpdateForm({
 
         <div className="space-y-2">
           <label htmlFor="resolutionNotes" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Resolution Notes</label>
-          <textarea id="resolutionNotes" name="resolutionNotes" defaultValue={resolutionNotes} rows={3} className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-4 text-sm text-fg focus:outline-none focus:border-accent-border resize-none" />
+          <textarea id="resolutionNotes" name="resolutionNotes" defaultValue={resolutionNotes} rows={3} className="textarea" />
         </div>
 
         <div className="space-y-2">
           <label htmlFor="note" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Internal Note</label>
-          <textarea id="note" name="note" rows={2} placeholder="Add a note or update..." className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-4 text-sm text-fg focus:outline-none focus:border-accent-border resize-none placeholder:text-faint" />
+          <textarea id="note" name="note" rows={2} placeholder="Add a note or update..." className="textarea" />
         </div>
 
         <div className="flex justify-end">
-          <button className="bg-accent text-accent-fg px-5 py-2.5 rounded-[var(--radius-control)] text-sm font-medium hover:opacity-90 transition-opacity inline-flex items-center gap-2">
+          <button className="btn btn--primary">
             {isPreview ? <><LockKeyhole size={15} /> Preview locked</> : "Save Update"}
           </button>
         </div>

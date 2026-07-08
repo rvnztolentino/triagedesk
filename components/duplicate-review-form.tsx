@@ -50,7 +50,7 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search tickets by ID, title, location, or department"
               disabled={isPreview || tickets.length === 0}
-              className="w-full bg-bg border border-border rounded-[var(--radius-control)] py-3 pl-9 pr-3 text-sm text-fg focus:outline-none focus:border-accent-border placeholder:text-faint disabled:cursor-not-allowed"
+              className="input pl-9 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -120,7 +120,7 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
           form={approveFormId}
           disabled={isPreview || createPending}
           onClick={() => setCreatePending(true)}
-          className="sm:flex-1 bg-accent text-accent-fg rounded-[var(--radius-control)] px-5 py-3 text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn btn--primary sm:flex-1"
         >
           {createPending ? (
             <>

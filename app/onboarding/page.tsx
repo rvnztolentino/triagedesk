@@ -81,7 +81,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
           <form action={createWorkspaceAction} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="name" className="text-sm font-medium text-fg">Workspace name</label>
-              <input id="name" name="name" required minLength={2} maxLength={80} placeholder="Acme Clinic" className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm text-fg placeholder:text-faint focus:outline-none focus:border-accent-border" />
+              <input id="name" name="name" required minLength={2} maxLength={80} placeholder="Acme Clinic" className="input" />
             </div>
             <SubmitButton pendingText="Creating workspace...">
               <PlusCircle size={16} /> Create workspace
@@ -98,7 +98,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
           <form action={joinWorkspaceAction} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="code" className="text-sm font-medium text-fg">Invite code or link</label>
-              <input id="code" name="code" required minLength={6} maxLength={500} placeholder={DEMO_WORKSPACE_INVITE_CODE} className="w-full bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm text-fg placeholder:text-faint focus:outline-none focus:border-accent-border font-mono" />
+              <input id="code" name="code" required minLength={6} maxLength={500} placeholder={DEMO_WORKSPACE_INVITE_CODE} className="input font-mono" />
             </div>
             <SubmitButton pendingText="Joining workspace...">
               <Link2 size={16} /> Join workspace

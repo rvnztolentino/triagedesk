@@ -71,7 +71,7 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
                         name="role"
                         defaultValue={user.role}
                         disabled={roleLocked}
-                        className="h-10 bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-accent-border disabled:cursor-not-allowed disabled:text-faint"
+                        className="select disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <option value="requester">Requester</option>
                         <option value="admin">Admin</option>

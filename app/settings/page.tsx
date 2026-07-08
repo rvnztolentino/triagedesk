@@ -124,19 +124,17 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
               {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
               <div className="space-y-2">
                 <label htmlFor="department-id" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">ID</label>
-                <input id="department-id" name="id" required placeholder="transport" className="h-11 w-full bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-accent-border placeholder:text-faint" />
+                <input id="department-id" name="id" required placeholder="transport" className="input" />
               </div>
               <div className="space-y-2">
                 <label htmlFor="department-name" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Name</label>
-                <input id="department-name" name="name" required placeholder="Transport" className="h-11 w-full bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-accent-border placeholder:text-faint" />
+                <input id="department-name" name="name" required placeholder="Transport" className="input" />
               </div>
               <div className="space-y-2">
                 <label htmlFor="department-description" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Description</label>
-                <input id="department-description" name="description" placeholder="Vehicle and shuttle requests" className="h-11 w-full bg-bg border border-border rounded-[var(--radius-control)] px-3 text-sm text-fg focus:outline-none focus:border-accent-border placeholder:text-faint" />
+                <input id="department-description" name="description" placeholder="Vehicle and shuttle requests" className="input" />
               </div>
-              <button className="h-11 px-5 bg-surface-hover border border-border rounded-[var(--radius-control)] text-sm font-medium text-fg hover:bg-surface transition-colors">
-                Add
-              </button>
+              <button className="btn btn--neutral">Add</button>
             </form>
           ) : null}
         </div>

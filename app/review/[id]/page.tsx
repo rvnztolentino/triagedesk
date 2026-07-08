@@ -140,7 +140,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
                   id="priority"
                   name="priority"
                   defaultValue={triage.priority}
-                  className="w-full appearance-none bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm font-medium focus:outline-none focus:border-accent-border cursor-pointer uppercase tracking-wider text-fg"
+                  className="select"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -157,7 +157,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
                   id="department"
                   name="department"
                   defaultValue={triage.department}
-                  className="w-full appearance-none bg-bg border border-border rounded-[var(--radius-control)] p-3 text-sm font-medium focus:outline-none focus:border-accent-border cursor-pointer uppercase tracking-wider text-fg"
+                  className="select"
                 >
                   {departments.map((department) => (
                     <option key={department.id} value={department.id}>{department.name}</option>
@@ -175,13 +175,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
 
             <div className="space-y-2">
               <label htmlFor="summary" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Edited Summary</label>
-              <textarea
-                id="summary"
-                name="summary"
-                defaultValue={triage.summary}
-                rows={4}
-                className="w-full text-sm text-fg bg-bg border border-border rounded-[var(--radius-control)] p-4 focus:outline-none focus:border-accent-border resize-none placeholder:text-faint"
-              />
+              <textarea id="summary" name="summary" defaultValue={triage.summary} rows={4} className="textarea" />
             </div>
           </ReviewDecisionForm>
         </div>
