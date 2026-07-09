@@ -1,5 +1,6 @@
-import { Lock, Paintbrush, Plus, Trash2 } from "lucide-react";
-import { createWorkspaceDepartmentAction, deleteWorkspaceDepartmentAction } from "@/app/actions";
+import { Lock, Paintbrush, Trash2 } from "lucide-react";
+import { deleteWorkspaceDepartmentAction } from "@/app/actions";
+import { AddDepartmentPopover } from "@/components/add-department-popover";
 import { requireWorkspaceContext } from "@/lib/auth";
 import { listDepartments } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
@@ -70,7 +71,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
         <div className="st-danger rounded-[var(--radius-card)] border px-4 py-3 text-sm">{params.error}</div>
       ) : null}
 
-      <div className="split" style={{ gridTemplateColumns: "1fr 1fr", alignItems: "start" }}>
+      <div className="split" style={{ gridTemplateColumns: "1fr 1fr", alignItems: "stretch" }}>
         <div className="stack" style={{ gap: 16 }}>
           <div className="card">
             <div className="panel-head">
@@ -79,7 +80,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
                 <span className="dot" /> {allUp ? "All core systems up" : "Action needed"}
               </span>
             </div>
-            <div className="card-pad stack" style={{ gap: 2 }}>
+            <div className="stack" style={{ gap: 2, padding: "4px 18px 12px" }}>
               {healthRows.map((row) => (
                 <div key={row.label} className="between" style={{ padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
                   <div className="cluster" style={{ gap: 10 }}>
@@ -112,12 +113,22 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
           </div>
         </div>
 
-        <div className="card" style={{ alignSelf: "start" }}>
+        <div style={{ position: "relative", minHeight: 340 }}>
+        <div className="card" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column" }}>
           <div className="panel-head">
             <div className="section-title">Departments</div>
-            <span className="eyebrow">{departments.length} total</span>
+            <div className="cluster" style={{ gap: 10 }}>
+              <span className="eyebrow">{departments.length} total</span>
+              {!isPreview ? (
+                <AddDepartmentPopover workspaceSlug={workspaceSlug} />
+              ) : (
+                <span className="badge" data-hue="warn">
+                  <Lock size={11} /> Locked
+                </span>
+              )}
+            </div>
           </div>
-          <div className="list">
+          <div className="list" style={{ flex: "1 1 0", minHeight: 0, overflowY: "auto" }}>
             {departments.map((department) => {
               const isDefault = (defaultDepartmentIds as readonly string[]).includes(department.id);
               return (
@@ -156,43 +167,14 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
             })}
           </div>
 
-          {!isPreview ? (
-            <div className="card-pad" style={{ borderTop: "1px solid var(--border)" }}>
-              <div className="eyebrow">Add department</div>
-              <form action={createWorkspaceDepartmentAction}>
-                {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
-                <div className="cols-2" style={{ gap: 10, marginTop: 10 }}>
-                  <div className="field">
-                    <label htmlFor="department-name" className="label">
-                      Name
-                    </label>
-                    <input id="department-name" name="name" required placeholder="Transport" className="input" />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="department-id" className="label">
-                      ID
-                    </label>
-                    <input id="department-id" name="id" required placeholder="transport" className="input" />
-                  </div>
-                </div>
-                <div className="field" style={{ marginTop: 10 }}>
-                  <label htmlFor="department-description" className="label">
-                    Description
-                  </label>
-                  <input id="department-description" name="description" placeholder="Vehicle and shuttle requests" className="input" />
-                </div>
-                <button className="btn btn--primary btn--block" style={{ marginTop: 12 }}>
-                  <Plus size={15} /> Add department
-                </button>
-              </form>
-            </div>
-          ) : (
+          {isPreview ? (
             <div className="card-pad" style={{ borderTop: "1px solid var(--border)" }}>
               <div className="banner">
                 <Lock size={15} /> Departments can&apos;t be changed in the read-only preview.
               </div>
             </div>
-          )}
+          ) : null}
+        </div>
         </div>
       </div>
     </div>

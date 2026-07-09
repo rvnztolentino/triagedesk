@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser, setActiveWorkspaceCookie } from "@/lib/auth";
 import { workspaceSlugSchema } from "@/lib/schema";
-import { requireWorkspaceMembership } from "@/lib/workspaces";
+import { isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
+import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 
 export async function GET(request: Request, { params }: { params: Promise<{ workspaceSlug: string }> }) {
   const { workspaceSlug: rawWorkspaceSlug } = await params;
@@ -18,9 +19,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ work
   }
 
   try {
-    await requireWorkspaceMembership(parsedSlug.data, user.id);
+    const access = await requireWorkspaceMembership(parsedSlug.data, user.id);
     await setActiveWorkspaceCookie(parsedSlug.data);
-    return NextResponse.redirect(new URL(`/w/${parsedSlug.data}`, url));
+    const destination =
+      isWorkspacePreview(access.workspace.id) || access.membership.role !== "requester"
+        ? scopedWorkspaceHref(parsedSlug.data, "/")
+        : scopedWorkspaceHref(parsedSlug.data, "/tickets");
+    return NextResponse.redirect(new URL(destination, url));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Workspace access is required.";
     return NextResponse.redirect(new URL(`/onboarding?error=${encodeURIComponent(message)}`, url));
