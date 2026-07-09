@@ -717,5 +717,8 @@ export async function activateWorkspaceAction(formData: FormData) {
   const workspaceSlug = workspaceSlugSchema.parse(formText(formData, "workspaceSlug"));
   const access = await requireWorkspaceMembership(workspaceSlug, user.id);
   await setActiveWorkspaceCookie(workspaceSlug);
+  // The active workspace is read from the cookie in the root layout (header +
+  // sidebar), so busting the layout cache keeps them in sync after switching.
+  revalidatePath("/", "layout");
   redirect(isWorkspacePreview(access.workspace.id) || access.membership.role !== "requester" ? scopedWorkspaceHref(workspaceSlug, "/") : scopedWorkspaceHref(workspaceSlug, "/tickets"));
 }

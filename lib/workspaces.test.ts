@@ -182,8 +182,14 @@ describe("workspace foundation", () => {
   it("persists workspace selection and scopes legacy operations to the active workspace", () => {
     expect(authSource).toContain('const ACTIVE_WORKSPACE_COOKIE = "triagedesk_active_workspace"');
     expect(authSource).toContain("return { user, ...access };");
-    expect(workspaceDashboardSource).toContain("href={`/w/${workspace.slug}`}");
-    expect(workspaceDashboardSource).not.toContain("href={`/w/${workspace.slug}/activate`}");
+    // Switching a workspace runs the activate server action (not a client Link to
+    // the route handler) so the cookie-driven root layout — header, sidebar, and
+    // preview indicator — refreshes; the action busts the layout cache. The
+    // /w/[slug] overview (Manage) is reached from the "Currently open" hub card.
+    expect(workspaceOpenLinkSource).toContain("action={activateWorkspaceAction}");
+    expect(actionsSource).toContain('revalidatePath("/", "layout")');
+    expect(workspaceDashboardSource).toContain("href={`/w/${activeWorkspace.workspace.slug}`}");
+    expect(workspaceDashboardSource).toContain("href={`/w/${activeWorkspace.workspace.slug}/activate`}");
     expect(actionsSource).toContain("const request = await createRequest(input, user, workspace.id)");
     expect(actionsSource).toContain("await createRequestAttachment(request.id, upload, workspace.id)");
     expect(actionsSource).toContain("await updateTicket(input, workspace.id)");
@@ -194,10 +200,10 @@ describe("workspace foundation", () => {
     expect(appLayoutSource).toContain("Current ${activeWorkspace.isPreview ? \"preview \" : \"\"}workspace: ${activeWorkspace.name}");
     expect(appLayoutSource).toContain('{activeWorkspace?.name ?? "Choose workspace"}');
     expect(appLayoutSource).toContain('href="/onboarding"');
-    expect(workspaceDashboardSource).toContain("Currently open workspace");
+    expect(workspaceDashboardSource).toContain("Currently open");
     expect(workspaceDashboardSource).toContain("Requests, tickets, and settings are scoped to this workspace.");
-    expect(workspaceOpenLinkSource).toContain("<CheckCircle2 size={13} /> Open");
-    expect(workspaceOpenLinkSource).toContain("<LoaderCircle size={13} className=\"animate-spin\" /> Opening");
+    expect(workspaceOpenLinkSource).toContain("<Check size={14} /> Open");
+    expect(workspaceOpenLinkSource).toContain('pendingText="Opening"');
   });
 
   it("shows workspace access policy without exposing seed configuration and keeps amber light-mode states readable", () => {

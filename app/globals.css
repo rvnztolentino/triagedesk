@@ -455,6 +455,19 @@ html[data-accent-dragging="true"] *::after {
   }
   .avatar.sm { width: 26px; height: 26px; font-size: 10px; }
   .avatar.lg { width: 44px; height: 44px; font-size: 15px; }
+  .ws-pill-glyph {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    flex-shrink: 0;
+  }
 
   /* ── buttons ── */
   .btn {

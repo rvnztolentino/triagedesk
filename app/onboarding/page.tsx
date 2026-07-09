@@ -1,4 +1,5 @@
-import { Building2, Link2, PlusCircle } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, LayoutGrid, Link2, Plus, SlidersHorizontal } from "lucide-react";
 import { createWorkspaceAction, joinWorkspaceAction } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { WorkspaceOpenLink } from "@/components/workspace-open-link";
@@ -6,6 +7,16 @@ import { getActiveWorkspaceAccess, requireUser } from "@/lib/auth";
 import { DEMO_WORKSPACE_INVITE_CODE, isWorkspacePreview, listUserWorkspaces } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
+
+const ROLE_HUE: Record<string, string> = {
+  owner: "active",
+  admin: "info",
+  requester: "neutral",
+};
+
+function glyph(name: string) {
+  return name.replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase() || "WS";
+}
 
 export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const user = await requireUser();
@@ -15,46 +26,77 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   const params = await searchParams;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      <div>
-        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-accent">Workspace Dashboard</span>
-        <h1 className="text-2xl font-semibold tracking-tight text-fg mt-2">Manage your TriageDesk workspaces</h1>
-        <p className="text-muted mt-2">Open an existing workspace, create one for your organization, or join with an invite code or link.</p>
+    <div className="mx-auto w-full max-w-[1120px]">
+      <div className="page-head">
+        <div className="eyebrow">Workspace hub</div>
+        <h1 className="page-title" style={{ marginTop: 8 }}>
+          Your workspaces
+        </h1>
+        <p className="page-sub">Switch between teams, spin up a new workspace, or join one with an invite.</p>
       </div>
 
       {params.error ? (
-        <div className="st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm">{params.error}</div>
+        <div className="st-danger rounded-[var(--radius-card)] border px-4 py-3 text-sm" style={{ marginBottom: 18 }}>
+          {params.error}
+        </div>
       ) : null}
 
       {activeWorkspace ? (
-        <section className="rounded-[var(--radius-card)] border border-accent-border bg-accent-soft px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center shrink-0">
-              <Building2 size={19} />
-            </div>
-            <div className="min-w-0">
-              <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-accent">Currently open workspace</p>
-              <h2 className="text-base font-medium text-fg truncate mt-1">{activeWorkspace.workspace.name}</h2>
-              {activeWorkspaceIsPreview ? <p className="font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--st-warn)] mt-1">Read-only preview</p> : null}
+        <div className="card" style={{ overflow: "hidden", marginBottom: 22 }}>
+          <div
+            style={{
+              padding: 20,
+              background: "radial-gradient(500px 300px at 90% -20%, var(--accent-soft), transparent 60%), var(--surface)",
+            }}
+          >
+            <div className="eyebrow">Currently open</div>
+            <div className="between wrap" style={{ gap: 14, marginTop: 12 }}>
+              <div className="cluster" style={{ gap: 14, minWidth: 0 }}>
+                <span className="ws-pill-glyph" style={{ width: 46, height: 46, fontSize: 17, borderRadius: 12 }}>
+                  {glyph(activeWorkspace.workspace.name)}
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div className="cluster wrap" style={{ gap: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 19 }}>{activeWorkspace.workspace.name}</span>
+                    {activeWorkspaceIsPreview ? (
+                      <span className="badge" data-hue="warn">
+                        Read-only
+                      </span>
+                    ) : null}
+                    <span className="badge" data-hue={ROLE_HUE[activeWorkspace.membership.role] ?? "neutral"}>
+                      {activeWorkspace.membership.role}
+                    </span>
+                  </div>
+                  <div className="muted" style={{ fontSize: 13.5, marginTop: 3 }}>
+                    Requests, tickets, and settings are scoped to this workspace.
+                  </div>
+                </div>
+              </div>
+              <div className="cluster" style={{ gap: 10 }}>
+                <Link href={`/w/${activeWorkspace.workspace.slug}/activate`} className="btn btn--neutral">
+                  <LayoutGrid size={15} /> Open dashboard
+                </Link>
+                <Link href={`/w/${activeWorkspace.workspace.slug}`} className="btn btn--primary">
+                  <SlidersHorizontal size={15} /> Manage
+                </Link>
+              </div>
             </div>
           </div>
-          <p className="text-xs text-muted sm:text-right">Requests, tickets, and settings are scoped to this workspace.</p>
-        </section>
+        </div>
       ) : null}
 
-      {workspaces.length > 0 ? (
-        <section className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
-          <div className="p-6 border-b border-border bg-surface-2">
-            <h2 className="font-medium text-fg">Your workspaces ({workspaces.length})</h2>
-          </div>
-          <div className="divide-y divide-border">
-            {workspaces.map(({ workspace, membership }) => {
+      <div className="split" style={{ gridTemplateColumns: "1.4fr 1fr" }}>
+        <div className="stack" style={{ gap: 14 }}>
+          <div className="eyebrow">All your workspaces · {workspaces.length}</div>
+          {workspaces.length === 0 ? (
+            <div className="banner">Create or join a workspace before using requests, tickets, review, and settings.</div>
+          ) : (
+            workspaces.map(({ workspace, membership }) => {
               const isActive = activeWorkspace?.workspace.id === workspace.id;
               const isPreview = isWorkspacePreview(workspace.id);
               return (
                 <WorkspaceOpenLink
                   key={workspace.id}
-                  href={`/w/${workspace.slug}`}
                   name={workspace.name}
                   slug={workspace.slug}
                   role={membership.role}
@@ -62,49 +104,58 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
                   isPreview={isPreview}
                 />
               );
-            })}
-          </div>
-        </section>
-      ) : (
-        <div className="st-warn rounded-[var(--radius-control)] border px-4 py-3 text-sm">
-          Create or join a workspace before using requests, tickets, review, and settings.
+            })
+          )}
         </div>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
-          <div className="w-11 h-11 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center mb-5">
-            <Building2 size={20} />
-          </div>
-          <h2 className="text-xl font-semibold text-fg">Create workspace</h2>
-          <p className="text-sm text-muted mt-2 mb-6">Start a new organization workspace. You will become its owner.</p>
-          <form action={createWorkspaceAction} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium text-fg">Workspace name</label>
-              <input id="name" name="name" required minLength={2} maxLength={80} placeholder="Acme Clinic" className="input" />
+        <div className="stack" style={{ gap: 16 }}>
+          <div className="card card-pad">
+            <div className="cluster" style={{ gap: 10, marginBottom: 12 }}>
+              <span className="metric-icon">
+                <Plus size={17} />
+              </span>
+              <div className="section-title">Create a workspace</div>
             </div>
-            <SubmitButton pendingText="Creating workspace...">
-              <PlusCircle size={16} /> Create workspace
-            </SubmitButton>
-          </form>
-        </section>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+              Start fresh — you will be the owner with the default departments.
+            </p>
+            <form action={createWorkspaceAction}>
+              <div className="field">
+                <label htmlFor="name" className="label">
+                  Workspace name
+                </label>
+                <input id="name" name="name" required minLength={2} maxLength={80} placeholder="e.g. Westside Facilities" className="input" />
+              </div>
+              <SubmitButton pendingText="Creating workspace..." className="btn--block" style={{ marginTop: 12 }}>
+                Create workspace
+              </SubmitButton>
+            </form>
+          </div>
 
-        <section className="bg-surface border border-border rounded-[var(--radius-card)] p-6">
-          <div className="w-11 h-11 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center mb-5">
-            <Link2 size={20} />
-          </div>
-          <h2 className="text-xl font-semibold text-fg">Join with invite</h2>
-          <p className="text-sm text-muted mt-2 mb-6">Enter a valid invite code or paste the full invite link from a workspace owner or admin.</p>
-          <form action={joinWorkspaceAction} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="code" className="text-sm font-medium text-fg">Invite code or link</label>
-              <input id="code" name="code" required minLength={6} maxLength={500} placeholder={DEMO_WORKSPACE_INVITE_CODE} className="input font-mono" />
+          <div className="card card-pad">
+            <div className="cluster" style={{ gap: 10, marginBottom: 12 }}>
+              <span className="metric-icon">
+                <Link2 size={17} />
+              </span>
+              <div className="section-title">Join with invite</div>
             </div>
-            <SubmitButton pendingText="Joining workspace...">
-              <Link2 size={16} /> Join workspace
-            </SubmitButton>
-          </form>
-        </section>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+              Paste an invite code or link a teammate shared with you.
+            </p>
+            <form action={joinWorkspaceAction}>
+              <div className="field">
+                <label htmlFor="code" className="label">
+                  Invite code or link
+                </label>
+                <input id="code" name="code" required minLength={6} maxLength={500} placeholder={DEMO_WORKSPACE_INVITE_CODE} className="input mono" />
+                <span className="field-hint">Try the active invite code from the demo workspace.</span>
+              </div>
+              <SubmitButton pendingText="Joining workspace..." className="btn--neutral btn--block" style={{ marginTop: 12 }}>
+                <ArrowRight size={15} /> Join workspace
+              </SubmitButton>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,64 +1,66 @@
 "use client";
 
-import Link from "next/link";
-import { type MouseEvent, useState } from "react";
-import { ArrowRight, CheckCircle2, LoaderCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowRight, Check } from "lucide-react";
+import { activateWorkspaceAction } from "@/app/actions";
+import { SubmitButton } from "@/components/submit-button";
 
-function isModifiedClick(event: MouseEvent<HTMLAnchorElement>) {
-  return event.metaKey || event.altKey || event.ctrlKey || event.shiftKey || event.button !== 0;
+function glyph(name: string) {
+  return name.replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase() || "WS";
 }
 
 export function WorkspaceOpenLink({
-  href,
   name,
   slug,
   role,
   isActive,
   isPreview,
 }: {
-  href: string;
   name: string;
   slug: string;
   role: string;
   isActive: boolean;
   isPreview: boolean;
 }) {
-  const [pending, setPending] = useState(false);
-
   return (
-    <Link
-      href={href}
-      aria-busy={pending}
-      onClick={(event) => {
-        if (!isModifiedClick(event) && event.currentTarget.target !== "_blank") {
-          setPending(true);
-        }
-      }}
-      className={cn(
-        "p-5 flex flex-col gap-3 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
-        pending ? "pointer-events-none bg-accent-soft" : isActive ? "bg-accent-soft" : "hover:bg-surface-hover"
-      )}
-    >
-      <div className="min-w-0">
-        <h3 className="font-medium text-fg truncate">{name}</h3>
-        <p className="text-xs text-muted font-mono mt-1 truncate">{slug}</p>
-      </div>
-      <div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto sm:justify-end">
-        {pending ? (
-          <span className="inline-flex items-center gap-1 font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-accent">
-            <LoaderCircle size={13} className="animate-spin" /> Opening
+    <div className="card card-pad card-hover">
+      <div className="between wrap" style={{ gap: 12 }}>
+        <div className="cluster" style={{ gap: 12, minWidth: 0 }}>
+          <span className="ws-pill-glyph" style={{ width: 40, height: 40, fontSize: 15, borderRadius: 11 }}>
+            {glyph(name)}
           </span>
-        ) : isActive ? (
-          <span className="inline-flex items-center gap-1 font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-accent">
-            <CheckCircle2 size={13} /> Open
+          <div style={{ minWidth: 0 }}>
+            <div className="cluster wrap" style={{ gap: 8 }}>
+              <span style={{ fontWeight: 650 }}>{name}</span>
+              {isPreview ? (
+                <span className="badge" data-hue="warn">
+                  Preview
+                </span>
+              ) : null}
+              {isActive ? (
+                <span className="badge" data-hue="accent">
+                  Active
+                </span>
+              ) : null}
+            </div>
+            <div className="muted mono" style={{ fontSize: 12.5, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {slug} · {role}
+            </div>
+          </div>
+        </div>
+
+        {isActive ? (
+          <span className="btn btn--sm" style={{ opacity: 0.6 }} aria-disabled>
+            <Check size={14} /> Open
           </span>
-        ) : null}
-        <span className={isPreview ? "font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--st-warn)]" : "font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-muted"}>
-          {isPreview ? "Preview locked" : role}
-        </span>
-        {pending ? null : <ArrowRight size={16} className="text-muted" />}
+        ) : (
+          <form action={activateWorkspaceAction}>
+            <input type="hidden" name="workspaceSlug" value={slug} />
+            <SubmitButton pendingText="Opening" className="btn--neutral btn--sm w-auto">
+              Switch <ArrowRight size={14} />
+            </SubmitButton>
+          </form>
+        )}
       </div>
-    </Link>
+    </div>
   );
 }
