@@ -106,8 +106,8 @@ export default async function WorkspaceLandingPage({
                         {membership.role === "owner" ? <option value="admin">Admin</option> : null}
                       </select>
                     </div>
-                    <SubmitButton pendingText="Creating..." className="w-auto">
-                      <Link2 size={15} /> Create invite
+                    <SubmitButton pendingText="Creating..." className="btn--sm w-auto">
+                      <Link2 size={14} /> Create invite
                     </SubmitButton>
                   </form>
 
@@ -221,8 +221,8 @@ export default async function WorkspaceLandingPage({
                 <form action={leaveWorkspaceAction}>
                   <input type="hidden" name="workspaceId" value={workspace.id} />
                   <input type="hidden" name="workspaceSlug" value={workspace.slug} />
-                  <ConfirmSubmitButton confirmation={`Leave ${workspace.name}? You will need a new valid invite to join again.`} className="btn btn--neutral btn--block">
-                    <LogOut size={15} /> Leave workspace
+                  <ConfirmSubmitButton confirmation={`Leave ${workspace.name}? You will need a new valid invite to join again.`} className="btn btn--neutral btn--sm btn--block">
+                    <LogOut size={14} /> Leave workspace
                   </ConfirmSubmitButton>
                 </form>
               </>
@@ -247,8 +247,8 @@ export default async function WorkspaceLandingPage({
                   </label>
                   <input id="confirmation" name="confirmation" required autoComplete="off" placeholder={workspace.slug} className="input" />
                 </div>
-                <SubmitButton pendingText="Deleting workspace..." className="btn--danger btn--block">
-                  <Trash2 size={15} /> Delete workspace
+                <SubmitButton pendingText="Deleting workspace..." className="btn--danger btn--sm btn--block">
+                  <Trash2 size={14} /> Delete workspace
                 </SubmitButton>
               </form>
             </div>

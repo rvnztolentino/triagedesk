@@ -363,6 +363,7 @@ export async function approveRequestAction(_prevState: ActionState, formData: Fo
       priority: formText(formData, "priority"),
       department: formText(formData, "department"),
       summary: formText(formData, "summary"),
+      note: formText(formData, "note"),
     });
     const ticket = await approveRequest(input, workspace.id);
 

@@ -287,8 +287,8 @@ function SignedOutLandingPage() {
 
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <StartNowLink className="w-full sm:w-auto" />
-                  <SecondaryLink href="/join/demo-clinic?code=DEMO-CLINIC-2026" className="w-full sm:w-auto">
-                    View live demo
+                  <SecondaryLink href="/login" className="w-full sm:w-auto">
+                    Sign in
                     <ArrowRight className="h-4 w-4" />
                   </SecondaryLink>
                 </div>

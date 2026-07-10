@@ -1068,6 +1068,7 @@ export async function approveRequest(input: {
   priority: Priority;
   department: Department;
   summary: string;
+  note?: string;
 }, workspaceId = DEMO_WORKSPACE_ID) {
   assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
@@ -1144,13 +1145,14 @@ export async function approveRequest(input: {
     requireNoError(insertError, "Create ticket");
   }
 
+  const decisionNote = input.note?.trim();
   await addActivity(client, {
     workspaceId,
     ticketId: ticket.id,
     requestId: request.id,
     action: "Ticket approved",
     actor: "Admin",
-    details: `Approved as ${ticket.priority} priority for ${ticket.department}.`,
+    details: `Approved as ${ticket.priority} priority for ${ticket.department}.${decisionNote ? ` Note: ${decisionNote}` : ""}`,
     createdAt: timestamp,
   });
 

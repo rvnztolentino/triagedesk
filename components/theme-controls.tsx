@@ -8,7 +8,10 @@ const THEME_KEY = "triagedesk-theme";
 const ACCENT_KEY = "triagedesk-accent";
 const PREFERENCE_EVENT = "triagedesk-preferences";
 const DEFAULT_ACCENT = "#879D5A";
-const ACCENT_PRESETS = ["#879D5A", "#35d0ab", "#5b9dff", "#f2685f", "#e8b23a", "#a78bfa"];
+// A neutral gray leads the row for a muted, colorless accent; it reads clearly
+// in both dark and light mode. Default green follows, then the color presets.
+const NEUTRAL_ACCENT = "#7F7F7F";
+const ACCENT_PRESETS = [NEUTRAL_ACCENT, "#879D5A", "#35d0ab", "#5b9dff", "#f2685f", "#e8b23a", "#a78bfa"];
 
 export type ThemeMode = "dark" | "light";
 
@@ -286,7 +289,6 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
           role="dialog"
           aria-label="Appearance"
           className="popover"
-          style={{ right: 0, top: "calc(100% + 8px)", maxWidth: "calc(100vw - 2rem)" }}
         >
           <div className="between" style={{ marginBottom: 14 }}>
             <div className="eyebrow">Appearance</div>

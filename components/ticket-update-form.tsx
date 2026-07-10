@@ -28,7 +28,7 @@ export function TicketUpdateForm({
   const [state, formAction] = useActionState(updateTicketAction, initialState);
 
   return (
-    <form action={formAction} className="mt-8 pt-8 border-t border-border space-y-5">
+    <form action={formAction} className="space-y-5">
       {isPreview ? (
         <div className="st-warn rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
           <LockKeyhole size={15} className="mt-0.5 shrink-0" />
@@ -44,8 +44,8 @@ export function TicketUpdateForm({
       <fieldset disabled={isPreview} className="space-y-5 disabled:opacity-60">
         {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
         <input type="hidden" name="ticketId" value={ticketId} />
-        <h3 className="text-base font-medium mb-2 flex items-center gap-2 text-fg">
-          <MessageSquare size={18} className="text-muted" /> Update Ticket
+        <h3 className="section-title mb-2 flex items-center gap-2">
+          <MessageSquare size={18} className="text-muted" /> Update ticket
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -78,8 +78,8 @@ export function TicketUpdateForm({
         </div>
 
         <div className="flex justify-end">
-          <button className="btn btn--primary">
-            {isPreview ? <><LockKeyhole size={15} /> Preview locked</> : "Save Update"}
+          <button className="btn btn--primary btn--sm">
+            {isPreview ? <><LockKeyhole size={14} /> Preview locked</> : "Save update"}
           </button>
         </div>
       </fieldset>

@@ -50,13 +50,13 @@ export function WorkspaceOpenLink({
 
         {isActive ? (
           <span className="btn btn--sm" style={{ opacity: 0.6 }} aria-disabled>
-            <Check size={14} /> Open
+            <Check size={14} /> Opened
           </span>
         ) : (
           <form action={activateWorkspaceAction}>
             <input type="hidden" name="workspaceSlug" value={slug} />
             <SubmitButton pendingText="Opening" className="btn--neutral btn--sm w-auto">
-              Switch <ArrowRight size={14} />
+              Open <ArrowRight size={14} />
             </SubmitButton>
           </form>
         )}

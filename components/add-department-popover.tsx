@@ -36,7 +36,7 @@ export function AddDepartmentPopover({ workspaceSlug }: { workspaceSlug?: string
       </button>
 
       {open ? (
-        <div className="popover" style={{ right: 0, top: "calc(100% + 8px)", maxWidth: "calc(100vw - 2rem)" }}>
+        <div className="popover">
           <div className="between" style={{ marginBottom: 14 }}>
             <div className="section-title" style={{ fontSize: 14 }}>
               Add department
@@ -71,8 +71,8 @@ export function AddDepartmentPopover({ workspaceSlug }: { workspaceSlug?: string
               </label>
               <input id="department-description" name="description" placeholder="Vehicle and shuttle requests" className="input" />
             </div>
-            <button className="btn btn--primary btn--block">
-              <Plus size={15} /> Add department
+            <button className="btn btn--primary btn--sm btn--block">
+              <Plus size={14} /> Add department
             </button>
           </form>
         </div>

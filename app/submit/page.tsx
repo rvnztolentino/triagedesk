@@ -44,13 +44,14 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
   }
 
   return (
-    <div className="max-w-2xl mx-auto w-full">
-      <div className="mb-6 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg mb-2">New Request</h1>
-        <p className="text-muted">Describe the issue and AI triage will structure it immediately.</p>
+    <div className="max-w-2xl mx-auto w-full py-4">
+      <div className="page-head">
+        <span className="eyebrow">New request</span>
+        <h1 className="page-title" style={{ marginTop: 8 }}>Submit a request</h1>
+        <p className="page-sub">Describe what&apos;s wrong in plain language. AI triage structures the rest.</p>
       </div>
 
-      <div className="bg-surface rounded-[var(--radius-card)] p-8 md:p-10 border border-border">
+      <div className="card card-pad" style={{ padding: 24 }}>
         <SubmitRequestForm workspaceSlug={workspaceSlug} isPreview={isPreview} ticketsHref={href("/tickets")} />
       </div>
     </div>

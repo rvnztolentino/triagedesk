@@ -157,7 +157,12 @@ button,
 input,
 select,
 textarea {
-  font: inherit;
+  /* Inherit only the font family so the design-system classes (.btn, .input,
+     .select, .textarea) keep control of font-size/weight. Using the `font`
+     shorthand here forced font-size:inherit, which — being unlayered — beat
+     those component classes and blew the control text up to the parent size. */
+  font-family: inherit;
+  letter-spacing: inherit;
 }
 
 select {
@@ -478,7 +483,7 @@ html[data-accent-dragging="true"] *::after {
     padding: 6px 13px;
     border-radius: var(--r-ctrl);
     font-weight: 550;
-    font-size: 13px;
+    font-size: 12.5px;
     border: 1px solid var(--border);
     background: var(--surface-2);
     color: var(--fg);
@@ -522,7 +527,7 @@ html[data-accent-dragging="true"] *::after {
     box-shadow: none;
   }
   .btn--neutral:hover { background: var(--surface-hover); border-color: var(--border-strong); box-shadow: none; }
-  .btn--sm { padding: 4px 10px; font-size: 12px; gap: 6px; }
+  .btn--sm { padding: 4px 10px; font-size: 12.5px; gap: 6px; }
   .btn--lg { padding: 9px 18px; font-size: 14px; }
   .btn--block { width: 100%; }
 
@@ -544,11 +549,14 @@ html[data-accent-dragging="true"] *::after {
     border: 1px solid var(--border);
     border-radius: var(--r-ctrl);
     padding: 6px 11px;
-    font-size: 13px;
+    font-size: 12.5px;
+    font-weight: 450;
     line-height: 1.4;
     color: var(--fg);
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   }
+  .input::placeholder,
+  .textarea::placeholder { font-weight: 400; }
   .input::placeholder,
   .textarea::placeholder { color: var(--faint); }
   .input:focus,
@@ -711,8 +719,11 @@ html[data-accent-dragging="true"] *::after {
   .backdrop { position: fixed; inset: 0; z-index: 60; background: transparent; }
   .popover {
     position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
     z-index: 61;
     width: 320px;
+    max-width: calc(100vw - 2rem);
     background: var(--surface);
     border: 1px solid var(--border-strong);
     border-radius: var(--r-card);
@@ -720,6 +731,24 @@ html[data-accent-dragging="true"] *::after {
     padding: 16px;
     animation: pop 0.16s cubic-bezier(0.22, 1, 0.36, 1);
     transform-origin: top right;
+  }
+  /* On small screens anchoring under the trigger overflows or gets clipped by
+     the header/adjacent stacking contexts. Center it on-screen as a floating
+     panel that sits above everything instead. */
+  @media (max-width: 540px) {
+    .popover {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      right: auto;
+      transform: translate(-50%, -50%);
+      transform-origin: center;
+      width: min(360px, calc(100vw - 2rem));
+      max-height: calc(100dvh - 2rem);
+      overflow-y: auto;
+      z-index: 80;
+      animation-name: pop-center;
+    }
   }
   .seg {
     position: relative;
@@ -1020,6 +1049,9 @@ html[data-accent-dragging="true"] *::after {
   }
 }
 
+@keyframes pop-center {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+}
 @keyframes pop {
   from { opacity: 0; transform: scale(0.96) translateY(-6px); }
   to { opacity: 1; transform: none; }

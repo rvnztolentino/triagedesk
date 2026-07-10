@@ -126,8 +126,8 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
                 </label>
                 <input id="name" name="name" required minLength={2} maxLength={80} placeholder="e.g. Westside Facilities" className="input" />
               </div>
-              <SubmitButton pendingText="Creating workspace..." className="btn--block" style={{ marginTop: 12 }}>
-                Create workspace
+              <SubmitButton pendingText="Creating workspace..." className="btn--sm btn--block" style={{ marginTop: 12 }}>
+                <Plus size={14} /> Create workspace
               </SubmitButton>
             </form>
           </div>
@@ -150,8 +150,8 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
                 <input id="code" name="code" required minLength={6} maxLength={500} placeholder={DEMO_WORKSPACE_INVITE_CODE} className="input mono" />
                 <span className="field-hint">Try the active invite code from the demo workspace.</span>
               </div>
-              <SubmitButton pendingText="Joining workspace..." className="btn--neutral btn--block" style={{ marginTop: 12 }}>
-                <ArrowRight size={15} /> Join workspace
+              <SubmitButton pendingText="Joining workspace..." className="btn--neutral btn--sm btn--block" style={{ marginTop: 12 }}>
+                <ArrowRight size={14} /> Join workspace
               </SubmitButton>
             </form>
           </div>

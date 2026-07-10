@@ -40,6 +40,7 @@ export const reviewApprovalSchema = z.object({
   priority: prioritySchema,
   department: departmentSchema,
   summary: z.string().trim().min(10).max(1200),
+  note: z.string().trim().max(2000).default(""),
 });
 
 export const ticketUpdateSchema = z.object({

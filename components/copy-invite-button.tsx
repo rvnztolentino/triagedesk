@@ -13,7 +13,7 @@ export function CopyInviteButton({ value }: { value: string }) {
   }
 
   return (
-    <button type="button" onClick={copy} className="h-9 px-3 rounded-[var(--radius-control)] bg-surface border border-border text-xs font-medium text-muted hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center gap-2">
+    <button type="button" onClick={copy} className="btn btn--sm">
       {copied ? <Check size={14} /> : <Copy size={14} />}
       {copied ? "Copied" : "Copy link"}
     </button>
