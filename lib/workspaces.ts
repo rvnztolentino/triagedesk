@@ -1,4 +1,5 @@
 import { requireSupabaseAdminClient } from "@/lib/supabase";
+import { PublicError } from "@/lib/errors";
 import {
   workspaceCreateSchema,
   workspaceDeleteSchema,
@@ -159,13 +160,19 @@ export async function getWorkspaceMembership(workspaceId: string, userId: string
   return data ? memberFromRow(data as SupabaseRow) : undefined;
 }
 
+// The join_workspace_by_invite RPC raises this text when the code matches no
+// active invite; surface it as a clear, user-facing message.
+function isInvalidInviteMessage(message: string) {
+  return message.includes("invite is invalid or expired") || message.includes("Workspace not found");
+}
+
 export function normalizeWorkspaceInviteCode(code: string) {
   const value = code.trim();
   const queryMatch = value.match(/[?&]code=([^&#]+)/);
   const extracted = queryMatch ? decodeURIComponent(queryMatch[1].replace(/\+/g, " ")) : value;
   const parsed = workspaceInviteCodeSchema.safeParse(extracted);
   if (!parsed.success) {
-    throw new Error("Enter a valid invite code or invite link.");
+    throw new PublicError("Enter a valid invite code or invite link.");
   }
   return parsed.data.toUpperCase();
 }
@@ -229,7 +236,7 @@ export function isWorkspaceInviteActive(invite: WorkspaceInviteRecord, at = new 
 export async function requireActiveWorkspaceInvite(workspaceId: string, code: string) {
   const invite = await getWorkspaceInviteByCode(workspaceId, code);
   if (!invite || !isWorkspaceInviteActive(invite)) {
-    throw new Error("Workspace invite is invalid or expired.");
+    throw new PublicError("That invite code doesn't exist or has expired.");
   }
   return invite;
 }
@@ -293,9 +300,14 @@ export async function joinWorkspaceWithInvite(workspaceSlug: string, code: strin
     target_user_id: userId,
   });
 
-  if (error) throw new Error(error.message || "Join workspace failed.");
+  if (error) {
+    if (isInvalidInviteMessage(error.message)) {
+      throw new PublicError("That invite code doesn't exist or has expired.");
+    }
+    throw new Error(error.message || "Join workspace failed.");
+  }
   const row = (data as SupabaseRow[] | null)?.[0];
-  if (!row) throw new Error("Join workspace failed.");
+  if (!row) throw new PublicError("That invite code doesn't exist or has expired.");
   return workspaceAccessFromRow(row, userId);
 }
 
@@ -304,10 +316,10 @@ export async function joinWorkspaceWithInviteCode(code: string, userId: string) 
   const normalizedCode = normalizeWorkspaceInviteCode(code);
   const { data, error } = await client.from("workspace_invites").select("workspace_id").eq("code", normalizedCode).maybeSingle();
   if (error) throw new Error(`Find workspace invite failed: ${error.message}`);
-  if (!data) throw new Error("Workspace invite is invalid or expired.");
+  if (!data) throw new PublicError("That invite code doesn't exist or has expired.");
 
   const workspace = await getWorkspaceById(asString((data as SupabaseRow).workspace_id));
-  if (!workspace) throw new Error("Workspace invite is invalid or expired.");
+  if (!workspace) throw new PublicError("That invite code doesn't exist or has expired.");
   return joinWorkspaceWithInvite(workspace.slug, normalizedCode, userId);
 }
 

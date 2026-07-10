@@ -24,6 +24,7 @@ import {
   type TriageResultRecord,
 } from "@/lib/schema";
 import { assertWorkspaceMutable, DEMO_WORKSPACE_ID } from "@/lib/workspaces";
+import { PublicError } from "@/lib/errors";
 
 export interface ReviewItem {
   request: RequestRecord;
@@ -329,6 +330,11 @@ function requireNoError(error: SupabaseError, context: string) {
   if (error) {
     throw new Error(`${context}: ${error.message}`);
   }
+}
+
+// Postgres unique-violation (23505) surfaces as a "duplicate key" message.
+function isDuplicateKeyError(message: string) {
+  return message.includes("duplicate key") || message.includes("_pkey");
 }
 
 function asString(value: unknown, fallback = "") {
@@ -782,6 +788,9 @@ export async function createWorkspaceDepartment(input: unknown, actorRole: "admi
     name: parsed.name,
     description: parsed.description,
   });
+  if (error && isDuplicateKeyError(error.message)) {
+    throw new PublicError(`A department with the ID "${parsed.id}" already exists.`);
+  }
   requireNoError(error, "Create department");
 }
 
