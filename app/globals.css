@@ -978,7 +978,7 @@ html[data-accent-dragging="true"] *::after {
     pointer-events: none;
     background:
       radial-gradient(1100px 620px at 78% -8%, var(--accent-softer), transparent 62%),
-      radial-gradient(900px 520px at 4% 108%, color-mix(in srgb, var(--info) 6%, transparent), transparent 60%);
+      radial-gradient(900px 520px at 4% 108%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 60%);
   }
 }
 
