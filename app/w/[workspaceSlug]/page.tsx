@@ -6,6 +6,7 @@ import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { CopyInviteButton } from "@/components/copy-invite-button";
 import { SubmitButton } from "@/components/submit-button";
 import { requireUser } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
 import { workspaceSlugSchema } from "@/lib/schema";
 import { getWorkspaceBySlug, getWorkspaceMembership, isWorkspaceAdmin, isWorkspaceInviteActive, isWorkspacePreview, listWorkspaceInvites, workspaceInviteLink } from "@/lib/workspaces";
 
@@ -158,7 +159,7 @@ export default async function WorkspaceLandingPage({
                                 </span>
                               </div>
                               <div className="faint" style={{ fontSize: 12, marginTop: 4 }}>
-                                {invite.isReusable ? "Reusable demo invite" : `Expires ${invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : "never"}`}
+                                {invite.isReusable ? "Reusable demo invite" : `Expires ${invite.expiresAt ? formatDate(invite.expiresAt) : "never"}`}
                               </div>
                             </div>
                             <div className="cluster" style={{ gap: 6 }}>

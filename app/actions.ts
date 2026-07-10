@@ -418,7 +418,7 @@ export async function updateTicketAction(_prevState: ActionState, formData: Form
   let destination: string;
   try {
     await requireTrustedActionRequest();
-    const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
+    const { access: { workspace, user }, workspaceSlug } = await requireActionAdmin(formData);
     assertWorkspaceMutable(workspace.id);
     const input = ticketUpdateSchema.parse({
       ticketId: formText(formData, "ticketId"),
@@ -427,7 +427,7 @@ export async function updateTicketAction(_prevState: ActionState, formData: Form
       resolutionNotes: formText(formData, "resolutionNotes"),
       note: formText(formData, "note"),
     });
-    await updateTicket(input, workspace.id);
+    await updateTicket(input, workspace.id, user?.displayName || "Admin");
 
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/tickets"));
@@ -590,6 +590,13 @@ export async function createWorkspaceAction(formData: FormData) {
   const user = await requireUser();
   let redirectTo = "/onboarding";
   try {
+    await enforceRateLimit({
+      scope: "workspace_create_user_hour",
+      keyParts: [user.id],
+      limit: 5,
+      windowSeconds: 60 * 60,
+      message: "Workspace creation limit reached. Try again later.",
+    });
     const access = await createWorkspace(formText(formData, "name"), user.id);
     await setActiveWorkspaceCookie(access.workspace.slug);
     redirectTo = `/w/${access.workspace.slug}`;

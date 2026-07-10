@@ -29,6 +29,15 @@ export function formatDate(value: string | number | Date) {
   return DATE_FORMAT.format(toDate(value));
 }
 
+// Title-cases free-text input per word: "room 44, building b" → "Room 44, Building B",
+// "john renz" → "John Renz". Tokens containing a digit (e.g. "2A", "B12") are left as
+// typed so room/building codes aren't mangled.
+export function toTitleCase(value: string) {
+  return value.replace(/\S+/g, (word) =>
+    /\d/.test(word) ? word : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  );
+}
+
 // Compact "just now / 5m ago / 3h ago / 2d ago / 4mo ago" relative time.
 export function relativeTime(value: string | number | Date) {
   const at = toDate(value).getTime();

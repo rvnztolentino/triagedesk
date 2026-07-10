@@ -18,6 +18,10 @@ import {
   type WorkspaceRecord,
 } from "@/lib/schema";
 
+// Max workspaces a single user may own/create. Bounds per-user footprint on the
+// Supabase + Vercel free tiers (row counts, storage, function invocations).
+export const MAX_WORKSPACES_PER_USER = 5;
+
 export const DEMO_WORKSPACE_ID = "00000000-0000-4000-8000-000000000001";
 export const DEMO_WORKSPACE_SLUG = "demo-clinic";
 export const DEMO_WORKSPACE_INVITE_CODE = "DEMO-CLINIC-2026";
@@ -131,6 +135,18 @@ export async function listUserWorkspaces(userId: string) {
   });
 }
 
+// Counts workspaces created (owned) by a user. Drives the creation cap and the
+// used/limit indicator on the workspace hub.
+export async function countOwnedWorkspaces(userId: string) {
+  const client = requireSupabaseAdminClient();
+  const { count, error } = await client
+    .from("workspaces")
+    .select("id", { count: "exact", head: true })
+    .eq("created_by", userId);
+  if (error) throw new Error(`Count owned workspaces failed: ${error.message}`);
+  return count ?? 0;
+}
+
 export async function getWorkspaceMembership(workspaceId: string, userId: string) {
   const client = requireSupabaseAdminClient();
   const { data, error } = await client
@@ -237,6 +253,12 @@ function isDuplicateSlugError(message: string) {
 export async function createWorkspace(name: string, userId: string) {
   const client = requireSupabaseAdminClient();
   const input = workspaceCreateSchema.parse({ name });
+
+  const ownedCount = await countOwnedWorkspaces(userId);
+  if (ownedCount >= MAX_WORKSPACES_PER_USER) {
+    throw new Error(`You can create up to ${MAX_WORKSPACES_PER_USER} workspaces. Delete one to create another.`);
+  }
+
   const baseSlug = workspaceSlugFromName(input.name);
 
   for (let attempt = 0; attempt < 20; attempt += 1) {

@@ -4,7 +4,7 @@ import { createWorkspaceAction, joinWorkspaceAction } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { WorkspaceOpenLink } from "@/components/workspace-open-link";
 import { getActiveWorkspaceAccess, requireUser } from "@/lib/auth";
-import { DEMO_WORKSPACE_INVITE_CODE, isWorkspacePreview, listUserWorkspaces } from "@/lib/workspaces";
+import { countOwnedWorkspaces, DEMO_WORKSPACE_INVITE_CODE, isWorkspacePreview, listUserWorkspaces, MAX_WORKSPACES_PER_USER } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +21,8 @@ function glyph(name: string) {
 export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const user = await requireUser();
   const workspaces = await listUserWorkspaces(user.id);
+  const ownedCount = await countOwnedWorkspaces(user.id);
+  const atWorkspaceLimit = ownedCount >= MAX_WORKSPACES_PER_USER;
   const activeWorkspace = await getActiveWorkspaceAccess(user.id);
   const activeWorkspaceIsPreview = activeWorkspace ? isWorkspacePreview(activeWorkspace.workspace.id) : false;
   const params = await searchParams;
@@ -110,23 +112,39 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
 
         <div className="stack" style={{ gap: 16 }}>
           <div className="card card-pad">
-            <div className="cluster" style={{ gap: 10, marginBottom: 12 }}>
-              <span className="metric-icon">
-                <Plus size={17} />
+            <div className="between" style={{ gap: 10, marginBottom: 12 }}>
+              <div className="cluster" style={{ gap: 10 }}>
+                <span className="metric-icon">
+                  <Plus size={17} />
+                </span>
+                <div className="section-title">Create a workspace</div>
+              </div>
+              <span className="badge mono" data-hue={atWorkspaceLimit ? "warn" : "neutral"} title="Workspaces you own vs. your limit">
+                {ownedCount}/{MAX_WORKSPACES_PER_USER}
               </span>
-              <div className="section-title">Create a workspace</div>
             </div>
             <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
-              Start fresh — you will be the owner with the default departments.
+              {atWorkspaceLimit
+                ? `You have reached the limit of ${MAX_WORKSPACES_PER_USER} workspaces. Delete one to create another.`
+                : "Start fresh — you will be the owner with the default departments."}
             </p>
             <form action={createWorkspaceAction}>
               <div className="field">
                 <label htmlFor="name" className="label">
                   Workspace name
                 </label>
-                <input id="name" name="name" required minLength={2} maxLength={80} placeholder="e.g. Westside Facilities" className="input" />
+                <input
+                  id="name"
+                  name="name"
+                  required
+                  minLength={2}
+                  maxLength={80}
+                  placeholder="e.g. Westside Facilities"
+                  className="input"
+                  disabled={atWorkspaceLimit}
+                />
               </div>
-              <SubmitButton pendingText="Creating workspace..." className="btn--sm btn--block" style={{ marginTop: 12 }}>
+              <SubmitButton pendingText="Creating workspace..." className="btn--sm btn--block" style={{ marginTop: 12 }} disabled={atWorkspaceLimit}>
                 <Plus size={14} /> Create workspace
               </SubmitButton>
             </form>

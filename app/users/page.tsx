@@ -3,6 +3,7 @@ import { removeWorkspaceMemberAction, updateUserRoleAction } from "@/app/actions
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { SubmitButton } from "@/components/submit-button";
 import { requireWorkspaceAdminContext } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
 import { listWorkspaceMembers, canRemoveWorkspaceMember } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
@@ -105,7 +106,7 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
                           ) : null}
                         </div>
                         <div className="muted" style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {user.email} · joined {new Date(user.createdAt).toLocaleDateString()}
+                          {user.email} · joined {formatDate(user.createdAt)}
                         </div>
                       </div>
                     </div>

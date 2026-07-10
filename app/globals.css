@@ -667,7 +667,7 @@ html[data-accent-dragging="true"] *::after {
     overflow: hidden;
     border: 1px solid var(--border);
   }
-  .bar-fill { height: 100%; border-radius: 999px; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+  .bar-fill { display: block; height: 100%; border-radius: 999px; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
   .dist-row {
     display: grid;
     grid-template-columns: 92px 1fr 42px;

@@ -1216,7 +1216,7 @@ export async function updateTicket(input: {
   department: Department;
   resolutionNotes: string;
   note: string;
-}, workspaceId = DEMO_WORKSPACE_ID) {
+}, workspaceId = DEMO_WORKSPACE_ID, actor = "Admin") {
   assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
   const { data, error } = await client.from("tickets").select("*").eq("workspace_id", workspaceId).eq("id", input.ticketId).maybeSingle();
@@ -1249,7 +1249,7 @@ export async function updateTicket(input: {
       id: await nextNumericId(client, "ticket_notes", "id", "NOTE"),
       workspaceId,
       ticketId: ticket.id,
-      actor: "Admin",
+      actor,
       body: input.note,
       createdAt: timestamp,
     };
@@ -1280,7 +1280,7 @@ export async function updateTicket(input: {
       ticketId: ticket.id,
       requestId: ticket.requestId,
       action: "Ticket updated",
-      actor: "Admin",
+      actor,
       details: changes.join(" "),
       createdAt: timestamp,
     });
@@ -1349,12 +1349,21 @@ function countByDepartment(tickets: TicketRecord[]) {
 }
 
 function buildResolutionTrend(tickets: TicketRecord[]) {
-  const days = ["May 20", "May 21", "May 22", "May 23", "May 24"];
-  return days.map((label) => ({
+  // Rolling last-7-days window (matches the "7 days" badge), keyed by UTC day so a
+  // ticket resolved today always lands in today's bucket.
+  const labelFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const dayKey = (value: Date) => value.toISOString().slice(0, 10);
+  const now = new Date();
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (6 - i)));
+    return { label: labelFormatter.format(date), key: dayKey(date) };
+  });
+
+  return days.map(({ label, key }) => ({
     label,
     resolved: tickets.filter((ticket) => {
       const date = ticket.resolvedAt ?? ticket.closedAt;
-      return date ? new Date(date).toLocaleString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) === label : false;
+      return date ? dayKey(new Date(date)) === key : false;
     }).length,
   }));
 }

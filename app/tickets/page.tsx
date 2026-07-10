@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowLeft, ArrowRight, Building2, Ticket } from "lucide-react";
 import { requireWorkspaceContext } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
 import { listDepartments, listTickets } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
@@ -132,7 +133,7 @@ async function TicketTable({
                       <Building2 size={11} /> {deptNames[ticket.department] ?? capitalize(ticket.department)}
                     </span>
                     <span className="faint" style={{ fontSize: 11.5 }}>
-                      {ticket.location || "No location"} · updated {new Date(ticket.updatedAt).toLocaleDateString()}
+                      {ticket.location || "No location"} · updated {formatDate(ticket.updatedAt)}
                     </span>
                   </div>
                 </div>
