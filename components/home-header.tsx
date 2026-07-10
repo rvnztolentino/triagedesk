@@ -63,13 +63,10 @@ export function HomeHeader() {
 
         <div className="hidden shrink-0 items-center gap-2 lg:flex">
           <ThemeToggle />
-          <Link href="/login" className="rounded-[var(--radius-control)] px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-fg">
+          <Link href="/login" className="btn btn--ghost btn--sm">
             Sign in
           </Link>
-          <Link
-            href="/signup?next=/onboarding"
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-accent px-4 text-sm font-medium text-accent-fg transition-opacity duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
-          >
+          <Link href="/signup?next=/onboarding" className="btn btn--primary btn--sm">
             Start now
             <ArrowRight className="h-4 w-4" />
           </Link>
@@ -116,7 +113,7 @@ export function HomeHeader() {
           </Link>
           <Link
             href="/signup?next=/onboarding"
-            className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-accent px-6 text-sm font-medium text-accent-fg transition-opacity duration-200 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+            className="btn btn--primary btn--block mt-2"
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Start now
