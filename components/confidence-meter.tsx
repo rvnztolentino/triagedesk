@@ -1,8 +1,8 @@
 import { triageConfidence, type ConfidenceLevel } from "@/lib/confidence";
 
 const LEVEL_COLOR: Record<ConfidenceLevel, string> = {
-  // High confidence tracks the selected accent so it matches the active theme.
-  high: "var(--accent)",
+  // Track the semantic status colors so all levels share one color scheme.
+  high: "var(--st-done)",
   moderate: "var(--st-warn)",
   low: "var(--st-danger)",
 };
