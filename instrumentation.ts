@@ -10,7 +10,9 @@ const beforeSend: NonNullable<Parameters<typeof Sentry.init>[0]["beforeSend"]> =
 };
 
 export async function register() {
-  if (!dsn) return;
+  // Sentry runs in production only; initializing it in `next dev` adds
+  // per-request/compile overhead with no local benefit.
+  if (process.env.NODE_ENV !== "production" || !dsn) return;
 
   if (process.env.NEXT_RUNTIME === "nodejs" || process.env.NEXT_RUNTIME === "edge") {
     Sentry.init({
