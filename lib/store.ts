@@ -25,6 +25,11 @@ import {
 } from "@/lib/schema";
 import { assertWorkspaceMutable, DEMO_WORKSPACE_ID } from "@/lib/workspaces";
 import { PublicError } from "@/lib/errors";
+import {
+  notifyRequestSubmitted,
+  notifyRequestDecision,
+  notifyTicketStatusChanged,
+} from "@/lib/notifications";
 
 export interface ReviewItem {
   request: RequestRecord;
@@ -629,7 +634,7 @@ async function fetchTicketRows(client: SupabaseClient, statusFilter?: string, re
   }
 
   if (statusFilter === "active") {
-    query = query.in("status", ["new", "needs-review", "open", "in-progress"]);
+    query = query.in("status", ["new", "open", "in-progress"]);
   } else if (statusFilter === "resolved") {
     query = query.in("status", ["resolved", "closed"]);
   } else if (statusFilter && statusFilter !== "all") {
@@ -840,6 +845,13 @@ export async function createRequest(input: RequestSubmission, requester: AppUser
     actor: requester.displayName,
     details: `${request.location}: ${request.description}`,
     createdAt: timestamp,
+  });
+
+  await notifyRequestSubmitted(client, {
+    workspaceId,
+    requestId: request.id,
+    requesterName: requester.displayName || requester.email,
+    requesterUserId: requester.id,
   });
 
   return request;
@@ -1078,7 +1090,7 @@ export async function approveRequest(input: {
   department: Department;
   summary: string;
   note?: string;
-}, workspaceId = DEMO_WORKSPACE_ID) {
+}, workspaceId = DEMO_WORKSPACE_ID, actor?: { id: string; name: string }) {
   assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
 
@@ -1160,15 +1172,25 @@ export async function approveRequest(input: {
     ticketId: ticket.id,
     requestId: request.id,
     action: "Ticket approved",
-    actor: "Admin",
+    actor: actor?.name || "Admin",
     details: `Approved as ${ticket.priority} priority for ${ticket.department}.${decisionNote ? ` Note: ${decisionNote}` : ""}`,
     createdAt: timestamp,
+  });
+
+  await notifyRequestDecision(client, {
+    workspaceId,
+    requestId: request.id,
+    requesterUserId: request.requesterUserId,
+    decision: "approved",
+    actorName: actor?.name || "An admin",
+    actorUserId: actor?.id,
+    ticketId: ticket.id,
   });
 
   return ticket;
 }
 
-export async function rejectRequest(requestId: string, workspaceId = DEMO_WORKSPACE_ID) {
+export async function rejectRequest(requestId: string, workspaceId = DEMO_WORKSPACE_ID, actor?: { id: string; name: string }) {
   assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
   const timestamp = now();
@@ -1178,7 +1200,7 @@ export async function rejectRequest(requestId: string, workspaceId = DEMO_WORKSP
     .update({ status: "rejected", reviewed_at: timestamp })
     .eq("workspace_id", workspaceId)
     .eq("id", requestId)
-    .select("id")
+    .select("id, requester_user_id")
     .maybeSingle();
   requireNoError(error, "Reject request");
   if (!data) throw new Error("Request not found.");
@@ -1187,13 +1209,22 @@ export async function rejectRequest(requestId: string, workspaceId = DEMO_WORKSP
     workspaceId,
     requestId,
     action: "Request rejected",
-    actor: "Admin",
+    actor: actor?.name || "Admin",
     details: "Request rejected during human review.",
     createdAt: timestamp,
   });
+
+  await notifyRequestDecision(client, {
+    workspaceId,
+    requestId,
+    requesterUserId: (data as SupabaseRow).requester_user_id ? asString((data as SupabaseRow).requester_user_id) : undefined,
+    decision: "rejected",
+    actorName: actor?.name || "An admin",
+    actorUserId: actor?.id,
+  });
 }
 
-export async function markDuplicate(requestId: string, duplicateOfTicketId: string, workspaceId = DEMO_WORKSPACE_ID) {
+export async function markDuplicate(requestId: string, duplicateOfTicketId: string, workspaceId = DEMO_WORKSPACE_ID, actor?: { id: string; name: string }) {
   assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
   const timestamp = now();
@@ -1204,7 +1235,7 @@ export async function markDuplicate(requestId: string, duplicateOfTicketId: stri
     .update({ status: "duplicate", duplicate_of_ticket_id: duplicateOfTicketId, reviewed_at: timestamp })
     .eq("workspace_id", workspaceId)
     .eq("id", requestId)
-    .select("id")
+    .select("id, requester_user_id")
     .maybeSingle();
   requireNoError(error, "Mark request duplicate");
   if (!data) throw new Error("Request not found.");
@@ -1213,9 +1244,18 @@ export async function markDuplicate(requestId: string, duplicateOfTicketId: stri
     workspaceId,
     requestId,
     action: "Marked duplicate",
-    actor: "Admin",
+    actor: actor?.name || "Admin",
     details: `Marked as duplicate of ${duplicateOfTicketId}.`,
     createdAt: timestamp,
+  });
+
+  await notifyRequestDecision(client, {
+    workspaceId,
+    requestId,
+    requesterUserId: (data as SupabaseRow).requester_user_id ? asString((data as SupabaseRow).requester_user_id) : undefined,
+    decision: "duplicate",
+    actorName: actor?.name || "An admin",
+    actorUserId: actor?.id,
   });
 }
 
@@ -1225,7 +1265,7 @@ export async function updateTicket(input: {
   department: Department;
   resolutionNotes: string;
   note: string;
-}, workspaceId = DEMO_WORKSPACE_ID, actor = "Admin") {
+}, workspaceId = DEMO_WORKSPACE_ID, actor = "Admin", actorUserId?: string) {
   assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
   const { data, error } = await client.from("tickets").select("*").eq("workspace_id", workspaceId).eq("id", input.ticketId).maybeSingle();
@@ -1235,10 +1275,11 @@ export async function updateTicket(input: {
   const ticket = ticketFromRow(data as SupabaseRow);
   const timestamp = now();
   const changes: string[] = [];
+  const statusChanged = ticket.status !== input.status;
   let resolvedAt = ticket.resolvedAt ?? null;
   let closedAt = ticket.closedAt ?? null;
 
-  if (ticket.status !== input.status) {
+  if (statusChanged) {
     changes.push(`Status changed from ${ticket.status} to ${input.status}.`);
     if (input.status === "resolved" && !resolvedAt) resolvedAt = timestamp;
     if (input.status === "closed" && !closedAt) closedAt = timestamp;
@@ -1295,6 +1336,18 @@ export async function updateTicket(input: {
     });
   }
 
+  if (statusChanged) {
+    await notifyTicketStatusChanged(client, {
+      workspaceId,
+      ticketId: ticket.id,
+      requesterUserId: ticket.requesterUserId,
+      fromStatus: ticket.status,
+      toStatus: input.status,
+      actorName: actor,
+      actorUserId,
+    });
+  }
+
   return ticketFromRow(updatedData as SupabaseRow);
 }
 
@@ -1312,7 +1365,7 @@ export async function getDashboardData(workspaceId = DEMO_WORKSPACE_ID): Promise
   requireNoError(requestsResult.error, "List requests");
 
   const requests = ((requestsResult.data ?? []) as SupabaseRow[]).map(requestFromRow);
-  const activeTickets = tickets.filter((ticket) => ["new", "needs-review", "open", "in-progress"].includes(ticket.status));
+  const activeTickets = tickets.filter((ticket) => ["new", "open", "in-progress"].includes(ticket.status));
   const resolvedTickets = tickets.filter((ticket) => ticket.resolvedAt);
   const totalResolutionMs = resolvedTickets.reduce((sum, ticket) => {
     return sum + (new Date(ticket.resolvedAt || ticket.updatedAt).getTime() - new Date(ticket.createdAt).getTime());

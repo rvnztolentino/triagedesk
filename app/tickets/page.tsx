@@ -23,7 +23,6 @@ const PRIORITY_HUE: Record<string, string> = {
 
 const STATUS_HUE: Record<string, string> = {
   new: "neutral",
-  "needs-review": "warn",
   open: "info",
   "in-progress": "active",
   resolved: "done",

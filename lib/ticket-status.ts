@@ -5,10 +5,6 @@ const statusStyles: Record<TicketStatus, { badge: string; indicator: string }> =
     badge: "st-neutral",
     indicator: "ind-neutral",
   },
-  "needs-review": {
-    badge: "st-warn",
-    indicator: "ind-warn animate-pulse",
-  },
   open: {
     badge: "st-info",
     indicator: "ind-info",

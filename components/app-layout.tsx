@@ -22,7 +22,8 @@ import {
 import { signOutAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
 import { ThemeToggle } from "@/components/theme-controls";
-import type { AppUser, UserRole } from "@/lib/schema";
+import { NotificationBell } from "@/components/notification-bell";
+import type { AppUser, NotificationView, UserRole } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 
@@ -91,10 +92,14 @@ export function AppLayout({
   children,
   currentUser,
   activeWorkspace,
+  notifications = [],
+  unreadNotifications = 0,
 }: {
   children: React.ReactNode;
   currentUser: AppUser | null;
   activeWorkspace: { name: string; slug: string; role: UserRole; isPreview: boolean } | null;
+  notifications?: NotificationView[];
+  unreadNotifications?: number;
 }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -429,6 +434,14 @@ export function AppLayout({
             ) : null}
 
             <ThemeToggle />
+
+            {currentUser && activeWorkspace ? (
+              <NotificationBell
+                notifications={notifications}
+                unreadCount={unreadNotifications}
+                workspaceSlug={activeWorkspace.slug}
+              />
+            ) : null}
 
             {currentUser ? (
               <div className="relative">

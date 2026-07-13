@@ -98,7 +98,7 @@ create table if not exists tickets (
   location text not null,
   contact_name text not null default '',
   urgency_note text not null default '',
-  status text not null check (status in ('new', 'needs-review', 'open', 'in-progress', 'resolved', 'closed')),
+  status text not null check (status in ('new', 'open', 'in-progress', 'resolved', 'closed')),
   priority text not null check (priority in ('low', 'medium', 'high', 'critical')),
   department text not null,
   category text not null,
@@ -151,6 +151,22 @@ create table if not exists request_attachments (
   created_at timestamptz not null default now()
 );
 
+-- Per-recipient in-app notifications. Each row targets a single workspace member
+-- (user_id) and is delivered/read independently. `link` is a workspace-relative
+-- path (e.g. '/tickets/TRG-1042') resolved against the active workspace in the UI.
+create table if not exists notifications (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references workspaces(id) on delete cascade,
+  user_id uuid not null references user_profiles(id) on delete cascade,
+  type text not null,
+  title text not null,
+  body text not null default '',
+  link text,
+  actor text not null default '',
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
 alter table requests add column if not exists requester_user_id uuid references user_profiles(id) on delete set null;
 alter table tickets add column if not exists requester_user_id uuid references user_profiles(id) on delete set null;
 alter table requests add column if not exists workspace_id uuid references workspaces(id) on delete cascade;
@@ -164,6 +180,12 @@ alter table workspace_invites add column if not exists is_reusable boolean not n
 alter table workspace_invites alter column created_by drop not null;
 alter table departments add column if not exists workspace_id uuid references workspaces(id) on delete cascade;
 alter table request_attachments add column if not exists file_name text not null default 'Attachment';
+
+-- Retire the ticket-level 'needs-review' status (review is a request-stage concept).
+-- Migrate any existing rows, then tighten the status check constraint. Idempotent.
+update tickets set status = 'open' where status = 'needs-review';
+alter table tickets drop constraint if exists tickets_status_check;
+alter table tickets add constraint tickets_status_check check (status in ('new', 'open', 'in-progress', 'resolved', 'closed'));
 
 update departments set workspace_id = '00000000-0000-4000-8000-000000000001' where workspace_id is null;
 
@@ -305,6 +327,8 @@ create index if not exists workspace_members_user_created_at_idx on workspace_me
 create index if not exists workspace_invites_workspace_created_at_idx on workspace_invites (workspace_id, created_at desc);
 create index if not exists departments_workspace_name_idx on departments (workspace_id, name);
 create index if not exists request_attachments_workspace_request_created_at_idx on request_attachments (workspace_id, request_id, created_at desc);
+create index if not exists notifications_user_workspace_created_at_idx on notifications (user_id, workspace_id, created_at desc);
+create index if not exists notifications_user_workspace_unread_idx on notifications (user_id, workspace_id) where read_at is null;
 
 do $$
 begin
@@ -367,6 +391,7 @@ grant select, insert, delete on table ticket_activity to authenticated;
 grant select, insert, update, delete on table ticket_notes to authenticated;
 grant select, insert, delete on table request_attachments to authenticated;
 grant select, insert, update, delete on table workspace_metadata to authenticated;
+grant select, update, delete on table notifications to authenticated;
 
 grant select, insert, update, delete on table
   user_profiles,
@@ -380,7 +405,8 @@ grant select, insert, update, delete on table
   ticket_activity,
   ticket_notes,
   workspace_metadata,
-  request_attachments
+  request_attachments,
+  notifications
 to service_role;
 
 create table if not exists security_rate_limits (
@@ -735,6 +761,7 @@ alter table ticket_activity enable row level security;
 alter table ticket_notes enable row level security;
 alter table request_attachments enable row level security;
 alter table workspace_metadata enable row level security;
+alter table notifications enable row level security;
 
 drop policy if exists departments_select_all on departments;
 drop policy if exists departments_select_member on departments;
@@ -853,6 +880,18 @@ drop policy if exists workspace_metadata_update_owner on workspace_metadata;
 create policy workspace_metadata_update_owner on workspace_metadata for update using (has_workspace_role(workspace_id, array['owner'])) with check (has_workspace_role(workspace_id, array['owner']));
 drop policy if exists workspace_metadata_delete_owner on workspace_metadata;
 create policy workspace_metadata_delete_owner on workspace_metadata for delete using (has_workspace_role(workspace_id, array['owner']));
+
+-- Notifications are private to their recipient. Rows are created only by the
+-- service-role client (no authenticated insert policy); recipients may read them,
+-- mark them read (update), and dismiss them (delete).
+drop policy if exists notifications_select_own on notifications;
+create policy notifications_select_own on notifications for select using (
+  user_id = auth.uid() and is_workspace_member(workspace_id)
+);
+drop policy if exists notifications_update_own on notifications;
+create policy notifications_update_own on notifications for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists notifications_delete_own on notifications;
+create policy notifications_delete_own on notifications for delete using (user_id = auth.uid());
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (

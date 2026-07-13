@@ -11,6 +11,7 @@ export function scopedWorkspaceHref(workspaceSlug: string | undefined, path: str
   if (pathname.startsWith("/tickets")) return `/w/${workspaceSlug}${pathname}${suffix}`;
   if (pathname.startsWith("/settings")) return `/w/${workspaceSlug}${pathname}${suffix}`;
   if (pathname.startsWith("/users")) return `/w/${workspaceSlug}${pathname}${suffix}`;
+  if (pathname.startsWith("/notifications")) return `/w/${workspaceSlug}${pathname}${suffix}`;
   if (pathname.startsWith("/requests")) return `/w/${workspaceSlug}${pathname}${suffix}`;
   if (pathname.startsWith("/attachments")) return `/w/${workspaceSlug}${pathname}${suffix}`;
 

@@ -737,19 +737,17 @@ html[data-accent-dragging="true"] *::after {
      pinned to the bottom of the header — mirroring the landing-page mobile
      menu — so it slides down from the header edge across the whole viewport.
      `--popover-top` is set from JS to the measured header bottom. */
-  @media (max-width: 540px) {
+  @media (max-width: 640px) {
     .popover {
       position: fixed;
-      top: var(--popover-top, 56px);
-      left: 0;
-      right: 0;
+      top: calc(var(--popover-top, 56px) + 8px);
+      left: 1rem;
+      right: 1rem;
       width: auto;
       max-width: none;
-      max-height: calc(100dvh - var(--popover-top, 56px));
+      max-height: calc(100dvh - var(--popover-top, 56px) - 1rem);
       overflow-y: auto;
-      border-left: none;
-      border-right: none;
-      border-radius: 0 0 var(--r-card) var(--r-card);
+      border-radius: var(--r-card);
       transform: none;
       transform-origin: top center;
       z-index: 80;
@@ -892,6 +890,21 @@ html[data-accent-dragging="true"] *::after {
     padding: 12px 12px 10px;
     border-bottom: 1px solid var(--border);
     margin-bottom: 4px;
+  }
+
+  /* ── notifications ── */
+  .notif-item { transition: background 0.13s; }
+  .notif-item:hover { background: var(--surface-hover); }
+  /* Messenger-style unread highlight; kept for the current viewing even after
+     the badge clears, until the layout re-renders on the next navigation. */
+  .notif-item--unread { background: var(--accent-softer); }
+  .notif-item--unread:hover { background: var(--accent-soft); }
+  .notif-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    margin-top: 5px;
+    flex-shrink: 0;
   }
 
   /* ── banners / callouts ── */

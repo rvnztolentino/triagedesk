@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { loginCredentialsSchema, requestSubmissionSchema, reviewApprovalSchema, ticketUpdateSchema, userRoleUpdateSchema, workspaceDepartmentCreateSchema, workspaceDepartmentDeleteSchema, workspaceSlugSchema } from "@/lib/schema";
+import { loginCredentialsSchema, requestSubmissionSchema, reviewApprovalSchema, ticketUpdateSchema, userRoleUpdateSchema, workspaceDepartmentCreateSchema, workspaceDepartmentDeleteSchema, workspaceSlugSchema, type NotificationView } from "@/lib/schema";
 import {
   clearSessionCookies,
   clearActiveWorkspaceCookie,
   completeEmailVerificationFromTokens,
   getActiveWorkspaceAccess,
+  getCurrentUser,
   getGoogleOAuthUrl,
   getPostVerificationRedirect,
   requireAdmin,
@@ -41,6 +42,7 @@ import {
   saveTriageResult,
   updateTicket,
 } from "@/lib/store";
+import { clearNotifications, countUnreadNotifications, listNotifications, markAllNotificationsRead } from "@/lib/notifications";
 import {
   createWorkspace,
   createWorkspaceInvite,
@@ -355,7 +357,7 @@ export async function approveRequestAction(_prevState: ActionState, formData: Fo
   let destination: string;
   try {
     await requireTrustedActionRequest();
-    const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
+    const { access: { workspace, user }, workspaceSlug } = await requireActionAdmin(formData);
     assertWorkspaceMutable(workspace.id);
     const input = reviewApprovalSchema.parse({
       requestId: formText(formData, "requestId"),
@@ -365,7 +367,7 @@ export async function approveRequestAction(_prevState: ActionState, formData: Fo
       summary: formText(formData, "summary"),
       note: formText(formData, "note"),
     });
-    const ticket = await approveRequest(input, workspace.id);
+    const ticket = await approveRequest(input, workspace.id, { id: user.id, name: user.displayName || "An admin" });
 
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
@@ -382,9 +384,9 @@ export async function rejectRequestAction(_prevState: ActionState, formData: For
   let destination: string;
   try {
     await requireTrustedActionRequest();
-    const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
+    const { access: { workspace, user }, workspaceSlug } = await requireActionAdmin(formData);
     assertWorkspaceMutable(workspace.id);
-    await rejectRequest(formText(formData, "requestId"), workspace.id);
+    await rejectRequest(formText(formData, "requestId"), workspace.id, { id: user.id, name: user.displayName || "An admin" });
 
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
@@ -400,9 +402,9 @@ export async function markDuplicateAction(_prevState: ActionState, formData: For
   let destination: string;
   try {
     await requireTrustedActionRequest();
-    const { access: { workspace }, workspaceSlug } = await requireActionAdmin(formData);
+    const { access: { workspace, user }, workspaceSlug } = await requireActionAdmin(formData);
     assertWorkspaceMutable(workspace.id);
-    await markDuplicate(formText(formData, "requestId"), formText(formData, "duplicateOfTicketId"), workspace.id);
+    await markDuplicate(formText(formData, "requestId"), formText(formData, "duplicateOfTicketId"), workspace.id, { id: user.id, name: user.displayName || "An admin" });
 
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/review"));
@@ -427,7 +429,7 @@ export async function updateTicketAction(_prevState: ActionState, formData: Form
       resolutionNotes: formText(formData, "resolutionNotes"),
       note: formText(formData, "note"),
     });
-    await updateTicket(input, workspace.id, user?.displayName || "Admin");
+    await updateTicket(input, workspace.id, user?.displayName || "Admin", user?.id);
 
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/tickets"));
@@ -525,6 +527,61 @@ export async function completeEmailVerificationFromTokensAction(formData: FormDa
   } catch (error) {
     captureOperationalError(error, { area: "email_verification" });
     return { error: actionErrorMessage(error) };
+  }
+}
+
+// Returns the current user's latest notifications + unread count for the active
+// workspace. Polled by the bell so new activity appears without a full navigation.
+// Reads auth from the httpOnly cookie server-side; never throws to the client.
+export async function fetchNotificationsAction(): Promise<{ notifications: NotificationView[]; unreadCount: number }> {
+  try {
+    await requireTrustedActionRequest();
+    const user = await getCurrentUser();
+    if (!user) return { notifications: [], unreadCount: 0 };
+    const access = await getActiveWorkspaceAccess(user.id);
+    if (!access) return { notifications: [], unreadCount: 0 };
+    const [notifications, unreadCount] = await Promise.all([
+      listNotifications(user.id, access.workspace.id),
+      countUnreadNotifications(user.id, access.workspace.id),
+    ]);
+    return { notifications, unreadCount };
+  } catch (error) {
+    captureOperationalError(error, { area: "fetch_notifications" });
+    return { notifications: [], unreadCount: 0 };
+  }
+}
+
+// Deletes all of the current user's notifications in the (scoped or active)
+// workspace. Backs the "Clear all" button on the notifications page.
+export async function clearNotificationsAction(formData: FormData) {
+  await requireTrustedActionRequest();
+  const workspaceSlug = formText(formData, "workspaceSlug");
+  try {
+    const user = await requireUser();
+    const access = workspaceSlug
+      ? await requireWorkspaceMembership(workspaceSlugSchema.parse(workspaceSlug), user.id)
+      : await getActiveWorkspaceAccess(user.id);
+    if (access) {
+      await clearNotifications(user.id, access.workspace.id);
+    }
+  } catch (error) {
+    captureOperationalError(error, { area: "clear_notifications" });
+  }
+  const returnPath = scopedWorkspaceHref(workspaceSlug || undefined, "/notifications");
+  revalidatePath(returnPath);
+  redirect(returnPath);
+}
+
+// Marks every unread notification for the current user in the active workspace as
+// read. Called by the bell when its panel opens; no revalidate so the current
+// view keeps its "unread" highlights while the badge clears on next navigation.
+export async function markNotificationsReadAction() {
+  await requireTrustedActionRequest();
+  try {
+    const { user, workspace } = await requireOperationalWorkspace();
+    await markAllNotificationsRead(user.id, workspace.id);
+  } catch (error) {
+    captureOperationalError(error, { area: "mark_notifications_read" });
   }
 }
 

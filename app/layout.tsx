@@ -4,6 +4,8 @@ import "./globals.css";
 import { AppLayout } from "@/components/app-layout";
 import { getActiveWorkspaceAccess, getCurrentUser } from "@/lib/auth";
 import { isWorkspacePreview } from "@/lib/workspaces";
+import { countUnreadNotifications, listNotifications } from "@/lib/notifications";
+import type { NotificationView } from "@/lib/schema";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -50,6 +52,12 @@ try {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const currentUser = await getCurrentUser();
   const activeWorkspace = currentUser ? await getActiveWorkspaceAccess(currentUser.id) : undefined;
+  const [notifications, unreadNotifications]: [NotificationView[], number] = currentUser && activeWorkspace
+    ? await Promise.all([
+        listNotifications(currentUser.id, activeWorkspace.workspace.id),
+        countUnreadNotifications(currentUser.id, activeWorkspace.workspace.id),
+      ])
+    : [[], 0];
 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
@@ -65,6 +73,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             role: activeWorkspace.membership.role,
             isPreview: isWorkspacePreview(activeWorkspace.workspace.id),
           } : null}
+          notifications={notifications}
+          unreadNotifications={unreadNotifications}
         >
           {children}
         </AppLayout>

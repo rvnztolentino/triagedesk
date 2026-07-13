@@ -1,6 +1,12 @@
 import { requireSupabaseAdminClient } from "@/lib/supabase";
 import { PublicError } from "@/lib/errors";
 import {
+  notifyMemberJoined,
+  notifyMemberLeft,
+  notifyMemberRemoved,
+  notifyMemberRoleChanged,
+} from "@/lib/notifications";
+import {
   workspaceCreateSchema,
   workspaceDeleteSchema,
   workspaceInviteCodeSchema,
@@ -308,7 +314,9 @@ export async function joinWorkspaceWithInvite(workspaceSlug: string, code: strin
   }
   const row = (data as SupabaseRow[] | null)?.[0];
   if (!row) throw new PublicError("That invite code doesn't exist or has expired.");
-  return workspaceAccessFromRow(row, userId);
+  const access = workspaceAccessFromRow(row, userId);
+  await notifyMemberJoined(client, { workspaceId: access.workspace.id, memberUserId: userId });
+  return access;
 }
 
 export async function joinWorkspaceWithInviteCode(code: string, userId: string) {
@@ -417,6 +425,8 @@ export async function leaveWorkspace(workspaceId: string, userId: string) {
     .maybeSingle();
   if (error) throw new Error(`Leave workspace failed: ${error.message}`);
   if (!data) throw new Error("Workspace membership not found.");
+
+  await notifyMemberLeft(client, { workspaceId: input.workspaceId, memberUserId: userId });
 }
 
 export async function removeWorkspaceMember(workspaceId: string, memberUserId: string, userId: string) {
@@ -444,6 +454,12 @@ export async function removeWorkspaceMember(workspaceId: string, memberUserId: s
     .maybeSingle();
   if (error) throw new Error(`Remove workspace member failed: ${error.message}`);
   if (!data) throw new Error("Workspace membership not found.");
+
+  await notifyMemberRemoved(client, {
+    workspaceId: input.workspaceId,
+    removedUserId: input.memberUserId,
+    actorUserId: userId,
+  });
 }
 
 export async function updateWorkspaceMemberRole(workspaceId: string, memberUserId: string, role: "requester" | "admin", userId: string) {
@@ -471,6 +487,13 @@ export async function updateWorkspaceMemberRole(workspaceId: string, memberUserI
     .maybeSingle();
   if (error) throw new Error(`Update workspace member failed: ${error.message}`);
   if (!data) throw new Error("Workspace membership not found.");
+
+  await notifyMemberRoleChanged(client, {
+    workspaceId: input.workspaceId,
+    memberUserId: input.memberUserId,
+    newRole: input.role,
+    actorUserId: userId,
+  });
 }
 
 export async function deleteWorkspace(workspaceId: string, confirmation: string, userId: string) {

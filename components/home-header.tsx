@@ -1,23 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Mail, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BrandIcon } from "@/components/brand-icon";
 import { ThemeToggle } from "@/components/theme-controls";
 import { cn } from "@/lib/utils";
 
+const CONTACT_EMAIL = "rvnztolentino@gmail.com";
+
 const navItems = [
-  { label: "Workflow", href: "#workflow" },
-  { label: "Preview", href: "#preview" },
+  { label: "How it Works", href: "#workflow" },
   { label: "Highlights", href: "#highlights" },
 ];
+
+// Fixed-header height to offset scroll targets so section headings aren't hidden.
+const HEADER_OFFSET = 80;
 
 export function HomeHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(false);
   const lastScrollY = useRef(0);
+  const contactRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleScroll() {
@@ -26,6 +32,7 @@ export function HomeHeader() {
       if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
         setIsVisible(false);
         setIsMobileMenuOpen(false);
+        setIsContactOpen(false);
       } else {
         setIsVisible(true);
       }
@@ -37,6 +44,54 @@ export function HomeHeader() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Close the contact popover when clicking outside of it or pressing Escape.
+  useEffect(() => {
+    if (!isContactOpen) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (contactRef.current && !contactRef.current.contains(event.target as Node)) {
+        setIsContactOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsContactOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isContactOpen]);
+
+  // Smooth-scroll to in-page anchors. Driving the scroll ourselves (instead of
+  // relying on the URL hash) means repeat clicks on the same item always work,
+  // and lets us offset for the fixed header.
+  function handleAnchorClick(event: React.MouseEvent<HTMLAnchorElement>, href: string) {
+    const target = document.querySelector(href);
+    if (!target) return;
+
+    event.preventDefault();
+    const top = target.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET;
+    window.scrollTo({ top, behavior: "smooth" });
+    setIsMobileMenuOpen(false);
+  }
+
+  const contactPanel = (
+    <div className="p-4">
+      <p className="text-sm font-semibold text-fg">Need help?</p>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
+        Reach out and we&apos;ll get back to you as soon as we can.
+      </p>
+      <a href={`mailto:${CONTACT_EMAIL}`} className="btn btn--primary btn--sm btn--block mt-4">
+        <Mail className="h-4 w-4" />
+        Send an email
+      </a>
+      <p className="mt-2.5 text-center text-xs text-muted">{CONTACT_EMAIL}</p>
+    </div>
+  );
 
   return (
     <nav
@@ -55,10 +110,38 @@ export function HomeHeader() {
 
         <div className="hidden items-center gap-1 lg:flex">
           {navItems.map((item) => (
-            <Link key={item.label} href={item.href} className="rounded-[var(--radius-control)] px-3 py-2 text-sm text-muted transition-colors hover:text-fg">
+            <a
+              key={item.label}
+              href={item.href}
+              onClick={(event) => handleAnchorClick(event, item.href)}
+              className="rounded-[var(--radius-control)] px-3 py-2 text-sm text-muted transition-colors hover:text-fg"
+            >
               {item.label}
-            </Link>
+            </a>
           ))}
+
+          <div ref={contactRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsContactOpen((open) => !open)}
+              className="rounded-[var(--radius-control)] px-3 py-2 text-sm text-muted transition-colors hover:text-fg"
+              aria-expanded={isContactOpen}
+              aria-haspopup="dialog"
+            >
+              Contact
+            </button>
+            <div
+              role="dialog"
+              aria-label="Contact"
+              className={cn(
+                "absolute right-0 top-full mt-2 w-64 origin-top-right overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface transition-all duration-200 ease-out",
+                isContactOpen ? "visible scale-100 opacity-100" : "pointer-events-none invisible scale-95 opacity-0"
+              )}
+              style={{ boxShadow: "var(--shadow-lg)" }}
+            >
+              {contactPanel}
+            </div>
+          </div>
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 lg:flex">
@@ -90,35 +173,24 @@ export function HomeHeader() {
       <div
         className={cn(
           "overflow-hidden border-t border-border bg-bg transition-all duration-300 ease-out lg:hidden",
-          isMobileMenuOpen ? "max-h-[420px] opacity-100" : "pointer-events-none max-h-0 opacity-0"
+          isMobileMenuOpen ? "max-h-[520px] opacity-100" : "pointer-events-none max-h-0 opacity-0"
         )}
       >
         <div className="flex flex-col gap-1 px-5 py-4 sm:px-6">
           {navItems.map((item) => (
-            <Link
+            <a
               key={item.label}
               href={item.href}
+              onClick={(event) => handleAnchorClick(event, item.href)}
               className="rounded-[var(--radius-control)] px-3 py-3 text-base text-muted transition-colors hover:bg-surface-hover hover:text-fg"
-              onClick={() => setIsMobileMenuOpen(false)}
             >
               {item.label}
-            </Link>
+            </a>
           ))}
-          <Link
-            href="/login"
-            className="rounded-[var(--radius-control)] px-3 py-3 text-base text-muted transition-colors hover:bg-surface-hover hover:text-fg"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/signup?next=/onboarding"
-            className="btn btn--primary btn--block mt-2"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Start now
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+
+          <div className="mt-1 rounded-[var(--radius-card)] border border-border bg-surface">
+            {contactPanel}
+          </div>
         </div>
       </div>
     </nav>

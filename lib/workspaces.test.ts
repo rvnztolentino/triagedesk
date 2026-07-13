@@ -192,7 +192,7 @@ describe("workspace foundation", () => {
     expect(workspaceDashboardSource).toContain("href={`/w/${activeWorkspace.workspace.slug}/activate`}");
     expect(actionsSource).toContain("const request = await createRequest(input, user, workspace.id)");
     expect(actionsSource).toContain("await createRequestAttachment(request.id, upload, workspace.id)");
-    expect(actionsSource).toContain('await updateTicket(input, workspace.id, user?.displayName || "Admin")');
+    expect(actionsSource).toContain('await updateTicket(input, workspace.id, user?.displayName || "Admin", user?.id)');
     expect(ticketsSource).toContain("listTickets(filter, isAdmin ? undefined : userId, workspaceId)");
   });
 

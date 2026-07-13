@@ -4,10 +4,21 @@ import { toTitleCase } from "@/lib/format";
 export const priorities = ["low", "medium", "high", "critical"] as const;
 export const defaultDepartmentIds = ["it", "facilities", "maintenance", "security", "admin", "clinic"] as const;
 export const requestStatuses = ["needs-review", "approved", "rejected", "duplicate"] as const;
-export const ticketStatuses = ["new", "needs-review", "open", "in-progress", "resolved", "closed"] as const;
+export const ticketStatuses = ["new", "open", "in-progress", "resolved", "closed"] as const;
 export const triageSources = ["rules", "groq"] as const;
 export const userRoles = ["requester", "admin", "owner"] as const;
 export const assignableUserRoles = ["requester", "admin"] as const;
+export const notificationTypes = [
+  "request_submitted",
+  "request_approved",
+  "request_rejected",
+  "request_duplicate",
+  "ticket_status_changed",
+  "member_joined",
+  "member_left",
+  "member_removed",
+  "member_role_changed",
+] as const;
 
 export const prioritySchema = z.enum(priorities);
 export const departmentSchema = z.string().trim().min(1);
@@ -148,6 +159,7 @@ export type TicketStatus = z.infer<typeof ticketStatusSchema>;
 export type TriageSource = z.infer<typeof triageSourceSchema>;
 export type UserRole = z.infer<typeof userRoleSchema>;
 export type AssignableUserRole = z.infer<typeof assignableUserRoleSchema>;
+export type NotificationType = (typeof notificationTypes)[number];
 export type RequestSubmission = z.infer<typeof requestSubmissionSchema>;
 export type TriageDraft = z.infer<typeof triageDraftSchema>;
 export type AuthCredentials = z.infer<typeof authCredentialsSchema>;
@@ -276,6 +288,31 @@ export interface WorkspaceInviteRecord {
   usedAt?: string;
   revokedAt?: string;
   isReusable: boolean;
+  createdAt: string;
+}
+
+export interface NotificationRecord {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  link?: string;
+  actor: string;
+  readAt?: string;
+  createdAt: string;
+}
+
+// Serializable shape passed to client components (bell + notifications page).
+export interface NotificationView {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  link?: string;
+  actor: string;
+  read: boolean;
   createdAt: string;
 }
 

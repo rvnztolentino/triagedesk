@@ -224,7 +224,7 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
     if (!open) return;
 
     function measure() {
-      const isMobile = window.matchMedia("(max-width: 540px)").matches;
+      const isMobile = window.matchMedia("(max-width: 640px)").matches;
       const header = isMobile ? triggerRef.current?.closest("header, nav") : null;
       setPanelTop(header ? Math.round(header.getBoundingClientRect().bottom) : null);
     }
