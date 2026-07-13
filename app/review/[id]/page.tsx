@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlertTriangle, Building2, ChevronLeft, ChevronRight, Clock, FileText, Inbox, MapPin, Paperclip, Sparkles, Ticket, User } from "lucide-react";
 import { AttachmentFileName } from "@/components/attachment-file-name";
+import { CharLimitedTextarea } from "@/components/char-limited-textarea";
 import { ConfidenceMeter } from "@/components/confidence-meter";
 import { ReviewDecisionForm } from "@/components/review-decision-form";
 import { getUserProfile, requireWorkspaceAdminContext } from "@/lib/auth";
@@ -157,7 +158,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
 
                 <div className="field">
                   <label htmlFor="title" className="label">Suggested title</label>
-                  <input id="title" name="title" type="text" defaultValue={triage.title} className="input" />
+                  <input id="title" name="title" type="text" maxLength={160} defaultValue={triage.title} className="input" />
                 </div>
 
                 <div className="grid cols-2" style={{ gap: 12 }}>
@@ -191,7 +192,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
 
                 <div className="field">
                   <label htmlFor="summary" className="label">Edited summary</label>
-                  <textarea id="summary" name="summary" defaultValue={triage.summary} rows={4} className="textarea" />
+                  <CharLimitedTextarea id="summary" name="summary" defaultValue={triage.summary} max={1200} rows={4} className="textarea" />
                 </div>
               </div>
             </div>

@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { AlertTriangle, LockKeyhole, MapPin, Sparkles, User } from "lucide-react";
 import { submitRequestAction } from "@/app/actions";
 import { AiTriageLoading } from "@/components/ai-triage-loading";
+import { CharCounter } from "@/components/char-limited-textarea";
 import { RequestAttachmentsInput } from "@/components/request-attachments-input";
 import { SubmitButton } from "@/components/submit-button";
 import type { ActionState } from "@/lib/errors";
@@ -45,12 +46,14 @@ function FormBody({
           name="description"
           required
           minLength={10}
+          maxLength={1200}
           rows={5}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="e.g. Aircon in Room 304 is leaking again. Floor is wet near the outlet."
           className="textarea"
         />
+        <CharCounter length={description.length} max={1200} />
         <div className="cluster wrap" style={{ gap: 6, marginTop: 2 }}>
           <span className="field-hint">Try:</span>
           {SAMPLES.map((sample) => (
@@ -72,14 +75,14 @@ function FormBody({
           <label htmlFor="location" className="label" style={{ display: "flex", alignItems: "center", gap: 7 }}>
             <MapPin size={13} className="text-muted" /> Location
           </label>
-          <input id="location" name="location" required type="text" placeholder="Building A, Room 304" className="input" />
+          <input id="location" name="location" required type="text" maxLength={160} placeholder="Building A, Room 304" className="input" />
         </div>
 
         <div className="field">
           <label htmlFor="contactName" className="label" style={{ display: "flex", alignItems: "center", gap: 7 }}>
             <User size={13} className="text-muted" /> Contact name
           </label>
-          <input id="contactName" name="contactName" type="text" placeholder="Who to reach" className="input" />
+          <input id="contactName" name="contactName" type="text" maxLength={80} placeholder="Who to reach" className="input" />
         </div>
       </div>
 
@@ -87,7 +90,7 @@ function FormBody({
         <label htmlFor="urgencyNote" className="label" style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <AlertTriangle size={13} className="text-muted" /> Urgency note (optional)
         </label>
-        <input id="urgencyNote" name="urgencyNote" type="text" placeholder="Why is it urgent?" className="input" />
+        <input id="urgencyNote" name="urgencyNote" type="text" maxLength={400} placeholder="Why is it urgent?" className="input" />
       </div>
 
       <RequestAttachmentsInput />

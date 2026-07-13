@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { AlertTriangle, Check, LockKeyhole, X } from "lucide-react";
 import { approveRequestAction, rejectRequestAction } from "@/app/actions";
+import { CharLimitedTextarea } from "@/components/char-limited-textarea";
 import { SubmitButton } from "@/components/submit-button";
 import type { ActionState } from "@/lib/errors";
 
@@ -49,9 +50,10 @@ export function ReviewDecisionForm({
 
           <div className="field" style={{ marginBottom: 14 }}>
             <label htmlFor="note" className="label">Decision note (optional)</label>
-            <textarea
+            <CharLimitedTextarea
               id="note"
               name="note"
+              max={2000}
               rows={3}
               placeholder="Add context for this decision…"
               className="textarea"

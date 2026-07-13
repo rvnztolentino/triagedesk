@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { AlertTriangle, LockKeyhole, MessageSquare } from "lucide-react";
 import { updateTicketAction } from "@/app/actions";
+import { CharLimitedTextarea } from "@/components/char-limited-textarea";
 import { ticketStatuses, type DepartmentRecord } from "@/lib/schema";
 import type { ActionState } from "@/lib/errors";
 
@@ -69,12 +70,12 @@ export function TicketUpdateForm({
 
         <div className="space-y-2">
           <label htmlFor="resolutionNotes" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Resolution Notes</label>
-          <textarea id="resolutionNotes" name="resolutionNotes" defaultValue={resolutionNotes} rows={3} className="textarea" />
+          <CharLimitedTextarea id="resolutionNotes" name="resolutionNotes" defaultValue={resolutionNotes} max={4000} rows={3} className="textarea" />
         </div>
 
         <div className="space-y-2">
           <label htmlFor="note" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Internal Note</label>
-          <textarea id="note" name="note" rows={2} placeholder="Add a note or update..." className="textarea" />
+          <CharLimitedTextarea id="note" name="note" max={2000} rows={2} placeholder="Add a note or update..." className="textarea" />
         </div>
 
         <div className="flex justify-end">
