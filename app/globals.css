@@ -733,21 +733,27 @@ html[data-accent-dragging="true"] *::after {
     transform-origin: top right;
   }
   /* On small screens anchoring under the trigger overflows or gets clipped by
-     the header/adjacent stacking contexts. Center it on-screen as a floating
-     panel that sits above everything instead. */
+     the header/adjacent stacking contexts. Drop it as a full-width overlay
+     pinned to the bottom of the header — mirroring the landing-page mobile
+     menu — so it slides down from the header edge across the whole viewport.
+     `--popover-top` is set from JS to the measured header bottom. */
   @media (max-width: 540px) {
     .popover {
       position: fixed;
-      top: 50%;
-      left: 50%;
-      right: auto;
-      transform: translate(-50%, -50%);
-      transform-origin: center;
-      width: min(360px, calc(100vw - 2rem));
-      max-height: calc(100dvh - 2rem);
+      top: var(--popover-top, 56px);
+      left: 0;
+      right: 0;
+      width: auto;
+      max-width: none;
+      max-height: calc(100dvh - var(--popover-top, 56px));
       overflow-y: auto;
+      border-left: none;
+      border-right: none;
+      border-radius: 0 0 var(--r-card) var(--r-card);
+      transform: none;
+      transform-origin: top center;
       z-index: 80;
-      animation-name: pop-center;
+      animation-name: pop-down;
     }
   }
   .seg {
@@ -1051,6 +1057,10 @@ html[data-accent-dragging="true"] *::after {
 
 @keyframes pop-center {
   from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+}
+@keyframes pop-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes pop {
   from { opacity: 0; transform: scale(0.96) translateY(-6px); }

@@ -203,6 +203,8 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
   const { theme, accent } = usePreferences();
   const [open, setOpen] = useState(false);
   const [hexDraft, setHexDraft] = useState<string | null>(null);
+  const [panelTop, setPanelTop] = useState<number | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const colorFieldRef = useRef<HTMLDivElement>(null);
   const hueTrackRef = useRef<HTMLDivElement>(null);
@@ -214,6 +216,26 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
   useEffect(() => {
     applyAccentVariables(accent);
   }, [accent]);
+
+  // On mobile the popover renders as a full-width overlay pinned to the bottom
+  // of the header (see globals.css). Measure the enclosing header/nav so the
+  // panel drops from the exact header edge on both the landing and app headers.
+  useEffect(() => {
+    if (!open) return;
+
+    function measure() {
+      const isMobile = window.matchMedia("(max-width: 540px)").matches;
+      const header = isMobile ? triggerRef.current?.closest("header, nav") : null;
+      setPanelTop(header ? Math.round(header.getBoundingClientRect().bottom) : null);
+    }
+
+    const frame = window.requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", measure);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -268,6 +290,7 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
   return (
     <div ref={popoverRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         aria-label={label}
         aria-expanded={open}
@@ -289,6 +312,7 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
           role="dialog"
           aria-label="Appearance"
           className="popover"
+          style={panelTop !== null ? ({ "--popover-top": `${panelTop}px` } as React.CSSProperties) : undefined}
         >
           <div className="between" style={{ marginBottom: 14 }}>
             <div className="eyebrow">Appearance</div>

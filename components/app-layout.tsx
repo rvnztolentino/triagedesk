@@ -36,7 +36,9 @@ const ownerNavItems = [
 ];
 
 const adminNavItems = ownerNavItems;
-const previewNavItems = ownerNavItems.filter((item) => item.href !== "/users");
+// The demo preview exposes the full owner surface (including a sample Users
+// roster); all actions on those pages are locked server-side.
+const previewNavItems = ownerNavItems;
 
 const requesterNavItems = [
   { href: "/submit", icon: PlusCircle, label: "New Request" },
@@ -266,7 +268,7 @@ export function AppLayout({
           <div className={cn("flex items-center justify-between gap-3", collapsed && "md:justify-center")}>
             <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
               <BrandIcon size={26} className="rounded-md" />
-              <span className={cn("text-[15px] font-semibold tracking-tight text-fg", collapsed && "md:hidden")}>TriageDesk</span>
+              <span className={cn("whitespace-nowrap text-[15px] font-semibold tracking-tight text-fg", collapsed && "md:hidden")}>TriageDesk</span>
             </Link>
             <button
               type="button"
@@ -341,7 +343,7 @@ export function AppLayout({
                           active ? "text-accent" : "text-faint group-hover:text-fg"
                         )}
                       />
-                      <span className={cn(collapsed && "md:hidden")}>{item.label}</span>
+                      <span className={cn("whitespace-nowrap", collapsed && "md:hidden")}>{item.label}</span>
                       {active ? (
                         <span className={cn("ml-auto h-1.5 w-1.5 rounded-full bg-accent", collapsed && "md:hidden")} />
                       ) : null}
@@ -362,7 +364,7 @@ export function AppLayout({
               title={collapsed ? "Preview — read-only" : undefined}
             >
               <LockKeyhole size={12} className="shrink-0" />
-              <span className={cn("text-[11px] font-medium", collapsed && "md:hidden")}>Preview — read-only</span>
+              <span className={cn("whitespace-nowrap text-[11px] font-medium", collapsed && "md:hidden")}>Preview — read-only</span>
             </div>
           ) : null}
           <button
@@ -376,7 +378,7 @@ export function AppLayout({
             )}
           >
             {collapsed ? <ChevronsRight size={17} className="shrink-0" /> : <ChevronsLeft size={17} className="shrink-0" />}
-            <span className={cn(collapsed && "md:hidden")}>Collapse</span>
+            <span className={cn("whitespace-nowrap", collapsed && "md:hidden")}>Collapse</span>
           </button>
         </div>
       </aside>

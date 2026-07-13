@@ -43,7 +43,7 @@ export function WorkspaceOpenLink({
               ) : null}
             </div>
             <div className="muted mono" style={{ fontSize: 12.5, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {slug} · {role}
+              {isPreview ? slug : `${slug} · ${role}`}
             </div>
           </div>
         </div>

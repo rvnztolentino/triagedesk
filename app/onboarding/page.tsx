@@ -64,10 +64,11 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
                       <span className="badge" data-hue="warn">
                         Read-only
                       </span>
-                    ) : null}
-                    <span className="badge" data-hue={ROLE_HUE[activeWorkspace.membership.role] ?? "neutral"}>
-                      {activeWorkspace.membership.role}
-                    </span>
+                    ) : (
+                      <span className="badge" data-hue={ROLE_HUE[activeWorkspace.membership.role] ?? "neutral"}>
+                        {activeWorkspace.membership.role}
+                      </span>
+                    )}
                   </div>
                   <div className="muted" style={{ fontSize: 13.5, marginTop: 3 }}>
                     Requests, tickets, and settings are scoped to this workspace.
