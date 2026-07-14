@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { WorkspaceInviteRecord } from "./schema";
 import {
   canCreateWorkspaceInvite,
+  canManageWorkspaceInvite,
   canRemoveWorkspaceMember,
   assertWorkspaceMutable,
   DEMO_PREVIEW_LOCK_MESSAGE,
@@ -13,6 +14,8 @@ import {
   isWorkspaceAdmin,
   isWorkspaceInviteActive,
   isWorkspacePreview,
+  MAX_ACTIVE_WORKSPACE_INVITES,
+  MAX_WORKSPACE_MEMBERS,
   normalizeWorkspaceInviteCode,
   workspaceInviteLink,
   workspaceSlugFromName,
@@ -26,6 +29,7 @@ const storeSource = readFileSync(new URL("./store.ts", import.meta.url), "utf8")
 const ticketsSource = readFileSync(new URL("../app/tickets/page.tsx", import.meta.url), "utf8");
 const workspaceDashboardSource = readFileSync(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8");
 const workspaceOpenLinkSource = readFileSync(new URL("../components/workspace-open-link.tsx", import.meta.url), "utf8");
+const openWorkspaceButtonSource = readFileSync(new URL("../components/open-workspace-button.tsx", import.meta.url), "utf8");
 const appLayoutSource = readFileSync(new URL("../components/app-layout.tsx", import.meta.url), "utf8");
 const themeControlsSource = readFileSync(new URL("../components/theme-controls.tsx", import.meta.url), "utf8");
 const settingsSource = readFileSync(new URL("../app/settings/page.tsx", import.meta.url), "utf8");
@@ -172,6 +176,32 @@ describe("workspace foundation", () => {
     expect(actionsSource).toContain("await deleteWorkspaceInvite(");
   });
 
+  it("caps workspace membership and enforces it in the join RPC", () => {
+    expect(MAX_WORKSPACE_MEMBERS).toBe(20);
+    // Hard backstop lives in Postgres so it holds even if the app check is raced.
+    expect(schemaSql).toContain("raise exception 'Workspace member limit reached.'");
+    expect(schemaSql).toContain("perform 1 from workspaces where id = matched_workspace_id for update");
+  });
+
+  it("caps outstanding invites and rate-limits invite creation", () => {
+    expect(MAX_ACTIVE_WORKSPACE_INVITES).toBe(5);
+    expect(actionsSource).toContain('scope: "invite_create_user_hour"');
+  });
+
+  it("persists the display-name change window on the profile", () => {
+    expect(schemaSql).toContain("add column if not exists name_change_count integer not null default 0");
+    expect(schemaSql).toContain("add column if not exists name_change_window_start timestamptz");
+  });
+
+  it("lets owners manage any invite but admins only their own", () => {
+    const invite = { createdBy: "admin-1" } as WorkspaceInviteRecord;
+    expect(canManageWorkspaceInvite("owner", "someone-else", invite)).toBe(true);
+    expect(canManageWorkspaceInvite("admin", "admin-1", invite)).toBe(true);
+    expect(canManageWorkspaceInvite("admin", "admin-2", invite)).toBe(false);
+    expect(canManageWorkspaceInvite("requester", "admin-1", invite)).toBe(false);
+    expect(canManageWorkspaceInvite("admin", "admin-1", {} as WorkspaceInviteRecord)).toBe(false);
+  });
+
   it("defines owner-only cascading workspace deletion", () => {
     expect(schemaSql).toContain("create or replace function delete_workspace_as_owner");
     expect(schemaSql).toContain("and wm.role = 'owner'");
@@ -182,11 +212,12 @@ describe("workspace foundation", () => {
   it("persists workspace selection and scopes legacy operations to the active workspace", () => {
     expect(authSource).toContain('const ACTIVE_WORKSPACE_COOKIE = "triagedesk_active_workspace"');
     expect(authSource).toContain("return { user, ...access };");
-    // Switching a workspace runs the activate server action (not a client Link to
+    // Switching a workspace runs the switch server action (not a client Link to
     // the route handler) so the cookie-driven root layout — header, sidebar, and
     // preview indicator — refreshes; the action busts the layout cache. The
     // /w/[slug] overview (Manage) is reached from the "Currently open" hub card.
-    expect(workspaceOpenLinkSource).toContain("action={activateWorkspaceAction}");
+    expect(workspaceOpenLinkSource).toContain("OpenWorkspaceButton");
+    expect(openWorkspaceButtonSource).toContain("action={switchActiveWorkspaceAction}");
     expect(actionsSource).toContain('revalidatePath("/", "layout")');
     expect(workspaceDashboardSource).toContain("href={`/w/${activeWorkspace.workspace.slug}`}");
     expect(workspaceDashboardSource).toContain("href={`/w/${activeWorkspace.workspace.slug}/activate`}");

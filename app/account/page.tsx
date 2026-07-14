@@ -4,7 +4,12 @@ import { updateAccountNameAction } from "@/app/actions";
 import { DeleteAccountForm } from "@/components/delete-account-form";
 import { SubmitButton } from "@/components/submit-button";
 import { getUserProfile, requireUser } from "@/lib/auth";
+import { MAX_NAME_CHANGES, nameChangeStatus } from "@/lib/display-name";
 import { countOwnedWorkspaces } from "@/lib/workspaces";
+
+function formatResetDate(date: Date) {
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+}
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +27,9 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
   const displayName = profile?.displayName ?? user.displayName;
   const successMessage = params.updated ? SUCCESS_MESSAGES[params.updated] : undefined;
+
+  const changeStatus = nameChangeStatus(profile?.nameChangeCount ?? 0, profile?.nameChangeWindowStart);
+  const changesExhausted = changeStatus.remaining <= 0;
 
   return (
     <div className="mx-auto w-full max-w-[720px] space-y-5">
@@ -58,15 +66,18 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
                 required
                 maxLength={80}
                 defaultValue={displayName}
+                disabled={changesExhausted}
                 className="input"
                 placeholder="Your name"
               />
               <p className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>
-                Shown to other members of your workspaces. Profile photos aren&apos;t supported yet.
+                {changesExhausted && changeStatus.resetAt
+                  ? `You've used your ${MAX_NAME_CHANGES} name changes. You can change it again on ${formatResetDate(changeStatus.resetAt)}.`
+                  : `Shown to other members of your workspaces. You can change your name ${changeStatus.remaining} more time${changeStatus.remaining === 1 ? "" : "s"} before it locks for 3 months.`}
               </p>
             </div>
             <div>
-              <SubmitButton pendingText="Saving..." className="btn--primary">
+              <SubmitButton pendingText="Saving..." className="btn--primary" disabled={changesExhausted}>
                 Save changes
               </SubmitButton>
             </div>

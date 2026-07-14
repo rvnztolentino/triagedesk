@@ -5,7 +5,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { requireWorkspaceAdminContext } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import type { AppUser, WorkspaceMemberSummary } from "@/lib/schema";
-import { listWorkspaceMembers, canRemoveWorkspaceMember, isWorkspacePreview } from "@/lib/workspaces";
+import { listWorkspaceMembers, canRemoveWorkspaceMember, isWorkspacePreview, MAX_WORKSPACE_MEMBERS } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +89,9 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
           People in {workspace.name}
         </h1>
         <p className="page-sub">
-          {users.length} member{users.length === 1 ? "" : "s"}. Owners manage roles; admins can remove requesters.
+          {isPreview
+            ? `${users.length} member${users.length === 1 ? "" : "s"}. Owners manage roles; admins can remove requesters.`
+            : `${users.length} / ${MAX_WORKSPACE_MEMBERS} members. Owners manage roles; admins can remove requesters.`}
         </p>
       </div>
 

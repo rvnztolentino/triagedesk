@@ -16,6 +16,13 @@ end $$;
 -- Two-factor was removed; drop the column idempotently on existing databases.
 alter table user_profiles drop column if exists two_factor_enabled;
 
+-- Display-name change throttling (max 2 per rolling 3 months). window_start marks
+-- the first change in the active window; the app resets the count once the window
+-- elapses. Kept here rather than in security_rate_limits, whose rows are GC'd after
+-- 7 days, which would silently reset a 3-month window.
+alter table user_profiles add column if not exists name_change_count integer not null default 0;
+alter table user_profiles add column if not exists name_change_window_start timestamptz;
+
 create table if not exists workspaces (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -568,6 +575,10 @@ begin
     raise exception 'Workspace invite is invalid or expired.';
   end if;
 
+  -- Serialize concurrent joins to this workspace so the member-cap check below
+  -- can't be raced by two people redeeming different invites at the same time.
+  perform 1 from workspaces where id = matched_workspace_id for update;
+
   if exists (
     select 1
     from workspace_members wm
@@ -575,6 +586,17 @@ begin
       and wm.user_id = target_user_id
   ) then
     raise exception 'You are already a member of this workspace.';
+  end if;
+
+  -- Cap workspace size (owner included). Keep in sync with MAX_WORKSPACE_MEMBERS
+  -- in lib/workspaces.ts; enforced here so it holds even if the app check is
+  -- bypassed or races.
+  if (
+    select count(*)
+    from workspace_members wm
+    where wm.workspace_id = matched_workspace_id
+  ) >= 20 then
+    raise exception 'Workspace member limit reached.';
   end if;
 
   insert into workspace_members (workspace_id, user_id, role)

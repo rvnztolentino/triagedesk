@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { toTitleCase } from "@/lib/format";
+import { containsProfanity } from "@/lib/display-name";
 
 export const priorities = ["low", "medium", "high", "critical"] as const;
 export const defaultDepartmentIds = ["it", "facilities", "maintenance", "security", "admin", "clinic"] as const;
@@ -92,7 +93,12 @@ export const workspaceInviteCodeSchema = z
 
 export const workspaceInviteInputSchema = z.string().trim().min(6).max(500);
 
-export const workspaceNameSchema = z.string().trim().min(2, "Workspace name is required.").max(80);
+export const workspaceNameSchema = z
+  .string()
+  .trim()
+  .min(2, "Workspace name is required.")
+  .max(80)
+  .refine((value) => !containsProfanity(value), "Choose a different workspace name.");
 
 export const workspaceCreateSchema = z.object({
   name: workspaceNameSchema,
@@ -248,6 +254,10 @@ export interface UserProfileRecord {
   role: UserRole;
   createdAt: string;
   updatedAt: string;
+  // Display-name change throttling window (see lib/display-name.ts). Optional so
+  // rows written before the migration and the AppUser projection stay valid.
+  nameChangeCount?: number;
+  nameChangeWindowStart?: string;
 }
 
 export interface AppUser {

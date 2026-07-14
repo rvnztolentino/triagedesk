@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Zap } from "lucide-react";
 import { signUpAction } from "@/app/actions";
 import { AuthLayout } from "@/components/auth-layout";
 import { GoogleSignIn } from "@/components/google-sign-in";
 import { SubmitButton } from "@/components/submit-button";
 
-export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string; rateLimited?: string }> }) {
   const params = await searchParams;
   const loginHref = params.next ? `/login?next=${encodeURIComponent(params.next)}` : "/login";
+  const rateLimited = params.rateLimited === "1";
 
   return (
     <AuthLayout
@@ -15,7 +16,16 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       title="Create your account"
       sub="Spin up a workspace and start triaging requests in minutes."
     >
-      {params.error ? (
+      {rateLimited ? (
+        <div className="st-warn rounded-[var(--radius-control)] border px-4 py-3 text-sm" style={{ marginBottom: 16 }} role="status">
+          <span className="cluster" style={{ gap: 8, fontWeight: 600 }}>
+            <Zap size={15} style={{ flexShrink: 0 }} /> Email sign-ups are busy right now
+          </span>
+          <p style={{ marginTop: 6, lineHeight: 1.5 }}>
+            {params.error || "We've hit a temporary limit on confirmation emails."} Continuing with Google is instant — no confirmation email needed.
+          </p>
+        </div>
+      ) : params.error ? (
         <div className="st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm" style={{ marginBottom: 16 }}>
           {params.error}
         </div>
@@ -34,7 +44,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           {params.next ? <input type="hidden" name="next" value={params.next} /> : null}
           <div className="field">
             <label htmlFor="displayName" className="label">Full name</label>
-            <input id="displayName" name="displayName" type="text" className="input" placeholder="Vic Marlowe" />
+            <input id="displayName" name="displayName" type="text" maxLength={80} className="input" placeholder="Vic Marlowe" />
           </div>
           <div className="field">
             <label htmlFor="email" className="label">Work email</label>
