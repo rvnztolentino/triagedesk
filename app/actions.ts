@@ -656,6 +656,11 @@ export async function createWorkspaceAction(formData: FormData) {
     });
     const access = await createWorkspace(formText(formData, "name"), user.id);
     await setActiveWorkspaceCookie(access.workspace.slug);
+    // The active workspace is read from the cookie in the root layout (header +
+    // sidebar) and the onboarding hub, so bust their caches to reflect the newly
+    // created workspace instead of the previously active one.
+    revalidatePath("/", "layout");
+    revalidatePath("/onboarding");
     redirectTo = `/w/${access.workspace.slug}`;
   } catch (error) {
     redirectWithError("/onboarding", error);
@@ -676,6 +681,10 @@ export async function joinWorkspaceAction(formData: FormData) {
       ? await joinWorkspaceWithInvite(workspaceSlug, code, user.id)
       : await joinWorkspaceWithInviteCode(code, user.id);
     await setActiveWorkspaceCookie(access.workspace.slug);
+    // Joining switches the active workspace, so bust the layout + hub caches the
+    // same way activation does (otherwise they keep showing the previous one).
+    revalidatePath("/", "layout");
+    revalidatePath("/onboarding");
     redirectTo = `/w/${access.workspace.slug}`;
   } catch (error) {
     const returnPath = workspaceSlug ? `/join/${encodeURIComponent(workspaceSlug)}?code=${encodeURIComponent(code)}` : "/onboarding";
@@ -784,6 +793,9 @@ export async function activateWorkspaceAction(formData: FormData) {
   await setActiveWorkspaceCookie(workspaceSlug);
   // The active workspace is read from the cookie in the root layout (header +
   // sidebar), so busting the layout cache keeps them in sync after switching.
+  // The onboarding hub renders the "Currently open" card and Active badges from
+  // the same cookie, so refresh it too or it keeps showing the previous one.
   revalidatePath("/", "layout");
+  revalidatePath("/onboarding");
   redirect(isWorkspacePreview(access.workspace.id) || access.membership.role !== "requester" ? scopedWorkspaceHref(workspaceSlug, "/") : scopedWorkspaceHref(workspaceSlug, "/tickets"));
 }

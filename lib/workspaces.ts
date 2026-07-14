@@ -27,7 +27,7 @@ import {
 
 // Max workspaces a single user may own/create. Bounds per-user footprint on the
 // Supabase + Vercel free tiers (row counts, storage, function invocations).
-export const MAX_WORKSPACES_PER_USER = 5;
+export const MAX_WORKSPACES_PER_USER = 3;
 
 export const DEMO_WORKSPACE_ID = "00000000-0000-4000-8000-000000000001";
 export const DEMO_WORKSPACE_SLUG = "demo-clinic";
