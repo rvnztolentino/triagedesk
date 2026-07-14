@@ -40,6 +40,11 @@ export const MAX_WORKSPACE_MEMBERS = 20;
 // unbounded invite-row growth while leaving room to onboard a full workspace.
 export const MAX_ACTIVE_WORKSPACE_INVITES = 5;
 
+// Max custom (non-default) departments per workspace. The default departments are
+// always present and don't count, so a workspace holds up to this many admin-added
+// departments on top of them. Bounds department-row growth per workspace.
+export const MAX_CUSTOM_WORKSPACE_DEPARTMENTS = 10;
+
 export const DEMO_WORKSPACE_ID = "00000000-0000-4000-8000-000000000001";
 export const DEMO_WORKSPACE_SLUG = "demo-clinic";
 export const DEMO_WORKSPACE_INVITE_CODE = "DEMO-CLINIC-2026";
@@ -322,7 +327,7 @@ export async function createWorkspace(name: string, userId: string) {
 
   const ownedCount = await countOwnedWorkspaces(userId);
   if (ownedCount >= MAX_WORKSPACES_PER_USER) {
-    throw new Error(`You can create up to ${MAX_WORKSPACES_PER_USER} workspaces. Delete one to create another.`);
+    throw new PublicError(`You can create up to ${MAX_WORKSPACES_PER_USER} workspaces. Delete one to create another.`);
   }
 
   const baseSlug = workspaceSlugFromName(input.name);
@@ -346,7 +351,7 @@ export async function createWorkspace(name: string, userId: string) {
     }
   }
 
-  throw new Error("Create workspace failed: choose a more specific workspace name.");
+  throw new PublicError("Choose a more specific workspace name.");
 }
 
 export async function joinWorkspaceWithInvite(workspaceSlug: string, code: string, userId: string) {
@@ -365,6 +370,9 @@ export async function joinWorkspaceWithInvite(workspaceSlug: string, code: strin
     }
     if (error.message.includes("Workspace member limit reached")) {
       throw new PublicError(`This workspace is full (${MAX_WORKSPACE_MEMBERS} members). Ask an admin to remove a member, then try again.`);
+    }
+    if (error.message.includes("already a member")) {
+      throw new PublicError("You're already a member of this workspace.");
     }
     throw new Error(error.message || "Join workspace failed.");
   }
@@ -578,7 +586,7 @@ export async function deleteWorkspace(workspaceId: string, confirmation: string,
   const workspace = await getWorkspaceById(input.workspaceId);
   if (!workspace) throw new Error("Workspace not found.");
   if (input.confirmation !== workspace.slug) {
-    throw new Error(`Enter ${workspace.slug} to confirm permanent deletion.`);
+    throw new PublicError(`Enter ${workspace.slug} to confirm permanent deletion.`);
   }
 
   const membership = await getWorkspaceMembership(input.workspaceId, userId);

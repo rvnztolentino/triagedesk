@@ -23,7 +23,7 @@ import {
   type TriageDraft,
   type TriageResultRecord,
 } from "@/lib/schema";
-import { assertWorkspaceMutable, DEMO_WORKSPACE_ID } from "@/lib/workspaces";
+import { assertWorkspaceMutable, DEMO_WORKSPACE_ID, MAX_CUSTOM_WORKSPACE_DEPARTMENTS } from "@/lib/workspaces";
 import { PublicError } from "@/lib/errors";
 import {
   notifyRequestSubmitted,
@@ -779,11 +779,32 @@ export async function listDepartments(workspaceId = DEMO_WORKSPACE_ID) {
   return departments.length > 0 ? departments : defaultDepartments;
 }
 
+// Counts custom (non-default) departments in a workspace. Drives the
+// MAX_CUSTOM_WORKSPACE_DEPARTMENTS cap and the settings usage indicator; the
+// always-present default departments are excluded so they never eat the budget.
+export async function countCustomWorkspaceDepartments(workspaceId: string) {
+  const client = requireSupabaseAdminClient();
+  const { count, error } = await client
+    .from("departments")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .not("id", "in", `(${(defaultDepartmentIds as readonly string[]).join(",")})`);
+  requireNoError(error, "Count custom departments");
+  return count ?? 0;
+}
+
 export async function createWorkspaceDepartment(input: unknown, actorRole: "admin" | "owner" | "requester") {
   const parsed = workspaceDepartmentCreateSchema.parse(input);
   assertWorkspaceMutable(parsed.workspaceId);
   if (actorRole !== "admin" && actorRole !== "owner") {
     throw new Error("Workspace admin access is required.");
+  }
+
+  // A brand-new custom ID that isn't itself a default consumes a slot; adding a
+  // default-ID department (e.g. re-adding "it") doesn't count against the cap.
+  const isDefault = (defaultDepartmentIds as readonly string[]).includes(parsed.id);
+  if (!isDefault && (await countCustomWorkspaceDepartments(parsed.workspaceId)) >= MAX_CUSTOM_WORKSPACE_DEPARTMENTS) {
+    throw new PublicError(`You can create up to ${MAX_CUSTOM_WORKSPACE_DEPARTMENTS} custom departments. Delete one to add another.`);
   }
 
   const client = requireSupabaseAdminClient();

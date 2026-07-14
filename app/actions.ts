@@ -657,9 +657,16 @@ export async function updateUserRoleAction(formData: FormData) {
 
 export async function createWorkspaceDepartmentAction(formData: FormData) {
   await requireTrustedActionRequest();
-  const { access: { workspace, membership }, workspaceSlug } = await requireActionAdmin(formData);
+  const { access: { user, workspace, membership }, workspaceSlug } = await requireActionAdmin(formData);
   const returnPath = scopedWorkspaceHref(workspaceSlug, "/settings");
   try {
+    await enforceRateLimit({
+      scope: "department_create_user_hour",
+      keyParts: [user.id],
+      limit: 20,
+      windowSeconds: 60 * 60,
+      message: "You're creating departments too quickly. Try again later.",
+    });
     const input = workspaceDepartmentCreateSchema.parse({
       workspaceId: workspace.id,
       id: formText(formData, "id"),

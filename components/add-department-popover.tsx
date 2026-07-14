@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { createWorkspaceDepartmentAction } from "@/app/actions";
 
-export function AddDepartmentPopover({ workspaceSlug }: { workspaceSlug?: string }) {
+export function AddDepartmentPopover({ workspaceSlug, disabled = false }: { workspaceSlug?: string; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -30,12 +30,14 @@ export function AddDepartmentPopover({ workspaceSlug }: { workspaceSlug?: string
         type="button"
         className="btn btn--neutral btn--sm"
         aria-expanded={open}
+        disabled={disabled}
+        title={disabled ? "Department limit reached — delete one to add another." : undefined}
         onClick={() => setOpen((value) => !value)}
       >
         <Plus size={14} /> Add
       </button>
 
-      {open ? (
+      {open && !disabled ? (
         <div className="popover">
           <div className="between" style={{ marginBottom: 14 }}>
             <div className="section-title" style={{ fontSize: 14 }}>
@@ -57,19 +59,19 @@ export function AddDepartmentPopover({ workspaceSlug }: { workspaceSlug?: string
               <label htmlFor="department-name" className="label">
                 Name
               </label>
-              <input id="department-name" name="name" required placeholder="Transport" className="input" />
+              <input id="department-name" name="name" required minLength={2} maxLength={80} placeholder="Transport" className="input" />
             </div>
             <div className="field">
               <label htmlFor="department-id" className="label">
                 ID
               </label>
-              <input id="department-id" name="id" required placeholder="transport" className="input mono" />
+              <input id="department-id" name="id" required minLength={2} maxLength={40} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" title="Use lowercase letters, numbers, and single hyphens." placeholder="transport" className="input mono" />
             </div>
             <div className="field">
               <label htmlFor="department-description" className="label">
                 Description
               </label>
-              <input id="department-description" name="description" placeholder="Vehicle and shuttle requests" className="input" />
+              <input id="department-description" name="description" maxLength={200} placeholder="Vehicle and shuttle requests" className="input" />
             </div>
             <button className="btn btn--primary btn--sm btn--block">
               <Plus size={14} /> Add department

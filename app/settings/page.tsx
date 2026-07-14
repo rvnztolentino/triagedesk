@@ -5,7 +5,7 @@ import { requireWorkspaceContext } from "@/lib/auth";
 import { listDepartments } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
 import { defaultDepartmentIds } from "@/lib/schema";
-import { isWorkspacePreview } from "@/lib/workspaces";
+import { isWorkspacePreview, MAX_CUSTOM_WORKSPACE_DEPARTMENTS } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +45,8 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
 
   const setup = getRuntimeSetupStatus();
   const departments = await listDepartments(workspace.id);
+  const customDepartmentCount = departments.filter((d) => !(defaultDepartmentIds as readonly string[]).includes(d.id)).length;
+  const departmentsAtLimit = customDepartmentCount >= MAX_CUSTOM_WORKSPACE_DEPARTMENTS;
   const allUp = setup.supabaseConfigured && setup.groqConfigured;
   const healthRows = [
     { label: "Database", hue: setup.supabaseConfigured ? "done" : "warn", value: setup.supabaseConfigured ? "Configured" : "Missing setup" },
@@ -118,9 +120,11 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
           <div className="panel-head">
             <div className="section-title">Departments</div>
             <div className="cluster" style={{ gap: 10 }}>
-              <span className="eyebrow">{departments.length} total</span>
+              <span className="badge" data-hue={departmentsAtLimit ? "danger" : "neutral"}>
+                {customDepartmentCount} / {MAX_CUSTOM_WORKSPACE_DEPARTMENTS} custom
+              </span>
               {!isPreview ? (
-                <AddDepartmentPopover workspaceSlug={workspaceSlug} />
+                <AddDepartmentPopover workspaceSlug={workspaceSlug} disabled={departmentsAtLimit} />
               ) : (
                 <span className="badge" data-hue="warn">
                   <Lock size={11} /> Locked
