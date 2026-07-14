@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { assertEmailVerificationRequired, getGoogleOAuthUrl, getPostVerificationRedirect, isExistingUserSignupError, roleForEmail, sanitizeInternalRedirect, signUpWithEmail, validateLoginInput, validateSignupInput } from "./auth";
+import { RateLimitError } from "@/lib/security";
 
 const signInWithOAuth = vi.fn();
 const signUp = vi.fn();
@@ -134,8 +135,10 @@ describe("signup account enumeration", () => {
     vi.stubEnv("SEED_ADMIN_EMAIL", "admin@triagedesk.test");
     signUp.mockResolvedValue({ data: { user: null, session: null }, error: { code: "over_email_send_rate_limit", message: "Email rate limit exceeded" } });
 
+    // Unlike existing-account errors, real throttling is surfaced (not swallowed)
+    // — as a RateLimitError so the signup page can steer users to Google.
     await expect(
       signUpWithEmail({ email: "new@triagedesk.test", password: "password123", displayName: "New" })
-    ).rejects.toThrow("Email rate limit exceeded");
+    ).rejects.toBeInstanceOf(RateLimitError);
   });
 });

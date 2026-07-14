@@ -29,6 +29,7 @@ const storeSource = readFileSync(new URL("./store.ts", import.meta.url), "utf8")
 const ticketsSource = readFileSync(new URL("../app/tickets/page.tsx", import.meta.url), "utf8");
 const workspaceDashboardSource = readFileSync(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8");
 const workspaceOpenLinkSource = readFileSync(new URL("../components/workspace-open-link.tsx", import.meta.url), "utf8");
+const openWorkspaceButtonSource = readFileSync(new URL("../components/open-workspace-button.tsx", import.meta.url), "utf8");
 const appLayoutSource = readFileSync(new URL("../components/app-layout.tsx", import.meta.url), "utf8");
 const themeControlsSource = readFileSync(new URL("../components/theme-controls.tsx", import.meta.url), "utf8");
 const settingsSource = readFileSync(new URL("../app/settings/page.tsx", import.meta.url), "utf8");
@@ -211,11 +212,12 @@ describe("workspace foundation", () => {
   it("persists workspace selection and scopes legacy operations to the active workspace", () => {
     expect(authSource).toContain('const ACTIVE_WORKSPACE_COOKIE = "triagedesk_active_workspace"');
     expect(authSource).toContain("return { user, ...access };");
-    // Switching a workspace runs the activate server action (not a client Link to
+    // Switching a workspace runs the switch server action (not a client Link to
     // the route handler) so the cookie-driven root layout — header, sidebar, and
     // preview indicator — refreshes; the action busts the layout cache. The
     // /w/[slug] overview (Manage) is reached from the "Currently open" hub card.
-    expect(workspaceOpenLinkSource).toContain("action={activateWorkspaceAction}");
+    expect(workspaceOpenLinkSource).toContain("OpenWorkspaceButton");
+    expect(openWorkspaceButtonSource).toContain("action={switchActiveWorkspaceAction}");
     expect(actionsSource).toContain('revalidatePath("/", "layout")');
     expect(workspaceDashboardSource).toContain("href={`/w/${activeWorkspace.workspace.slug}`}");
     expect(workspaceDashboardSource).toContain("href={`/w/${activeWorkspace.workspace.slug}/activate`}");
