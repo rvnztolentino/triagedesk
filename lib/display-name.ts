@@ -90,6 +90,44 @@ export function containsProfanity(value: string) {
   });
 }
 
+// Display-name changes are throttled to a small number per rolling window so a
+// name can't be churned endlessly (impersonation, notification spam). The window
+// is a product rule, not abuse throttling, so it lives on user_profiles rather
+// than the short-lived security_rate_limits table.
+export const MAX_NAME_CHANGES = 2;
+export const NAME_CHANGE_WINDOW_MONTHS = 3;
+
+// Adds whole calendar months, clamping day overflow (e.g. Jan 31 + 1mo -> Feb 28).
+export function addMonths(date: Date, months: number) {
+  const result = new Date(date);
+  const targetMonth = result.getMonth() + months;
+  result.setMonth(targetMonth);
+  return result;
+}
+
+export interface NameChangeStatus {
+  used: number;
+  remaining: number;
+  // When the current window resets and the count returns to zero; null when no
+  // active window is running (the next change starts a fresh one).
+  resetAt: Date | null;
+}
+
+// Given the stored change count and window start, reports how many changes remain
+// right now. An expired window reports a full allowance. Shared by the update flow
+// (to allow/deny) and the account page (to show usage), so they never disagree.
+export function nameChangeStatus(count: number, windowStartIso?: string | null, now = new Date()): NameChangeStatus {
+  if (!windowStartIso) {
+    return { used: 0, remaining: MAX_NAME_CHANGES, resetAt: null };
+  }
+  const resetAt = addMonths(new Date(windowStartIso), NAME_CHANGE_WINDOW_MONTHS);
+  if (now.getTime() >= resetAt.getTime()) {
+    return { used: 0, remaining: MAX_NAME_CHANGES, resetAt: null };
+  }
+  const used = Math.max(count, 0);
+  return { used, remaining: Math.max(MAX_NAME_CHANGES - used, 0), resetAt };
+}
+
 // Validates and returns a clean display name, or throws a user-facing PublicError
 // describing what to fix. Used by the account name update flow.
 export function assertCleanDisplayName(raw: string) {

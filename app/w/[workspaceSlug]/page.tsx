@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, Clock, Link2, LogOut, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Link2, LogOut, Trash2 } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createWorkspaceInviteAction, deleteWorkspaceAction, deleteWorkspaceInviteAction, leaveWorkspaceAction, revokeWorkspaceInviteAction } from "@/app/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { requireUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { workspaceSlugSchema } from "@/lib/schema";
-import { getWorkspaceBySlug, getWorkspaceMembership, isWorkspaceAdmin, isWorkspaceInviteActive, isWorkspacePreview, listWorkspaceInvites, workspaceInviteLink } from "@/lib/workspaces";
+import { canManageWorkspaceInvite, countWorkspaceMembers, getWorkspaceBySlug, getWorkspaceMembership, isWorkspaceAdmin, isWorkspaceInviteActive, isWorkspacePreview, listWorkspaceInvites, MAX_ACTIVE_WORKSPACE_INVITES, MAX_WORKSPACE_MEMBERS, workspaceInviteLink } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +50,10 @@ export default async function WorkspaceLandingPage({
   const isPreview = isWorkspacePreview(workspace.id);
   const canManageInvites = !isPreview && isWorkspaceAdmin(membership.role);
   const invites = canManageInvites ? await listWorkspaceInvites(workspace.id, user.id) : [];
+  const memberCount = canManageInvites ? await countWorkspaceMembers(workspace.id) : 0;
+  const activeInviteCount = invites.filter((invite) => isWorkspaceInviteActive(invite)).length;
+  const inviteLimitReached = activeInviteCount >= MAX_ACTIVE_WORKSPACE_INVITES;
+  const memberLimitReached = memberCount >= MAX_WORKSPACE_MEMBERS;
   const newInviteLink = query.invite ? workspaceInviteLink(workspace.slug, query.invite) : null;
 
   return (
@@ -87,8 +91,8 @@ export default async function WorkspaceLandingPage({
               <div className="card">
                 <div className="panel-head">
                   <div className="section-title">Share workspace</div>
-                  <span className="badge" data-hue="neutral">
-                    <Clock size={11} /> 7-day · one-time
+                  <span className="badge" data-hue={memberLimitReached ? "danger" : "neutral"}>
+                    {memberCount} / {MAX_WORKSPACE_MEMBERS} members
                   </span>
                 </div>
                 <div className="card-pad">
@@ -107,10 +111,20 @@ export default async function WorkspaceLandingPage({
                         {membership.role === "owner" ? <option value="admin">Admin</option> : null}
                       </select>
                     </div>
-                    <SubmitButton pendingText="Creating..." className="btn--sm w-auto">
+                    <SubmitButton pendingText="Creating..." className="btn--sm w-auto" disabled={inviteLimitReached || memberLimitReached}>
                       <Link2 size={14} /> Create invite
                     </SubmitButton>
                   </form>
+
+                  {memberLimitReached ? (
+                    <p className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
+                      This workspace is full ({MAX_WORKSPACE_MEMBERS} members). Remove a member before inviting someone new.
+                    </p>
+                  ) : inviteLimitReached ? (
+                    <p className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
+                      You have {MAX_ACTIVE_WORKSPACE_INVITES} pending invites. Delete or revoke one to create another.
+                    </p>
+                  ) : null}
 
                   {newInviteLink ? (
                     <div className="callout callout--accent" style={{ marginTop: 16 }}>
@@ -129,7 +143,7 @@ export default async function WorkspaceLandingPage({
               <div className="card">
                 <div className="panel-head">
                   <div className="section-title">Invites</div>
-                  <span className="eyebrow">{invites.length} total</span>
+                  <span className="eyebrow">{activeInviteCount} / {MAX_ACTIVE_WORKSPACE_INVITES} active · {invites.length} total</span>
                 </div>
                 {invites.length === 0 ? (
                   <div className="card-pad">
@@ -143,6 +157,7 @@ export default async function WorkspaceLandingPage({
                       const link = workspaceInviteLink(workspace.slug, invite.code);
                       const status = inviteStatus(invite);
                       const active = isWorkspaceInviteActive(invite);
+                      const canManage = canManageWorkspaceInvite(membership.role, user.id, invite);
                       return (
                         <div key={invite.id} className="row-link" style={{ cursor: "default" }}>
                           <div className="between wrap" style={{ gap: 12 }}>
@@ -164,7 +179,7 @@ export default async function WorkspaceLandingPage({
                             </div>
                             <div className="cluster" style={{ gap: 6 }}>
                               <CopyInviteButton value={link} />
-                              {membership.role === "owner" && active ? (
+                              {canManage && active ? (
                                 <form action={revokeWorkspaceInviteAction}>
                                   <input type="hidden" name="workspaceId" value={workspace.id} />
                                   <input type="hidden" name="workspaceSlug" value={workspace.slug} />
@@ -172,7 +187,7 @@ export default async function WorkspaceLandingPage({
                                   <button className="btn btn--sm">Revoke</button>
                                 </form>
                               ) : null}
-                              {membership.role === "owner" ? (
+                              {canManage ? (
                                 <form action={deleteWorkspaceInviteAction}>
                                   <input type="hidden" name="workspaceId" value={workspace.id} />
                                   <input type="hidden" name="workspaceSlug" value={workspace.slug} />

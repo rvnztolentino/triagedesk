@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { WorkspaceInviteRecord } from "./schema";
 import {
   canCreateWorkspaceInvite,
+  canManageWorkspaceInvite,
   canRemoveWorkspaceMember,
   assertWorkspaceMutable,
   DEMO_PREVIEW_LOCK_MESSAGE,
@@ -13,6 +14,8 @@ import {
   isWorkspaceAdmin,
   isWorkspaceInviteActive,
   isWorkspacePreview,
+  MAX_ACTIVE_WORKSPACE_INVITES,
+  MAX_WORKSPACE_MEMBERS,
   normalizeWorkspaceInviteCode,
   workspaceInviteLink,
   workspaceSlugFromName,
@@ -170,6 +173,32 @@ describe("workspace foundation", () => {
     expect(schemaSql).toContain("create policy workspace_invites_delete_owner");
     expect(actionsSource).toContain("deleteWorkspaceInviteAction");
     expect(actionsSource).toContain("await deleteWorkspaceInvite(");
+  });
+
+  it("caps workspace membership and enforces it in the join RPC", () => {
+    expect(MAX_WORKSPACE_MEMBERS).toBe(20);
+    // Hard backstop lives in Postgres so it holds even if the app check is raced.
+    expect(schemaSql).toContain("raise exception 'Workspace member limit reached.'");
+    expect(schemaSql).toContain("perform 1 from workspaces where id = matched_workspace_id for update");
+  });
+
+  it("caps outstanding invites and rate-limits invite creation", () => {
+    expect(MAX_ACTIVE_WORKSPACE_INVITES).toBe(5);
+    expect(actionsSource).toContain('scope: "invite_create_user_hour"');
+  });
+
+  it("persists the display-name change window on the profile", () => {
+    expect(schemaSql).toContain("add column if not exists name_change_count integer not null default 0");
+    expect(schemaSql).toContain("add column if not exists name_change_window_start timestamptz");
+  });
+
+  it("lets owners manage any invite but admins only their own", () => {
+    const invite = { createdBy: "admin-1" } as WorkspaceInviteRecord;
+    expect(canManageWorkspaceInvite("owner", "someone-else", invite)).toBe(true);
+    expect(canManageWorkspaceInvite("admin", "admin-1", invite)).toBe(true);
+    expect(canManageWorkspaceInvite("admin", "admin-2", invite)).toBe(false);
+    expect(canManageWorkspaceInvite("requester", "admin-1", invite)).toBe(false);
+    expect(canManageWorkspaceInvite("admin", "admin-1", {} as WorkspaceInviteRecord)).toBe(false);
   });
 
   it("defines owner-only cascading workspace deletion", () => {

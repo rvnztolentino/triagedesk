@@ -29,6 +29,17 @@ import {
 // Supabase + Vercel free tiers (row counts, storage, function invocations).
 export const MAX_WORKSPACES_PER_USER = 3;
 
+// Max members in a single workspace, owner included. The heavy free-tier cost
+// (Groq triage, storage) is already bounded by the per-workspace daily request +
+// upload caps, so this mainly bounds auth rows and notification fan-out. Keep in
+// sync with the hard cap enforced inside the join_workspace_by_invite RPC.
+export const MAX_WORKSPACE_MEMBERS = 20;
+
+// Max invites that can be outstanding (not used, revoked, or expired) at once.
+// Admins/owners must let one lapse, revoke, or delete it to mint another; stops
+// unbounded invite-row growth while leaving room to onboard a full workspace.
+export const MAX_ACTIVE_WORKSPACE_INVITES = 5;
+
 export const DEMO_WORKSPACE_ID = "00000000-0000-4000-8000-000000000001";
 export const DEMO_WORKSPACE_SLUG = "demo-clinic";
 export const DEMO_WORKSPACE_INVITE_CODE = "DEMO-CLINIC-2026";
@@ -154,6 +165,36 @@ export async function countOwnedWorkspaces(userId: string) {
   return count ?? 0;
 }
 
+// Current member count for a workspace. Used to enforce MAX_WORKSPACE_MEMBERS in
+// the app layer (the join RPC is the authoritative backstop) and to drive the
+// used/limit indicator on the members list.
+export async function countWorkspaceMembers(workspaceId: string) {
+  const client = requireSupabaseAdminClient();
+  const { count, error } = await client
+    .from("workspace_members")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId);
+  if (error) throw new Error(`Count workspace members failed: ${error.message}`);
+  return count ?? 0;
+}
+
+// Counts invites that are still redeemable (not revoked, not expired, and either
+// reusable or unused) — the same predicate as isWorkspaceInviteActive. Drives the
+// MAX_ACTIVE_WORKSPACE_INVITES cap and the used/limit indicator.
+export async function countActiveWorkspaceInvites(workspaceId: string) {
+  const client = requireSupabaseAdminClient();
+  const nowIso = new Date().toISOString();
+  const { count, error } = await client
+    .from("workspace_invites")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .is("revoked_at", null)
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+    .or("is_reusable.eq.true,used_at.is.null");
+  if (error) throw new Error(`Count active workspace invites failed: ${error.message}`);
+  return count ?? 0;
+}
+
 export async function getWorkspaceMembership(workspaceId: string, userId: string) {
   const client = requireSupabaseAdminClient();
   const { data, error } = await client
@@ -191,6 +232,18 @@ export async function getWorkspaceInviteByCode(workspaceId: string, code: string
     .select("*")
     .eq("workspace_id", workspaceId)
     .eq("code", normalizedCode)
+    .maybeSingle();
+  if (error) throw new Error(`Get workspace invite failed: ${error.message}`);
+  return data ? inviteFromRow(data as SupabaseRow) : undefined;
+}
+
+export async function getWorkspaceInviteById(workspaceId: string, inviteId: string) {
+  const client = requireSupabaseAdminClient();
+  const { data, error } = await client
+    .from("workspace_invites")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("id", inviteId)
     .maybeSingle();
   if (error) throw new Error(`Get workspace invite failed: ${error.message}`);
   return data ? inviteFromRow(data as SupabaseRow) : undefined;
@@ -310,6 +363,9 @@ export async function joinWorkspaceWithInvite(workspaceSlug: string, code: strin
     if (isInvalidInviteMessage(error.message)) {
       throw new PublicError("That invite code doesn't exist or has expired.");
     }
+    if (error.message.includes("Workspace member limit reached")) {
+      throw new PublicError(`This workspace is full (${MAX_WORKSPACE_MEMBERS} members). Ask an admin to remove a member, then try again.`);
+    }
     throw new Error(error.message || "Join workspace failed.");
   }
   const row = (data as SupabaseRow[] | null)?.[0];
@@ -340,6 +396,17 @@ export async function createWorkspaceInvite(workspaceId: string, role: Assignabl
     throw new Error("You cannot create this workspace invite.");
   }
 
+  const [memberCount, activeInvites] = await Promise.all([
+    countWorkspaceMembers(input.workspaceId),
+    countActiveWorkspaceInvites(input.workspaceId),
+  ]);
+  if (memberCount >= MAX_WORKSPACE_MEMBERS) {
+    throw new PublicError(`This workspace is full (${MAX_WORKSPACE_MEMBERS} members). Remove a member before inviting someone new.`);
+  }
+  if (activeInvites >= MAX_ACTIVE_WORKSPACE_INVITES) {
+    throw new PublicError(`You can have up to ${MAX_ACTIVE_WORKSPACE_INVITES} pending invites. Delete or revoke one to create another.`);
+  }
+
   const invite: WorkspaceInviteRecord = {
     id: crypto.randomUUID(),
     workspaceId: input.workspaceId,
@@ -368,9 +435,13 @@ export async function revokeWorkspaceInvite(workspaceId: string, inviteId: strin
   const client = requireSupabaseAdminClient();
   const input = workspaceInviteRevokeSchema.parse({ workspaceId, inviteId });
   assertWorkspaceMutable(input.workspaceId);
-  const membership = await getWorkspaceMembership(input.workspaceId, userId);
-  if (membership?.role !== "owner") {
-    throw new Error("Workspace owner access is required.");
+  const [membership, invite] = await Promise.all([
+    getWorkspaceMembership(input.workspaceId, userId),
+    getWorkspaceInviteById(input.workspaceId, input.inviteId),
+  ]);
+  if (!invite) throw new Error("Workspace invite not found.");
+  if (!membership || !canManageWorkspaceInvite(membership.role, userId, invite)) {
+    throw new Error("You cannot manage this workspace invite.");
   }
 
   const revokedAt = new Date().toISOString();
@@ -389,9 +460,13 @@ export async function deleteWorkspaceInvite(workspaceId: string, inviteId: strin
   const client = requireSupabaseAdminClient();
   const input = workspaceInviteRevokeSchema.parse({ workspaceId, inviteId });
   assertWorkspaceMutable(input.workspaceId);
-  const membership = await getWorkspaceMembership(input.workspaceId, userId);
-  if (membership?.role !== "owner") {
-    throw new Error("Workspace owner access is required.");
+  const [membership, invite] = await Promise.all([
+    getWorkspaceMembership(input.workspaceId, userId),
+    getWorkspaceInviteById(input.workspaceId, input.inviteId),
+  ]);
+  if (!invite) throw new Error("Workspace invite not found.");
+  if (!membership || !canManageWorkspaceInvite(membership.role, userId, invite)) {
+    throw new Error("You cannot manage this workspace invite.");
   }
 
   const { data, error } = await client
@@ -555,6 +630,14 @@ export function isWorkspaceAdmin(role: UserRole) {
 
 export function canCreateWorkspaceInvite(actorRole: UserRole, inviteRole: AssignableUserRole) {
   return actorRole === "owner" || (actorRole === "admin" && inviteRole === "requester");
+}
+
+// Owners can revoke/delete any invite in the workspace; admins can only manage the
+// invites they created themselves (so the 5-invite cap can't wedge them). Requesters
+// can never manage invites.
+export function canManageWorkspaceInvite(actorRole: UserRole, actorId: string, invite: WorkspaceInviteRecord) {
+  if (actorRole === "owner") return true;
+  return actorRole === "admin" && Boolean(invite.createdBy) && invite.createdBy === actorId;
 }
 
 export function canRemoveWorkspaceMember(actorRole: UserRole, memberRole: UserRole) {

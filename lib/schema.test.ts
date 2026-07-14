@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { requestSubmissionSchema, triageDraftSchema, userRoleSchema, userRoleUpdateSchema, workspaceInviteCodeSchema, workspaceSlugSchema } from "./schema";
+import { requestSubmissionSchema, triageDraftSchema, userRoleSchema, userRoleUpdateSchema, workspaceInviteCodeSchema, workspaceNameSchema, workspaceSlugSchema } from "./schema";
 
 describe("schemas", () => {
   it("rejects empty request details", () => {
@@ -30,6 +30,12 @@ describe("schemas", () => {
         urgencyNote: "",
       }).success
     ).toBe(false);
+  });
+
+  it("accepts a normal workspace name but rejects profane ones", () => {
+    expect(workspaceNameSchema.safeParse("Northside Clinic").success).toBe(true);
+    expect(workspaceNameSchema.safeParse("f").success).toBe(false);
+    expect(workspaceNameSchema.safeParse("fuck clinic").success).toBe(false);
   });
 
   it("accepts valid rules triage output", () => {

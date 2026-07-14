@@ -5,7 +5,8 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { authCredentialsSchema, loginCredentialsSchema, workspaceSlugSchema, type AppUser, type AuthCredentials, type UserProfileRecord, type UserRole } from "@/lib/schema";
 import { getSupabaseAdminClient, getSupabaseAuthClient, getRuntimeSetupStatus, requireSupabaseAdminClient, requireSupabaseAuthClient, requireSupabaseOAuthClient, SetupRequiredError } from "@/lib/supabase";
 import { PublicError } from "@/lib/errors";
-import { assertCleanDisplayName } from "@/lib/display-name";
+import { RateLimitError } from "@/lib/security";
+import { assertCleanDisplayName, addMonths, nameChangeStatus, NAME_CHANGE_WINDOW_MONTHS } from "@/lib/display-name";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { countOwnedWorkspaces, getPostAuthWorkspacePath, isWorkspaceAdmin, isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
 
@@ -79,6 +80,22 @@ function isEmailNotConfirmedError(error: { message?: string; code?: string } | n
   return code === "email_not_confirmed" || /email not confirmed/i.test(message);
 }
 
+// Detects Supabase's own throttling on signup: the confirmation-email send rate
+// limit and the generic auth request rate limit (both surface as HTTP 429). These
+// are separate from our per-IP app limit, and Google sign-up sidesteps them
+// entirely (no confirmation email), so callers can steer users to Google instead.
+export function isSupabaseRateLimitError(error: { message?: string; code?: string; status?: number } | null | undefined) {
+  if (!error) return false;
+  const code = error.code ?? "";
+  const message = error.message ?? "";
+  return (
+    error.status === 429 ||
+    code === "over_email_send_rate_limit" ||
+    code === "over_request_rate_limit" ||
+    /rate limit|too many requests/i.test(message)
+  );
+}
+
 function profileFromRow(row: ProfileRow): UserProfileRecord {
   const role = asString(row.role);
   return {
@@ -88,6 +105,8 @@ function profileFromRow(row: ProfileRow): UserProfileRecord {
     role: role === "owner" || role === "admin" ? role : "requester",
     createdAt: asString(row.created_at),
     updatedAt: asString(row.updated_at),
+    nameChangeCount: typeof row.name_change_count === "number" ? row.name_change_count : Number(row.name_change_count ?? 0) || 0,
+    nameChangeWindowStart: row.name_change_window_start ? asString(row.name_change_window_start) : undefined,
   };
 }
 
@@ -219,15 +238,60 @@ export async function getUserProfileByEmail(email: string) {
   return data ? profileFromRow(data as ProfileRow) : undefined;
 }
 
+function formatResetDate(date: Date) {
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+}
+
 // Updates the signed-in user's display name after running it through the shared
-// name filter (length, character set, links, profanity). Throws PublicError with
-// a specific reason when the name is rejected.
+// name filter (length, character set, links, profanity) and the change-rate limit
+// (max MAX_NAME_CHANGES per rolling NAME_CHANGE_WINDOW_MONTHS). Saving the same name
+// is a no-op that doesn't consume an allowance. Throws PublicError with a specific
+// reason when the name is rejected or the limit is reached.
 export async function updateDisplayName(userId: string, rawName: string) {
   const displayName = assertCleanDisplayName(rawName);
   const client = requireSupabaseAdminClient();
+
+  const { data: current, error: fetchError } = await client
+    .from("user_profiles")
+    .select("display_name, name_change_count, name_change_window_start")
+    .eq("id", userId)
+    .maybeSingle();
+  if (fetchError) {
+    throw new Error(`Update display name failed: ${fetchError.message}`);
+  }
+  if (!current) {
+    throw new PublicError("Your profile could not be found.");
+  }
+
+  const row = current as ProfileRow;
+  // No-op: same name shouldn't burn a change. Return the existing profile as-is.
+  if (asString(row.display_name) === displayName) {
+    return profileFromRow(row);
+  }
+
+  const now = new Date();
+  const storedCount = typeof row.name_change_count === "number" ? row.name_change_count : Number(row.name_change_count ?? 0) || 0;
+  const storedWindowStart = row.name_change_window_start ? asString(row.name_change_window_start) : undefined;
+  const status = nameChangeStatus(storedCount, storedWindowStart, now);
+
+  if (status.remaining <= 0) {
+    const resetAt = status.resetAt ?? addMonths(now, NAME_CHANGE_WINDOW_MONTHS);
+    throw new PublicError(`You've used both of your name changes for now. You can change your name again on ${formatResetDate(resetAt)}.`);
+  }
+
+  // A fresh window (first-ever change or the previous window elapsed) starts now;
+  // otherwise keep counting within the active window.
+  const windowStart = status.used === 0 ? now.toISOString() : (storedWindowStart as string);
+  const nextCount = status.used + 1;
+
   const { data, error } = await client
     .from("user_profiles")
-    .update({ display_name: displayName, updated_at: new Date().toISOString() })
+    .update({
+      display_name: displayName,
+      name_change_count: nextCount,
+      name_change_window_start: windowStart,
+      updated_at: now.toISOString(),
+    })
     .eq("id", userId)
     .select("*")
     .single();
@@ -449,13 +513,18 @@ export async function signUpWithEmail(input: AuthCredentials, next?: string) {
     throw new SetupRequiredError("Seed owner email is required before signup.", ["SEED_ADMIN_EMAIL"]);
   }
 
+  // Run the chosen name through the same filter as the account editor so a profane,
+  // link-bearing, or malformed name can't be set at signup and propagate into the
+  // profile. Empty is allowed and falls back to the email prefix.
+  const displayName = credentials.displayName ? assertCleanDisplayName(credentials.displayName) : credentials.email.split("@")[0];
+
   const { data, error } = await authClient.auth.signUp({
     email: credentials.email,
     password: credentials.password,
     options: {
       emailRedirectTo: `${getSiteUrl()}/auth/callback${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`,
       data: {
-        display_name: credentials.displayName || credentials.email.split("@")[0],
+        display_name: displayName,
       },
     },
   });
@@ -466,6 +535,14 @@ export async function signUpWithEmail(input: AuthCredentials, next?: string) {
     // enumerate accounts; any other failure is still surfaced.
     if (isExistingUserSignupError(error)) {
       return { email: credentials.email, needsVerification: true };
+    }
+    // Supabase is throttling confirmation emails / signups. Surface it as a
+    // RateLimitError so the signup page can suggest Google (which skips the
+    // email flow) instead of showing a dead-end error.
+    if (isSupabaseRateLimitError(error)) {
+      throw new RateLimitError(
+        "We've hit a temporary limit on confirmation emails.",
+      );
     }
     throw new PublicError(error.message || "Create account failed.");
   }

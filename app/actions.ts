@@ -73,6 +73,15 @@ function redirectWithError(path: string, error: unknown) {
   redirect(`${path}${path.includes("?") ? "&" : "?"}error=${encodeURIComponent(message)}`);
 }
 
+// Bounces back to signup with a flag the page turns into a "use Google instead"
+// callout, carrying the specific message so the copy stays accurate whether the
+// limit came from our app or from Supabase's confirmation-email throttling.
+function redirectSignupRateLimited(next: string | undefined, error: unknown) {
+  const params = new URLSearchParams({ rateLimited: "1", error: actionErrorMessage(error) });
+  if (next) params.set("next", next);
+  redirect(`/signup?${params.toString()}`);
+}
+
 // Turn a thrown action error into a user-facing message. Validation, rate-limit,
 // setup, and explicitly-public errors carry safe, actionable text; anything else
 // is reported generically so internal failures (e.g. DB constraint or connection
@@ -494,6 +503,11 @@ export async function signUpAction(formData: FormData) {
     }, next);
     redirectTo = `/signup/check-email?email=${encodeURIComponent(result.email)}`;
   } catch (error) {
+    // A rate limit (our per-IP cap or Supabase's email throttling) gets the
+    // dedicated "use Google instead" callout; everything else is a plain error.
+    if (error instanceof RateLimitError) {
+      redirectSignupRateLimited(next, error);
+    }
     redirectWithError(`/signup${next ? `?next=${encodeURIComponent(next)}` : ""}`, error);
   }
   redirect(redirectTo);
@@ -734,6 +748,13 @@ export async function createWorkspaceInviteAction(formData: FormData) {
   const workspaceSlug = workspaceSlugSchema.parse(formText(formData, "workspaceSlug"));
   let redirectTo = `/w/${workspaceSlug}`;
   try {
+    await enforceRateLimit({
+      scope: "invite_create_user_hour",
+      keyParts: [user.id],
+      limit: 10,
+      windowSeconds: 60 * 60,
+      message: "You're creating invites too quickly. Try again later.",
+    });
     const invite = await createWorkspaceInvite(formText(formData, "workspaceId"), formText(formData, "role") as "requester" | "admin", user.id);
     revalidatePath(`/w/${workspaceSlug}`);
     redirectTo = `/w/${workspaceSlug}?invite=${encodeURIComponent(invite.code)}`;
