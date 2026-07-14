@@ -785,17 +785,32 @@ export async function deleteWorkspaceAction(formData: FormData) {
   redirect("/onboarding");
 }
 
-export async function activateWorkspaceAction(formData: FormData) {
+// Only honor a caller-supplied return path when it clearly belongs to the target
+// workspace. Anything else (including protocol-relative URLs) is rejected so the
+// redirect can't be pointed off-site or into a different workspace.
+function safeWorkspaceReturnPath(next: string, workspaceSlug: string) {
+  return next === `/w/${workspaceSlug}` || next.startsWith(`/w/${workspaceSlug}/`) ? next : undefined;
+}
+
+// Single entry point for opening/switching the active workspace, used by every
+// switch prompt (deep-link gate, join "already belong", onboarding hub).
+//
+// It MUST redirect: the active workspace lives in a cookie the root layout reads
+// for the header, sidebar, and preview banner. A client-side revalidate alone
+// leaves that shared layout rendered from the old cookie until a manual refresh;
+// a navigation is what reliably re-renders it. When the user deep-linked into a
+// page of the target workspace we return there, otherwise its dashboard/tickets.
+export async function switchActiveWorkspaceAction(formData: FormData) {
   await requireTrustedActionRequest();
   const user = await requireUser();
   const workspaceSlug = workspaceSlugSchema.parse(formText(formData, "workspaceSlug"));
   const access = await requireWorkspaceMembership(workspaceSlug, user.id);
   await setActiveWorkspaceCookie(workspaceSlug);
-  // The active workspace is read from the cookie in the root layout (header +
-  // sidebar), so busting the layout cache keeps them in sync after switching.
-  // The onboarding hub renders the "Currently open" card and Active badges from
-  // the same cookie, so refresh it too or it keeps showing the previous one.
   revalidatePath("/", "layout");
   revalidatePath("/onboarding");
-  redirect(isWorkspacePreview(access.workspace.id) || access.membership.role !== "requester" ? scopedWorkspaceHref(workspaceSlug, "/") : scopedWorkspaceHref(workspaceSlug, "/tickets"));
+  const landing =
+    isWorkspacePreview(access.workspace.id) || access.membership.role !== "requester"
+      ? scopedWorkspaceHref(workspaceSlug, "/")
+      : scopedWorkspaceHref(workspaceSlug, "/tickets");
+  redirect(safeWorkspaceReturnPath(formText(formData, "next"), workspaceSlug) ?? landing);
 }

@@ -1,8 +1,7 @@
 "use client";
 
 import { ArrowRight, Check } from "lucide-react";
-import { activateWorkspaceAction } from "@/app/actions";
-import { SubmitButton } from "@/components/submit-button";
+import { OpenWorkspaceButton } from "@/components/open-workspace-button";
 
 function glyph(name: string) {
   return name.replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase() || "WS";
@@ -53,12 +52,9 @@ export function WorkspaceOpenLink({
             <Check size={14} /> Opened
           </span>
         ) : (
-          <form action={activateWorkspaceAction}>
-            <input type="hidden" name="workspaceSlug" value={slug} />
-            <SubmitButton pendingText="Opening" className="btn--neutral btn--sm w-auto">
-              Open <ArrowRight size={14} />
-            </SubmitButton>
-          </form>
+          <OpenWorkspaceButton slug={slug} pendingText="Opening" className="btn--neutral btn--sm w-auto">
+            Open <ArrowRight size={14} />
+          </OpenWorkspaceButton>
         )}
       </div>
     </div>

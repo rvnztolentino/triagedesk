@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Link2, LockKeyhole, LogIn, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Link2, LockKeyhole, LogIn } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { joinWorkspaceAction } from "@/app/actions";
+import { OpenWorkspaceButton } from "@/components/open-workspace-button";
 import { SubmitButton } from "@/components/submit-button";
 import { getCurrentUser } from "@/lib/auth";
 import { workspaceSlugSchema } from "@/lib/schema";
@@ -31,14 +32,18 @@ export default async function JoinWorkspacePage({
   const membership = workspace ? await getWorkspaceMembership(workspace.id, user.id) : undefined;
   if (workspace && membership) {
     return (
-      <div className="max-w-xl mx-auto">
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col justify-center px-4 py-10">
         <div className="bg-surface border border-border rounded-[var(--radius-card)] p-8 text-center">
-          <ShieldCheck size={28} className="text-accent mx-auto mb-4" />
+          <div className="w-12 h-12 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center mx-auto mb-5">
+            <ArrowUpRight size={22} />
+          </div>
           <h1 className="text-2xl font-semibold text-fg">You already belong to {workspace.name}</h1>
           <p className="text-sm text-muted mt-2">Open the workspace instead of joining it again.</p>
-          <Link href={`/w/${workspace.slug}`} className="mt-6 inline-flex h-10 px-5 rounded-[var(--radius-control)] bg-accent hover:opacity-90 text-accent-fg text-sm font-medium items-center justify-center transition-opacity">
-            Open workspace
-          </Link>
+          <div className="mt-6">
+            <OpenWorkspaceButton slug={workspace.slug} className="w-auto mx-auto">
+              <ArrowUpRight size={16} /> Open workspace
+            </OpenWorkspaceButton>
+          </div>
         </div>
       </div>
     );
@@ -50,7 +55,7 @@ export default async function JoinWorkspacePage({
   const error = query.error || (!workspace || !code || !inviteActive ? "This workspace invite is invalid or expired." : "");
 
   return (
-    <div className="max-w-xl mx-auto">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col justify-center px-4 py-10">
       <div className="bg-surface border border-border rounded-[var(--radius-card)] p-8">
         <div className="w-12 h-12 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center mb-5">
           <Link2 size={22} />

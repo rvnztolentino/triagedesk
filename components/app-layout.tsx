@@ -73,6 +73,14 @@ function isAuthPath(path: string) {
   return path === "/login" || path.startsWith("/signup") || path.startsWith("/auth");
 }
 
+// Standalone pages render without the active-workspace chrome (sidebar, header,
+// preview banner). Invite pages live at `/join` and are cross-workspace by
+// nature, so showing the currently-open workspace's chrome around them — e.g. a
+// "Preview locked" banner from demo-clinic — is misleading.
+function isStandalonePath(path: string) {
+  return isAuthPath(path) || path.startsWith("/join");
+}
+
 function isPublicPath(path: string) {
   return path === "/" || isAuthPath(path);
 }
@@ -130,7 +138,7 @@ export function AppLayout({
     });
   }, []);
 
-  const isAuthPage = isAuthPath(pathname);
+  const isStandalonePage = isStandalonePath(pathname);
   const operationalNavItems = activeWorkspace?.isPreview
     ? previewNavItems
     : activeWorkspace?.role === "owner"
@@ -225,7 +233,7 @@ export function AppLayout({
     }
   }
 
-  if (isAuthPage) {
+  if (isStandalonePage) {
     return (
       <div className="bg-bg text-fg min-h-screen w-full" onClickCapture={handlePublicNavigate}>
         <RouteProgress active={!!pendingPath} />

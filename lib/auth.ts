@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type { NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { authCredentialsSchema, loginCredentialsSchema, workspaceSlugSchema, type AppUser, type AuthCredentials, type UserProfileRecord, type UserRole } from "@/lib/schema";
 import { getSupabaseAdminClient, getSupabaseAuthClient, getRuntimeSetupStatus, requireSupabaseAdminClient, requireSupabaseAuthClient, requireSupabaseOAuthClient, SetupRequiredError } from "@/lib/supabase";
@@ -231,6 +232,29 @@ export async function setActiveWorkspaceCookie(workspaceSlug: string) {
 export async function clearActiveWorkspaceCookie() {
   const cookieStore = await cookies();
   cookieStore.delete(ACTIVE_WORKSPACE_COOKIE);
+}
+
+// Route Handlers that hand-build a NextResponse (e.g. a redirect) do not pick up
+// cookie mutations made through `next/headers`, so the cookie must be written
+// onto the response itself. Keeps the cookie attributes in one place.
+export function applyActiveWorkspaceCookie(response: NextResponse, workspaceSlug: string) {
+  const slug = workspaceSlugSchema.parse(workspaceSlug);
+  response.cookies.set(ACTIVE_WORKSPACE_COOKIE, slug, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: COOKIE_MAX_AGE,
+  });
+  return response;
+}
+
+// Raw active-workspace slug from the cookie, without a membership/DB lookup. Used
+// by the scoped `/w/[slug]` layout to cheaply detect a URL/active mismatch.
+export async function getActiveWorkspaceSlug() {
+  const cookieStore = await cookies();
+  const parsed = workspaceSlugSchema.safeParse(cookieStore.get(ACTIVE_WORKSPACE_COOKIE)?.value);
+  return parsed.success ? parsed.data : undefined;
 }
 
 export async function getActiveWorkspaceAccess(userId: string) {
