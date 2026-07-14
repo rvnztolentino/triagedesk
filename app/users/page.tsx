@@ -31,7 +31,7 @@ function capitalize(value: string) {
 }
 
 const rolePolicies = [
-  { role: "owner", points: ["Full control of the workspace", "Edits any role, removes any member", "Protected — cannot be removed"] },
+  { role: "owner", points: ["Full control of the workspace", "Edits any role, removes any member", "Protected, cannot be removed"] },
   { role: "admin", points: ["Reviews and resolves tickets", "Manages settings & departments", "Can remove requesters"] },
   { role: "requester", points: ["Submits new requests", "Tracks their own tickets", "No management access"] },
 ];
@@ -97,7 +97,7 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
 
       {isPreview ? (
         <div className="banner">
-          <Link2 size={16} /> This is a read-only preview — sample members are shown and management actions are disabled.
+          <Link2 size={16} /> This is a read-only preview. Sample members are shown and management actions are disabled.
         </div>
       ) : null}
 

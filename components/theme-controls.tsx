@@ -10,7 +10,7 @@ const PREFERENCE_EVENT = "triagedesk-preferences";
 const DEFAULT_ACCENT = "#879D5A";
 // A neutral gray leads the row for a muted, colorless accent; it reads clearly
 // in both dark and light mode. Default green follows, then the color presets.
-const NEUTRAL_ACCENT = "#7F7F7F";
+const NEUTRAL_ACCENT = "#9D9D9D";
 const ACCENT_PRESETS = [NEUTRAL_ACCENT, "#879D5A", "#35d0ab", "#5b9dff", "#f2685f", "#e8b23a", "#a78bfa"];
 
 export type ThemeMode = "dark" | "light";
@@ -210,7 +210,14 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
   const hueTrackRef = useRef<HTMLDivElement>(null);
   const hsv = hexToHsv(accent);
   const rgb = hexToRgb(accent);
-  const hueColor = hsvToHex(hsv.h, 1, 1);
+  // A gray accent (saturation 0) carries no hue, so hexToHsv always reports
+  // hue 0 for it. Retain the last chosen hue independently so the hue slider
+  // stays movable at the white/left edge of the color field, and the picked
+  // hue applies the moment saturation is raised again. The pointer handlers
+  // keep this in sync so a chromatic->gray transition preserves the hue.
+  const [retainedHue, setRetainedHue] = useState(hsv.h);
+  const displayHue = hsv.s > 0 ? hsv.h : retainedHue;
+  const hueColor = hsvToHex(displayHue, 1, 1);
   const hexInput = hexDraft ?? accent.toUpperCase();
 
   useEffect(() => {
@@ -264,7 +271,8 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
     const saturation = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
     const value = 1 - Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
     setHexDraft(null);
-    applyPreferences(theme, hsvToHex(hsv.h, saturation, value));
+    setRetainedHue(displayHue);
+    applyPreferences(theme, hsvToHex(displayHue, saturation, value));
   }
 
   function updateFromHueTrack(event: React.PointerEvent<HTMLDivElement>) {
@@ -272,6 +280,7 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
     if (!rect) return;
     const nextHue = Math.round(Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)) * 359);
     setHexDraft(null);
+    setRetainedHue(nextHue);
     applyPreferences(theme, hsvToHex(nextHue, hsv.s, hsv.v));
   }
 
@@ -397,7 +406,7 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
             role="slider"
             tabIndex={0}
             aria-label="Accent hue"
-            aria-valuenow={hsv.h}
+            aria-valuenow={displayHue}
             aria-valuemin={0}
             aria-valuemax={359}
             onPointerDown={(event) => {
@@ -418,7 +427,7 @@ export function ThemeToggle({ label = "Customize appearance" }: { label?: string
           >
             <span
               className="hue-thumb"
-              style={{ left: `${(hsv.h / 359) * 100}%`, background: hueColor }}
+              style={{ left: `${(displayHue / 359) * 100}%`, background: hueColor }}
             />
           </div>
 

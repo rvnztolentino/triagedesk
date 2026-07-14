@@ -22,7 +22,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
             <Zap size={15} style={{ flexShrink: 0 }} /> Email sign-ups are busy right now
           </span>
           <p style={{ marginTop: 6, lineHeight: 1.5 }}>
-            {params.error || "We've hit a temporary limit on confirmation emails."} Continuing with Google is instant — no confirmation email needed.
+            {params.error || "We've hit a temporary limit on confirmation emails."} Continuing with Google is instant, no confirmation email needed.
           </p>
         </div>
       ) : params.error ? (

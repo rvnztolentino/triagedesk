@@ -80,7 +80,7 @@ export default async function WorkspaceLandingPage({
 
       {isPreview ? (
         <div className="banner" style={{ marginBottom: 18 }}>
-          <Link2 size={16} /> This is a read-only preview — sharing and deletion are disabled.
+          <Link2 size={16} /> This is a read-only preview. Sharing and deletion are disabled.
         </div>
       ) : null}
 

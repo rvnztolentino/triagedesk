@@ -77,7 +77,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
             <div className="card-pad">
               <p style={{ lineHeight: 1.6, fontSize: 14 }}>{request.description}</p>
               <div className="grid cols-2" style={{ gap: 14, marginTop: 18 }}>
-                <Meta label="Location" value={request.location || "—"} icon={MapPin} />
+                <Meta label="Location" value={request.location || "-"} icon={MapPin} />
                 <Meta label="Contact" value={request.contactName || "Anonymous"} icon={User} />
                 <Meta label="Submitted by" value={submittedBy} icon={User} />
                 <Meta label="When" value={relativeTime(request.createdAt)} icon={Clock} />

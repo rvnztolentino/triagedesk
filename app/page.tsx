@@ -123,7 +123,7 @@ function HeroTriageFlow() {
     <div className="space-y-3">
       <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4">
         <div className="flex items-center gap-2 font-mono text-xs text-muted">
-          <Inbox className="h-3.5 w-3.5" /> REQ-1003 — Nurse Station
+          <Inbox className="h-3.5 w-3.5" /> REQ-1003 - Nurse Station
         </div>
         <p className="mt-2 text-sm text-fg">&quot;Aircon in Recovery Room 304 is leaking again. Floor is wet near the outlet.&quot;</p>
       </div>
@@ -199,7 +199,7 @@ const stepWindows: Record<string, { title: string; body: React.ReactNode }> = {
         <div className="mb-2 flex items-center gap-2 text-xs text-accent">
           <Sparkles className="h-3.5 w-3.5" /> AI triage · confidence 0.91
         </div>
-        <div className="text-sm font-medium text-fg">AC leaking — Room 204</div>
+        <div className="text-sm font-medium text-fg">AC leaking - Room 204</div>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <span className="badge" data-hue="warn"><span className="dot" /> High</span>
           <span className="chip">Facilities</span>
@@ -216,7 +216,7 @@ const stepWindows: Record<string, { title: string; body: React.ReactNode }> = {
       <>
         <div className="mb-2 font-mono text-[11px] text-muted">Admin review</div>
         <div className="rounded-[var(--radius-control)] border border-border bg-bg px-3 py-2 text-sm text-fg">
-          AC leaking — Room 204
+          AC leaking - Room 204
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="btn btn--primary btn--sm"><CheckCircle2 className="h-3.5 w-3.5" /> Approve</span>
@@ -234,7 +234,7 @@ const stepWindows: Record<string, { title: string; body: React.ReactNode }> = {
           <span className="font-mono text-xs text-muted">TRG-1041</span>
           <span className="badge" data-hue="active">In progress</span>
         </div>
-        <div className="text-sm font-medium text-fg">AC leaking — Room 204</div>
+        <div className="text-sm font-medium text-fg">AC leaking - Room 204</div>
         <div className="mt-3 space-y-1.5 text-xs text-muted">
           <div className="flex items-center justify-between"><span>Facilities</span><span>High priority</span></div>
           <div className="flex items-center justify-between">

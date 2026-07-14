@@ -57,7 +57,7 @@ export async function SubmitConfirmView({ searchParams, requestId, workspaceSlug
           <Check size={24} strokeWidth={2.2} />
         </div>
         <div className="eyebrow">Request received</div>
-        <h1 style={{ fontSize: 21, fontWeight: 650, letterSpacing: "-0.02em", marginTop: 8 }}>Thanks — it&apos;s in the queue</h1>
+        <h1 style={{ fontSize: 21, fontWeight: 650, letterSpacing: "-0.02em", marginTop: 8 }}>Thanks, it&apos;s in the queue</h1>
         <p className="muted" style={{ marginTop: 8, fontSize: 13.5 }}>
           Request <span className="mono">{request.id}</span> was triaged and queued for review.
         </p>

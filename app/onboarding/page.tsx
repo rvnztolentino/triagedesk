@@ -127,7 +127,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
             <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
               {atWorkspaceLimit
                 ? `You have reached the limit of ${MAX_WORKSPACES_PER_USER} workspaces. Delete one to create another.`
-                : "Start fresh — you will be the owner with the default departments."}
+                : "Start fresh. You will be the owner with the default departments."}
             </p>
             <form action={createWorkspaceAction}>
               <div className="field">

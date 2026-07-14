@@ -76,7 +76,7 @@ function AuthAside() {
             AC leaking in Room 204
           </div>
           <div className="ai-reason" style={{ marginTop: 12 }}>
-            Matched &ldquo;ac, leak, water&rdquo; — routing to Facilities. Urgency term &ldquo;leaking&rdquo; pushes this to high.
+            Matched &ldquo;ac, leak, water&rdquo; and routed to Facilities. Urgency term &ldquo;leaking&rdquo; pushes this to high.
           </div>
 
           <div className="stack" style={{ gap: 7, marginTop: 16 }}>

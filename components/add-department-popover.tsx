@@ -31,7 +31,7 @@ export function AddDepartmentPopover({ workspaceSlug, disabled = false }: { work
         className="btn btn--neutral btn--sm"
         aria-expanded={open}
         disabled={disabled}
-        title={disabled ? "Department limit reached — delete one to add another." : undefined}
+        title={disabled ? "Department limit reached. Delete one to add another." : undefined}
         onClick={() => setOpen((value) => !value)}
       >
         <Plus size={14} /> Add

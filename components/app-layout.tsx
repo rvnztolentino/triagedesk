@@ -375,10 +375,10 @@ export function AppLayout({
                 "st-warn flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 mb-3",
                 collapsed && "md:justify-center md:px-0"
               )}
-              title={collapsed ? "Preview — read-only" : undefined}
+              title={collapsed ? "Preview - read-only" : undefined}
             >
               <LockKeyhole size={12} className="shrink-0" />
-              <span className={cn("whitespace-nowrap text-[11px] font-medium", collapsed && "md:hidden")}>Preview — read-only</span>
+              <span className={cn("whitespace-nowrap text-[11px] font-medium", collapsed && "md:hidden")}>Preview - read-only</span>
             </div>
           ) : null}
           <button

@@ -14,7 +14,7 @@ export default async function CheckEmailPage({ searchParams }: { searchParams: P
           </div>
           <h1 className="text-xl font-semibold tracking-tight text-fg">Check your email</h1>
           <p className="text-sm text-muted mt-3 leading-relaxed">
-            If no account exists for <span className="text-fg">{email}</span>, we&apos;ve sent a verification link. It can take a minute to arrive — check your spam folder too. Confirm that email before signing in.
+            If no account exists for <span className="text-fg">{email}</span>, we&apos;ve sent a verification link. It can take a minute to arrive, so check your spam folder too. Confirm that email before signing in.
           </p>
           <p className="text-sm text-muted mt-3 leading-relaxed">
             Already have an account? <Link href="/login" className="text-accent hover:opacity-90 font-medium">Sign in</Link>

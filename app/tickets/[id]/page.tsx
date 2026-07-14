@@ -83,7 +83,7 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
 
               <div className="grid cols-2" style={{ gap: 14, marginTop: 18 }}>
                 <Meta label="Department" value={departmentName} icon={Building2} />
-                <Meta label="Location" value={ticket.location || "—"} icon={MapPin} />
+                <Meta label="Location" value={ticket.location || "-"} icon={MapPin} />
                 <Meta label="Requester" value={requesterName} icon={User} />
                 <Meta label="Contact" value={ticket.contactName || "Anonymous"} icon={User} />
                 <Meta label="Opened" value={formatDateTime(ticket.createdAt)} icon={Clock} />
