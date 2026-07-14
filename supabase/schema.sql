@@ -13,6 +13,9 @@ begin
   alter table user_profiles add constraint user_profiles_role_check check (role in ('requester', 'admin', 'owner'));
 end $$;
 
+-- Two-factor was removed; drop the column idempotently on existing databases.
+alter table user_profiles drop column if exists two_factor_enabled;
+
 create table if not exists workspaces (
   id uuid primary key default gen_random_uuid(),
   name text not null,

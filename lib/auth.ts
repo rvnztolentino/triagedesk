@@ -5,12 +5,16 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { authCredentialsSchema, loginCredentialsSchema, workspaceSlugSchema, type AppUser, type AuthCredentials, type UserProfileRecord, type UserRole } from "@/lib/schema";
 import { getSupabaseAdminClient, getSupabaseAuthClient, getRuntimeSetupStatus, requireSupabaseAdminClient, requireSupabaseAuthClient, requireSupabaseOAuthClient, SetupRequiredError } from "@/lib/supabase";
 import { PublicError } from "@/lib/errors";
+import { assertCleanDisplayName } from "@/lib/display-name";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
-import { getPostAuthWorkspacePath, isWorkspaceAdmin, isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
+import { countOwnedWorkspaces, getPostAuthWorkspacePath, isWorkspaceAdmin, isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
 
 const ACCESS_COOKIE = "triagedesk_access_token";
 const REFRESH_COOKIE = "triagedesk_refresh_token";
-const COOKIE_MAX_AGE = 60 * 60 * 8;
+// Keep users signed in for a week. The access-token JWT still expires hourly, so
+// middleware.ts silently rotates it via the refresh token on each request within
+// this window (see setSessionCookies / SESSION_COOKIE_OPTIONS).
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const PASSWORD_RESET_COOKIE = "triagedesk_pending_auth";
 const ACTIVE_WORKSPACE_COOKIE = "triagedesk_active_workspace";
 
@@ -57,6 +61,22 @@ export function isExistingUserSignupError(error: { message?: string; code?: stri
   const code = error.code ?? "";
   const message = error.message ?? "";
   return code === "user_already_exists" || code === "email_exists" || /already\s+(registered|exists|in use)/i.test(message);
+}
+
+// Supabase returns a single generic "invalid credentials" error for both a wrong
+// password and an unknown email. We re-check the profile table to distinguish them.
+function isInvalidCredentialsError(error: { message?: string; code?: string } | null | undefined) {
+  if (!error) return false;
+  const code = error.code ?? "";
+  const message = error.message ?? "";
+  return code === "invalid_credentials" || /invalid login credentials/i.test(message);
+}
+
+function isEmailNotConfirmedError(error: { message?: string; code?: string } | null | undefined) {
+  if (!error) return false;
+  const code = error.code ?? "";
+  const message = error.message ?? "";
+  return code === "email_not_confirmed" || /email not confirmed/i.test(message);
 }
 
 function profileFromRow(row: ProfileRow): UserProfileRecord {
@@ -183,6 +203,56 @@ export async function getUserProfile(userId: string) {
   }
 
   return data ? profileFromRow(data as ProfileRow) : undefined;
+}
+
+// Looks up a profile by email. Used at sign-in to tell "no such account" apart
+// from "wrong password" so the form can show a specific message.
+export async function getUserProfileByEmail(email: string) {
+  const client = getSupabaseAdminClient();
+  if (!client) return undefined;
+
+  const { data, error } = await client.from("user_profiles").select("*").eq("email", normalizeEmail(email)).maybeSingle();
+  if (error) {
+    throw new Error(`Get user profile failed: ${error.message}`);
+  }
+
+  return data ? profileFromRow(data as ProfileRow) : undefined;
+}
+
+// Updates the signed-in user's display name after running it through the shared
+// name filter (length, character set, links, profanity). Throws PublicError with
+// a specific reason when the name is rejected.
+export async function updateDisplayName(userId: string, rawName: string) {
+  const displayName = assertCleanDisplayName(rawName);
+  const client = requireSupabaseAdminClient();
+  const { data, error } = await client
+    .from("user_profiles")
+    .update({ display_name: displayName, updated_at: new Date().toISOString() })
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(`Update display name failed: ${error.message}`);
+  }
+
+  return profileFromRow(data as ProfileRow);
+}
+
+// Permanently deletes the account. Blocked while the user still owns workspaces so
+// co-members aren't left in an ownerless workspace; deleting the auth user cascades
+// the profile row and workspace memberships via the schema's ON DELETE rules.
+export async function deleteAccount(userId: string) {
+  const ownedWorkspaces = await countOwnedWorkspaces(userId);
+  if (ownedWorkspaces > 0) {
+    throw new PublicError("Delete or hand off the workspaces you own before deleting your account.");
+  }
+
+  const client = requireSupabaseAdminClient();
+  const { error } = await client.auth.admin.deleteUser(userId);
+  if (error) {
+    throw new Error(`Delete account failed: ${error.message}`);
+  }
 }
 
 export async function getCurrentUser(): Promise<AppUser | null> {
@@ -464,12 +534,23 @@ export function getPostVerificationRedirect(next?: string) {
   return sanitizeInternalRedirect(next) ?? getPostAuthWorkspacePath();
 }
 
-export async function signInWithEmail(input: { email: string; password: string }) {
+export async function signInWithEmail(input: { email: string; password: string }): Promise<AppUser> {
   const credentials = validateLoginInput(input);
   const authClient = requireSupabaseAuthClient();
   const { data, error } = await authClient.auth.signInWithPassword(credentials);
 
   if (error || !data.session || !data.user?.email) {
+    if (isEmailNotConfirmedError(error)) {
+      throw new PublicError("Verify your email before signing in.");
+    }
+    // Distinguish an unknown account from a wrong password so the message is
+    // actionable. This intentionally reveals whether an email is registered.
+    if (isInvalidCredentialsError(error)) {
+      const existing = await getUserProfileByEmail(credentials.email);
+      throw new PublicError(
+        existing ? "Incorrect email or password." : "No account found with this email. Create one to get started.",
+      );
+    }
     throw new PublicError(error?.message || "Sign in failed.");
   }
 
@@ -488,8 +569,8 @@ export async function signInWithEmail(input: { email: string; password: string }
   } else {
     profile = await ensureSeedOwnerProfile(profile);
   }
-  await setSessionCookies(data.session.access_token, data.session.refresh_token);
 
+  await setSessionCookies(data.session.access_token, data.session.refresh_token);
   return toAppUser(profile);
 }
 

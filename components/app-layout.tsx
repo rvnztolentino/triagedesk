@@ -16,6 +16,7 @@ import {
   PlusCircle,
   Settings,
   Ticket,
+  UserRound,
   Users,
   X,
 } from "lucide-react";
@@ -498,6 +499,9 @@ export function AppLayout({
                     </div>
                     <Link href="/onboarding" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
                       <Building2 size={15} className="text-muted" /> Workspaces
+                    </Link>
+                    <Link href="/account" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
+                      <UserRound size={15} className="text-muted" /> Account
                     </Link>
                     {activeWorkspace ? (
                       <Link

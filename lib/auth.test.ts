@@ -121,13 +121,13 @@ describe("signup account enumeration", () => {
     expect(isExistingUserSignupError(null)).toBe(false);
   });
 
-  it("returns the generic verification outcome instead of leaking that the email is taken", async () => {
+  it("swallows existing-account errors and returns the neutral verification outcome", async () => {
     vi.stubEnv("SEED_ADMIN_EMAIL", "admin@triagedesk.test");
     signUp.mockResolvedValue({ data: { user: null, session: null }, error: { code: "user_already_exists", message: "User already registered" } });
 
-    const result = await signUpWithEmail({ email: "existing@triagedesk.test", password: "password123", displayName: "Existing" });
-
-    expect(result).toEqual({ email: "existing@triagedesk.test", needsVerification: true });
+    await expect(
+      signUpWithEmail({ email: "existing@triagedesk.test", password: "password123", displayName: "Existing" })
+    ).resolves.toEqual({ email: "existing@triagedesk.test", needsVerification: true });
   });
 
   it("still surfaces genuine signup failures", async () => {

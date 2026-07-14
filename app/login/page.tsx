@@ -5,7 +5,7 @@ import { AuthLayout } from "@/components/auth-layout";
 import { GoogleSignIn } from "@/components/google-sign-in";
 import { SubmitButton } from "@/components/submit-button";
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string; deleted?: string }> }) {
   const params = await searchParams;
   const signupHref = params.next ? `/signup?next=${encodeURIComponent(params.next)}` : "/signup";
 
@@ -18,6 +18,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       {params.error ? (
         <div className="st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm" style={{ marginBottom: 16 }}>
           {params.error}
+        </div>
+      ) : null}
+
+      {params.deleted ? (
+        <div className="rounded-[var(--radius-control)] border border-accent-border bg-accent-soft px-4 py-3 text-sm text-accent" style={{ marginBottom: 16 }}>
+          Your account has been deleted.
         </div>
       ) : null}
 

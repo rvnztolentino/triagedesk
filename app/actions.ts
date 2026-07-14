@@ -7,6 +7,7 @@ import {
   clearSessionCookies,
   clearActiveWorkspaceCookie,
   completeEmailVerificationFromTokens,
+  deleteAccount,
   getActiveWorkspaceAccess,
   getCurrentUser,
   getGoogleOAuthUrl,
@@ -19,6 +20,7 @@ import {
   setActiveWorkspaceCookie,
   signInWithEmail,
   signUpWithEmail,
+  updateDisplayName,
 } from "@/lib/auth";
 import { requestReceivedHref, scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { requireSupabaseAdminClient, SetupRequiredError } from "@/lib/supabase";
@@ -463,6 +465,7 @@ export async function resetWorkspaceDataAction(_prevState: ActionState, formData
 
 export async function signInAction(formData: FormData) {
   await requireTrustedActionRequest();
+  const next = sanitizeInternalRedirect(formText(formData, "next"));
   let redirectTo = "/onboarding";
   try {
     const credentials = loginCredentialsSchema.parse({
@@ -471,9 +474,8 @@ export async function signInAction(formData: FormData) {
     });
     await enforceAuthAttemptLimit("signin", credentials.email);
     await signInWithEmail(credentials);
-    redirectTo = sanitizeInternalRedirect(formText(formData, "next")) ?? getPostAuthWorkspacePath();
+    redirectTo = next ?? getPostAuthWorkspacePath();
   } catch (error) {
-    const next = sanitizeInternalRedirect(formText(formData, "next"));
     redirectWithError(`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`, error);
   }
   redirect(redirectTo);
@@ -589,6 +591,39 @@ export async function signOutAction() {
   await requireTrustedActionRequest();
   await clearSessionCookies();
   redirect("/login");
+}
+
+export async function updateAccountNameAction(formData: FormData) {
+  await requireTrustedActionRequest();
+  const user = await requireUser();
+  try {
+    await updateDisplayName(user.id, formText(formData, "displayName"));
+    // The header and profile menu read the name from the root layout, so refresh
+    // the whole layout tree, not just the account page.
+    revalidatePath("/", "layout");
+    revalidatePath("/account");
+  } catch (error) {
+    captureOperationalError(error, { area: "update_account_name" });
+    redirectWithError("/account", error);
+  }
+  redirect("/account?updated=name");
+}
+
+export async function deleteAccountAction(formData: FormData) {
+  await requireTrustedActionRequest();
+  const user = await requireUser();
+  try {
+    if (formText(formData, "confirmation") !== "DELETE") {
+      throw new PublicError("Type DELETE to confirm account deletion.");
+    }
+    await deleteAccount(user.id);
+  } catch (error) {
+    captureOperationalError(error, { area: "delete_account" });
+    redirectWithError("/account", error);
+  }
+  // Account is gone; drop every session cookie before returning to sign-in.
+  await clearSessionCookies();
+  redirect("/login?deleted=1");
 }
 
 export async function updateUserRoleAction(formData: FormData) {
