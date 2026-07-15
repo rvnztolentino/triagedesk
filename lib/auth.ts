@@ -159,12 +159,20 @@ async function completeVerifiedSession(input: {
     throw new Error("Email verification failed.");
   }
 
-  const profile = await upsertUserProfile({
-    id: input.user.id,
-    email: input.user.email,
-    displayName: displayNameFromMetadata(input.user.user_metadata),
-    role: roleForEmail(input.user.email),
-  });
+  // A returning user (re-verifying, or signing back in via Google) already has a
+  // profile whose display_name may have been edited in Account settings. Never
+  // overwrite it with the name from auth metadata — that's what reverts a saved
+  // name on the next sign-in. Only seed the metadata name when creating the
+  // profile for the first time. Mirrors the logic in signInWithEmail.
+  const existing = await getUserProfile(input.user.id);
+  const profile = existing
+    ? await ensureSeedOwnerProfile(existing)
+    : await upsertUserProfile({
+        id: input.user.id,
+        email: input.user.email,
+        displayName: displayNameFromMetadata(input.user.user_metadata),
+        role: roleForEmail(input.user.email),
+      });
   await setSessionCookies(input.accessToken, input.refreshToken);
   return toAppUser(profile);
 }

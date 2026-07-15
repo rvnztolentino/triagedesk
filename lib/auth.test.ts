@@ -1,23 +1,47 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assertEmailVerificationRequired, getGoogleOAuthUrl, getPostVerificationRedirect, isExistingUserSignupError, roleForEmail, sanitizeInternalRedirect, signUpWithEmail, validateLoginInput, validateSignupInput } from "./auth";
+import { assertEmailVerificationRequired, completeEmailVerification, getGoogleOAuthUrl, getPostVerificationRedirect, isExistingUserSignupError, roleForEmail, sanitizeInternalRedirect, signUpWithEmail, validateLoginInput, validateSignupInput } from "./auth";
 import { RateLimitError } from "@/lib/security";
 
 const signInWithOAuth = vi.fn();
 const signUp = vi.fn();
+const exchangeCodeForSession = vi.fn();
+const adminClientRef: { current: unknown } = { current: null };
 
 vi.mock("@/lib/supabase", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/supabase")>();
   return {
     ...actual,
     requireSupabaseOAuthClient: () => ({ auth: { signInWithOAuth } }),
-    requireSupabaseAuthClient: () => ({ auth: { signUp } }),
+    requireSupabaseAuthClient: () => ({ auth: { signUp, exchangeCodeForSession } }),
+    getSupabaseAdminClient: () => adminClientRef.current,
+    requireSupabaseAdminClient: () => adminClientRef.current,
   };
 });
+
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ set: vi.fn(), delete: vi.fn(), get: vi.fn() }),
+}));
+
+// Minimal chainable stand-in for the Supabase admin client. Supports both the
+// getUserProfile read (from → select → eq → maybeSingle) and the upsertUserProfile
+// write (from → upsert → select → single) used by completeVerifiedSession.
+function makeAdminClient({ existingProfile, upsertResult }: { existingProfile?: Record<string, unknown> | null; upsertResult?: Record<string, unknown> }) {
+  const builder = {
+    select: () => builder,
+    eq: () => builder,
+    upsert: () => builder,
+    maybeSingle: async () => ({ data: existingProfile ?? null, error: null }),
+    single: async () => ({ data: upsertResult ?? null, error: null }),
+  };
+  return { from: () => builder };
+}
 
 afterEach(() => {
   vi.unstubAllEnvs();
   signInWithOAuth.mockReset();
   signUp.mockReset();
+  exchangeCodeForSession.mockReset();
+  adminClientRef.current = null;
 });
 
 describe("auth role policy", () => {
@@ -110,6 +134,45 @@ describe("google oauth", () => {
     signInWithOAuth.mockResolvedValue({ data: { url: null }, error: { message: "provider disabled" } });
 
     await expect(getGoogleOAuthUrl()).rejects.toThrow("provider disabled");
+  });
+});
+
+describe("verified session name preservation", () => {
+  it("keeps a saved custom name when a returning user signs back in via Google", async () => {
+    // Regression: OAuth sign-in used to re-upsert the profile with the name from
+    // auth metadata, reverting a name the user had edited in Account settings.
+    exchangeCodeForSession.mockResolvedValue({
+      data: {
+        session: { access_token: "access", refresh_token: "refresh" },
+        user: { id: "user-1", email: "member@triagedesk.test", user_metadata: { full_name: "Old Google Name" } },
+      },
+      error: null,
+    });
+    adminClientRef.current = makeAdminClient({
+      existingProfile: { id: "user-1", email: "member@triagedesk.test", display_name: "Custom Name", role: "requester" },
+    });
+
+    const user = await completeEmailVerification("oauth-code");
+
+    expect(user.displayName).toBe("Custom Name");
+  });
+
+  it("seeds the metadata name only when creating a brand-new profile", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: {
+        session: { access_token: "access", refresh_token: "refresh" },
+        user: { id: "user-2", email: "fresh@triagedesk.test", user_metadata: { full_name: "Fresh User" } },
+      },
+      error: null,
+    });
+    adminClientRef.current = makeAdminClient({
+      existingProfile: null,
+      upsertResult: { id: "user-2", email: "fresh@triagedesk.test", display_name: "Fresh User", role: "requester" },
+    });
+
+    const user = await completeEmailVerification("oauth-code");
+
+    expect(user.displayName).toBe("Fresh User");
   });
 });
 
