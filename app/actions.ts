@@ -714,10 +714,18 @@ export async function createWorkspaceAction(formData: FormData) {
       message: "Workspace creation limit reached. Try again later.",
     });
     const access = await createWorkspace(formText(formData, "name"), user.id);
-    await setActiveWorkspaceCookie(access.workspace.slug);
+    // Only make the new workspace active when the user has no workspace open yet.
+    // If another workspace is already open, keep it active so creating a workspace
+    // doesn't yank the user out of the one they're working in — the scoped layout
+    // then shows the switch prompt on the new workspace's page, matching how
+    // opening a link to a non-active workspace behaves.
+    const activeWorkspace = await getActiveWorkspaceAccess(user.id);
+    if (!activeWorkspace) {
+      await setActiveWorkspaceCookie(access.workspace.slug);
+    }
     // The active workspace is read from the cookie in the root layout (header +
-    // sidebar) and the onboarding hub, so bust their caches to reflect the newly
-    // created workspace instead of the previously active one.
+    // sidebar) and the onboarding hub, so bust their caches to reflect the current
+    // active workspace and list the newly created one.
     revalidatePath("/", "layout");
     revalidatePath("/onboarding");
     redirectTo = `/w/${access.workspace.slug}`;
