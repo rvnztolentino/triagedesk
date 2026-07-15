@@ -643,15 +643,18 @@ export async function deleteAccountAction(formData: FormData) {
 export async function updateUserRoleAction(formData: FormData) {
   await requireTrustedActionRequest();
   const { access: { user: actor, workspace }, workspaceSlug } = await requireActionOwner(formData);
-  assertWorkspaceMutable(workspace.id);
-  const input = userRoleUpdateSchema.parse({
-    userId: formText(formData, "userId"),
-    role: formText(formData, "role"),
-  });
-  await updateWorkspaceMemberRole(workspace.id, input.userId, input.role, actor.id);
-
   const returnPath = scopedWorkspaceHref(workspaceSlug, "/users");
-  revalidatePath(returnPath);
+  try {
+    assertWorkspaceMutable(workspace.id);
+    const input = userRoleUpdateSchema.parse({
+      userId: formText(formData, "userId"),
+      role: formText(formData, "role"),
+    });
+    await updateWorkspaceMemberRole(workspace.id, input.userId, input.role, actor.id);
+    revalidatePath(returnPath);
+  } catch (error) {
+    redirectWithError(returnPath, error);
+  }
   redirect(returnPath);
 }
 
