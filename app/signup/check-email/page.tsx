@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MailCheck } from "lucide-react";
 import { useSignUp } from "@clerk/nextjs";
 import { SubmitButton } from "@/components/submit-button";
-import { clerkErrorCode, safeInternalNext } from "@/lib/auth-client";
+import { clerkErrorCode, formatResendCountdown, RESEND_COOLDOWN_SECONDS, safeInternalNext } from "@/lib/auth-client";
 
 function verifyErrorMessage(code: string) {
   switch (code) {
@@ -27,6 +27,20 @@ export default function CheckEmailPage() {
   const [error, setError] = useState("");
   const [resent, setResent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
+  // A code was just sent by the sign-up step before this page mounted, so start the
+  // resend cooldown immediately rather than letting the user resend right away.
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS);
+
+  // Tick the cooldown down once per second while it's active. Cleared when it hits
+  // zero or the component unmounts.
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((current) => (current <= 1 ? 0 : current - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   async function handleVerify(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,14 +78,30 @@ export default function CheckEmailPage() {
   }
 
   async function handleResend() {
-    if (!signUp) return;
+    if (!signUp || cooldown > 0 || resending) return;
     setError("");
-    const { error: sendError } = await signUp.verifications.sendEmailCode();
-    if (sendError) {
+    setResent(false);
+    setResending(true);
+    try {
+      const { error: sendError } = await signUp.verifications.sendEmailCode();
+      if (sendError) {
+        // Clerk rate-limits the send server-side too; surface a wait message rather
+        // than a generic failure when that's what happened.
+        const code = clerkErrorCode(sendError);
+        setError(
+          code === "too_many_requests" || code === "rate_limit_exceeded"
+            ? "You're requesting codes too quickly. Wait a moment and try again."
+            : "We couldn't send a new code. Please try again."
+        );
+        return;
+      }
+      setResent(true);
+      setCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch {
       setError("We couldn't send a new code. Please try again.");
-      return;
+    } finally {
+      setResending(false);
     }
-    setResent(true);
   }
 
   return (
@@ -115,8 +145,17 @@ export default function CheckEmailPage() {
             </SubmitButton>
           </form>
 
-          <button type="button" onClick={handleResend} className="mt-4 text-sm text-accent hover:opacity-90 font-medium">
-            Resend code
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={cooldown > 0 || resending}
+            className="mt-4 text-sm text-accent hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {cooldown > 0
+              ? `Resend code in ${formatResendCountdown(cooldown)}`
+              : resending
+                ? "Sending..."
+                : "Resend code"}
           </button>
 
           <p className="text-sm text-muted mt-4 leading-relaxed">

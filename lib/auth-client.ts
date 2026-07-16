@@ -8,6 +8,21 @@ export function safeInternalNext(value?: string) {
   return value && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : undefined;
 }
 
+// Cooldown, in seconds, the user must wait between verification-code sends. Applied
+// both on first arrival at the check-email page (a code was just sent by sign-up) and
+// after every resend, so the "Resend code" control can't be used to email-bomb an
+// address. Clerk also rate-limits the underlying send server-side; this is the UX gate.
+export const RESEND_COOLDOWN_SECONDS = 120;
+
+// Formats a remaining-seconds countdown as m:ss (e.g. 120 -> "2:00", 9 -> "0:09").
+// Negative or non-finite inputs clamp to "0:00".
+export function formatResendCountdown(seconds: number): string {
+  const total = Number.isFinite(seconds) ? Math.max(0, Math.ceil(seconds)) : 0;
+  const minutes = Math.floor(total / 60);
+  const remainder = total % 60;
+  return `${minutes}:${remainder.toString().padStart(2, "0")}`;
+}
+
 // Reads a Clerk error code without importing Clerk's error types. Handles both the
 // Signals API shape (a single ClerkError with `.code`) and the classic thrown
 // ClerkAPIResponseError shape (`.errors[0].code`). Returns "" when neither matches.

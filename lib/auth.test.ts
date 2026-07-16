@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getSeedAdminEmail, getPostVerificationRedirect, roleForEmail, sanitizeInternalRedirect } from "./auth";
-import { clerkErrorCode, safeInternalNext } from "./auth-client";
+import { clerkErrorCode, formatResendCountdown, safeInternalNext } from "./auth-client";
 
 // next/headers and Clerk's server helpers are only touched by functions that run
 // inside a request; the pure helpers under test never call them. Stub next/headers
@@ -76,5 +76,14 @@ describe("auth-client helpers", () => {
     expect(clerkErrorCode({ errors: [] })).toBe("");
     expect(clerkErrorCode(new Error("boom"))).toBe("");
     expect(clerkErrorCode(null)).toBe("");
+  });
+
+  it("formatResendCountdown renders m:ss and clamps invalid input", () => {
+    expect(formatResendCountdown(120)).toBe("2:00");
+    expect(formatResendCountdown(119)).toBe("1:59");
+    expect(formatResendCountdown(9)).toBe("0:09");
+    expect(formatResendCountdown(0)).toBe("0:00");
+    expect(formatResendCountdown(-5)).toBe("0:00");
+    expect(formatResendCountdown(Number.NaN)).toBe("0:00");
   });
 });

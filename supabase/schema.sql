@@ -403,7 +403,7 @@ end $$;
 
 -- Supabase no longer exposes new public tables to PostgREST/GraphQL by default.
 -- Keep these grants in sync when adding app tables above.
-grant usage on schema public to authenticated, service_role;
+grant usage on schema public to service_role;
 
 grant select on table user_profiles to authenticated;
 
@@ -657,17 +657,21 @@ begin
 end;
 $$;
 
-revoke all on function create_workspace_with_owner(text, text, uuid) from public;
-revoke all on function join_workspace_by_invite(text, text, uuid) from public;
-revoke all on function delete_workspace_as_owner(uuid, uuid) from public;
-revoke all on function is_workspace_member(uuid) from public;
-revoke all on function has_workspace_role(uuid, text[]) from public;
-revoke all on function can_create_workspace_invite(uuid, text) from public;
-revoke all on function can_remove_workspace_member(uuid, uuid) from public;
-grant execute on function is_workspace_member(uuid) to authenticated, service_role;
-grant execute on function has_workspace_role(uuid, text[]) to authenticated, service_role;
-grant execute on function can_create_workspace_invite(uuid, text) to authenticated, service_role;
-grant execute on function can_remove_workspace_member(uuid, uuid) to authenticated, service_role;
+-- Supabase auto-grants EXECUTE to `anon` and `authenticated` on every function in the
+-- `public` schema, and those are explicit grants — `revoke ... from public` does NOT
+-- clear them. Revoke from the roles by name so these SECURITY DEFINER functions aren't
+-- callable via the public REST API. Post-Clerk, only the service_role client calls them.
+revoke all on function create_workspace_with_owner(text, text, uuid) from public, anon, authenticated;
+revoke all on function join_workspace_by_invite(text, text, uuid) from public, anon, authenticated;
+revoke all on function delete_workspace_as_owner(uuid, uuid) from public, anon, authenticated;
+revoke all on function is_workspace_member(uuid) from public, anon, authenticated;
+revoke all on function has_workspace_role(uuid, text[]) from public, anon, authenticated;
+revoke all on function can_create_workspace_invite(uuid, text) from public, anon, authenticated;
+revoke all on function can_remove_workspace_member(uuid, uuid) from public, anon, authenticated;
+grant execute on function is_workspace_member(uuid) to service_role;
+grant execute on function has_workspace_role(uuid, text[]) to service_role;
+grant execute on function can_create_workspace_invite(uuid, text) to service_role;
+grant execute on function can_remove_workspace_member(uuid, uuid) to service_role;
 grant execute on function create_workspace_with_owner(text, text, uuid) to service_role;
 grant execute on function join_workspace_by_invite(text, text, uuid) to service_role;
 grant execute on function delete_workspace_as_owner(uuid, uuid) to service_role;
@@ -712,10 +716,10 @@ as $$
   );
 $$;
 
-revoke all on function can_view_workspace_request(uuid, text) from public;
-revoke all on function can_view_workspace_ticket(uuid, text) from public;
-grant execute on function can_view_workspace_request(uuid, text) to authenticated, service_role;
-grant execute on function can_view_workspace_ticket(uuid, text) to authenticated, service_role;
+revoke all on function can_view_workspace_request(uuid, text) from public, anon, authenticated;
+revoke all on function can_view_workspace_ticket(uuid, text) from public, anon, authenticated;
+grant execute on function can_view_workspace_request(uuid, text) to service_role;
+grant execute on function can_view_workspace_ticket(uuid, text) to service_role;
 
 create or replace function check_rate_limit(
   target_scope text,
@@ -788,7 +792,7 @@ begin
 end;
 $$;
 
-revoke all on function check_rate_limit(text, text, integer, integer, bigint) from public;
+revoke all on function check_rate_limit(text, text, integer, integer, bigint) from public, anon, authenticated;
 grant execute on function check_rate_limit(text, text, integer, integer, bigint) to service_role;
 
 alter table departments enable row level security;
