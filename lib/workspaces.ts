@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { requireSupabaseAdminClient } from "@/lib/supabase";
 import { PublicError } from "@/lib/errors";
 import {
@@ -622,15 +623,39 @@ export function workspaceInviteLink(workspaceSlug: string, code: string) {
   return `/join/${workspaceSlug}?code=${encodeURIComponent(code)}`;
 }
 
-export async function requireWorkspaceMembership(workspaceSlug: string, userId: string) {
-  const workspace = await getWorkspaceBySlug(workspaceSlug);
-  if (!workspace) throw new Error("Workspace not found.");
+// Resolves the workspace (by slug) and the caller's membership in it in a single
+// round-trip via a joined query, instead of a slug->workspace lookup followed by a
+// separate membership lookup. `!inner` on workspaces drops the row when the user
+// isn't a member of that slug, so a missing row means "no access". Cached per
+// request so the layout and the page share one resolution for the same args.
+export const requireWorkspaceMembership = cache(async (workspaceSlug: string, userId: string): Promise<WorkspaceAccess> => {
+  const client = requireSupabaseAdminClient();
+  const { data, error } = await client
+    .from("workspace_members")
+    .select("role, workspaces!inner(*)")
+    .eq("user_id", userId)
+    .eq("workspaces.slug", workspaceSlug)
+    .maybeSingle();
+  if (error) throw new Error(`Get workspace access failed: ${error.message}`);
+  if (!data) throw new Error("Workspace access is required.");
 
-  const membership = await getWorkspaceMembership(workspace.id, userId);
-  if (!membership) throw new Error("Workspace access is required.");
+  const row = data as SupabaseRow;
+  const workspaceRow =
+    row.workspaces && typeof row.workspaces === "object" && !Array.isArray(row.workspaces)
+      ? (row.workspaces as SupabaseRow)
+      : {};
 
-  return { workspace, membership };
-}
+  return {
+    workspace: workspaceFromRow(workspaceRow),
+    membership: {
+      id: "",
+      workspaceId: asString(workspaceRow.id),
+      userId,
+      role: asUserRole(row.role),
+      createdAt: "",
+    },
+  };
+});
 
 export function isWorkspaceAdmin(role: UserRole) {
   return role === "admin" || role === "owner";

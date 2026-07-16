@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { NextResponse } from "next/server";
@@ -296,7 +297,10 @@ export async function deleteAccount(userId: string) {
   }
 }
 
-export async function getCurrentUser(): Promise<AppUser | null> {
+// Wrapped in React `cache()` so the root layout and the page it renders share a
+// single resolution per request instead of each re-hitting Clerk + Supabase. The
+// first-request profile seeding runs at most once per request as a result.
+export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
   const { userId } = await auth();
   if (!userId) return null;
   if (!getSupabaseAdminClient()) return null;
@@ -321,7 +325,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
   }
 
   return toAppUser(profile);
-}
+});
 
 export async function requireUser() {
   const user = await getCurrentUser();
@@ -362,7 +366,9 @@ export async function getActiveWorkspaceSlug() {
   return parsed.success ? parsed.data : undefined;
 }
 
-export async function getActiveWorkspaceAccess(userId: string) {
+// Cached per request (keyed by userId) so the layout's call and the page's
+// requireOperationalWorkspace() call resolve the active workspace once.
+export const getActiveWorkspaceAccess = cache(async (userId: string) => {
   const cookieStore = await cookies();
   const parsedSlug = workspaceSlugSchema.safeParse(cookieStore.get(ACTIVE_WORKSPACE_COOKIE)?.value);
   if (!parsedSlug.success) return undefined;
@@ -372,7 +378,7 @@ export async function getActiveWorkspaceAccess(userId: string) {
   } catch {
     return undefined;
   }
-}
+});
 
 export async function requireOperationalWorkspace() {
   const user = await requireUser();
