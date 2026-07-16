@@ -127,6 +127,25 @@ async function enforceRequestSubmissionLimits(userId: string, workspaceId: strin
   }
 }
 
+// Per-user, per-workspace hourly cap for admin mutations that write to the DB and
+// fan out notifications/activity-log entries. Loose by design — sized to stop a
+// runaway loop or compromised session, not to throttle normal admin work.
+async function enforceAdminMutationLimit(
+  scope: string,
+  userId: string | undefined,
+  workspaceId: string,
+  limit: number,
+  message: string,
+) {
+  await enforceRateLimit({
+    scope,
+    keyParts: [userId || "unknown-user", workspaceId],
+    limit,
+    windowSeconds: 60 * 60,
+    message,
+  });
+}
+
 async function requireActionWorkspace(formData: FormData) {
   const workspaceSlug = formText(formData, "workspaceSlug");
   if (!workspaceSlug) return { access: await requireOperationalWorkspace(), workspaceSlug: undefined };
@@ -343,6 +362,7 @@ export async function approveRequestAction(_prevState: ActionState, formData: Fo
     await requireTrustedActionRequest();
     const { access: { workspace, user }, workspaceSlug } = await requireActionAdmin(formData);
     assertWorkspaceMutable(workspace.id);
+    await enforceAdminMutationLimit("request_approve_user_hour", user?.id, workspace.id, 60, "Too many approvals. Try again later.");
     const input = reviewApprovalSchema.parse({
       requestId: formText(formData, "requestId"),
       title: formText(formData, "title"),
@@ -370,6 +390,7 @@ export async function rejectRequestAction(_prevState: ActionState, formData: For
     await requireTrustedActionRequest();
     const { access: { workspace, user }, workspaceSlug } = await requireActionAdmin(formData);
     assertWorkspaceMutable(workspace.id);
+    await enforceAdminMutationLimit("request_reject_user_hour", user?.id, workspace.id, 60, "Too many rejections. Try again later.");
     await rejectRequest(formText(formData, "requestId"), workspace.id, { id: user.id, name: user.displayName || "An admin" });
 
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
@@ -388,6 +409,7 @@ export async function markDuplicateAction(_prevState: ActionState, formData: For
     await requireTrustedActionRequest();
     const { access: { workspace, user }, workspaceSlug } = await requireActionAdmin(formData);
     assertWorkspaceMutable(workspace.id);
+    await enforceAdminMutationLimit("request_mark_duplicate_user_hour", user?.id, workspace.id, 60, "Too many actions. Try again later.");
     await markDuplicate(formText(formData, "requestId"), formText(formData, "duplicateOfTicketId"), workspace.id, { id: user.id, name: user.displayName || "An admin" });
 
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
@@ -406,6 +428,7 @@ export async function updateTicketAction(_prevState: ActionState, formData: Form
     await requireTrustedActionRequest();
     const { access: { workspace, user }, workspaceSlug } = await requireActionAdmin(formData);
     assertWorkspaceMutable(workspace.id);
+    await enforceAdminMutationLimit("ticket_update_user_hour", user?.id, workspace.id, 60, "Too many ticket updates. Try again later.");
     const input = ticketUpdateSchema.parse({
       ticketId: formText(formData, "ticketId"),
       status: formText(formData, "status"),
@@ -547,6 +570,7 @@ export async function updateUserRoleAction(formData: FormData) {
   const returnPath = scopedWorkspaceHref(workspaceSlug, "/users");
   try {
     assertWorkspaceMutable(workspace.id);
+    await enforceAdminMutationLimit("member_role_update_user_hour", actor.id, workspace.id, 30, "Too many role changes. Try again later.");
     const input = userRoleUpdateSchema.parse({
       userId: formText(formData, "userId"),
       role: formText(formData, "role"),
@@ -688,7 +712,9 @@ export async function revokeWorkspaceInviteAction(formData: FormData) {
   const user = await requireUser();
   const workspaceSlug = workspaceSlugSchema.parse(formText(formData, "workspaceSlug"));
   try {
-    await revokeWorkspaceInvite(formText(formData, "workspaceId"), formText(formData, "inviteId"), user.id);
+    const workspaceId = formText(formData, "workspaceId");
+    await enforceAdminMutationLimit("invite_revoke_user_hour", user.id, workspaceId, 30, "Too many invite changes. Try again later.");
+    await revokeWorkspaceInvite(workspaceId, formText(formData, "inviteId"), user.id);
     revalidatePath(`/w/${workspaceSlug}`);
   } catch (error) {
     redirectWithError(`/w/${workspaceSlug}`, error);
@@ -701,7 +727,9 @@ export async function deleteWorkspaceInviteAction(formData: FormData) {
   const user = await requireUser();
   const workspaceSlug = workspaceSlugSchema.parse(formText(formData, "workspaceSlug"));
   try {
-    await deleteWorkspaceInvite(formText(formData, "workspaceId"), formText(formData, "inviteId"), user.id);
+    const workspaceId = formText(formData, "workspaceId");
+    await enforceAdminMutationLimit("invite_delete_user_hour", user.id, workspaceId, 30, "Too many invite changes. Try again later.");
+    await deleteWorkspaceInvite(workspaceId, formText(formData, "inviteId"), user.id);
     revalidatePath(`/w/${workspaceSlug}`);
   } catch (error) {
     redirectWithError(`/w/${workspaceSlug}`, error);
@@ -733,7 +761,9 @@ export async function removeWorkspaceMemberAction(formData: FormData) {
   const workspaceSlug = formText(formData, "workspaceSlug");
   const returnPath = scopedWorkspaceHref(workspaceSlug || undefined, "/users");
   try {
-    await removeWorkspaceMember(formText(formData, "workspaceId"), formText(formData, "memberUserId"), user.id);
+    const workspaceId = formText(formData, "workspaceId");
+    await enforceAdminMutationLimit("member_remove_user_hour", user.id, workspaceId, 30, "Too many member changes. Try again later.");
+    await removeWorkspaceMember(workspaceId, formText(formData, "memberUserId"), user.id);
     revalidatePath(returnPath);
     revalidatePath("/onboarding");
   } catch (error) {
