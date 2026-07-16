@@ -34,8 +34,9 @@ function capitalize(value: string) {
 
 function setupRequirementLabel(value: string) {
   const labels: Record<string, string> = {
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "auth publishable key",
+    CLERK_SECRET_KEY: "auth secret key",
     NEXT_PUBLIC_SUPABASE_URL: "database URL",
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: "browser auth key",
     SUPABASE_SERVICE_ROLE_KEY: "server database key",
     SEED_ADMIN_EMAIL: "seed owner email",
     GROQ_API_KEY: "AI service key",

@@ -1,5 +1,10 @@
-import { signInWithGoogleAction } from "@/app/actions";
-import { SubmitButton } from "@/components/submit-button";
+"use client";
+
+import { useState } from "react";
+import { LoaderCircle } from "lucide-react";
+import { useSignIn } from "@clerk/nextjs";
+import { cn } from "@/lib/utils";
+import { safeInternalNext } from "@/lib/auth-client";
 
 // Plain single-color Google "G" mark (inherits the button text color) so it
 // reads clean in both themes instead of the multicolor brand logo.
@@ -12,15 +17,41 @@ function GoogleIcon() {
 }
 
 export function GoogleSignIn({ next, label = "Continue with Google" }: { next?: string; label?: string }) {
+  const { signIn } = useSignIn();
+  const [loading, setLoading] = useState(false);
+
+  async function handleClick() {
+    if (!signIn) return;
+    setLoading(true);
+    try {
+      // Hand the browser off to Google. Clerk returns to /auth/callback to finalize
+      // the session, then forwards to redirectUrl (the post-auth destination).
+      await signIn.sso({
+        strategy: "oauth_google",
+        redirectUrl: safeInternalNext(next) ?? "/onboarding",
+        redirectCallbackUrl: "/auth/callback",
+      });
+    } catch {
+      setLoading(false);
+    }
+  }
+
   return (
-    <form action={signInWithGoogleAction}>
-      {next ? <input type="hidden" name="next" value={next} /> : null}
-      <SubmitButton
-        pendingText="Redirecting to Google..."
-        className="btn--neutral btn--block"
-      >
-        <GoogleIcon /> {label}
-      </SubmitButton>
-    </form>
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={loading}
+      className={cn("btn btn--neutral btn--block")}
+    >
+      {loading ? (
+        <>
+          <LoaderCircle size={16} className="animate-spin" /> Redirecting to Google...
+        </>
+      ) : (
+        <>
+          <GoogleIcon /> {label}
+        </>
+      )}
+    </button>
   );
 }

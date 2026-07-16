@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { AppLayout } from "@/components/app-layout";
 import { getActiveWorkspaceAccess, getCurrentUser } from "@/lib/auth";
@@ -60,25 +61,27 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     : [[], 0];
 
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
-      <body className="font-sans bg-bg text-fg min-h-screen antialiased" suppressHydrationWarning>
-        <AppLayout
-          currentUser={currentUser}
-          activeWorkspace={activeWorkspace ? {
-            name: activeWorkspace.workspace.name,
-            slug: activeWorkspace.workspace.slug,
-            role: activeWorkspace.membership.role,
-            isPreview: isWorkspacePreview(activeWorkspace.workspace.id),
-          } : null}
-          notifications={notifications}
-          unreadNotifications={unreadNotifications}
-        >
-          {children}
-        </AppLayout>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        </head>
+        <body className="font-sans bg-bg text-fg min-h-screen antialiased" suppressHydrationWarning>
+          <AppLayout
+            currentUser={currentUser}
+            activeWorkspace={activeWorkspace ? {
+              name: activeWorkspace.workspace.name,
+              slug: activeWorkspace.workspace.slug,
+              role: activeWorkspace.membership.role,
+              isPreview: isWorkspacePreview(activeWorkspace.workspace.id),
+            } : null}
+            notifications={notifications}
+            unreadNotifications={unreadNotifications}
+          >
+            {children}
+          </AppLayout>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
