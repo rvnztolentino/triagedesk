@@ -106,6 +106,9 @@ export function HomeHeader() {
         <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="TriageDesk home">
           <BrandIcon size={26} className="rounded-md" />
           <span className="text-[15px] font-semibold tracking-tight text-fg">TriageDesk</span>
+          <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none tracking-wide text-muted">
+            Beta
+          </span>
         </Link>
 
         <div className="hidden items-center gap-1 lg:flex">

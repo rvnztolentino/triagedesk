@@ -298,6 +298,9 @@ export function AppLayout({
             <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
               <BrandIcon size={26} className="rounded-md" />
               <span className={cn("whitespace-nowrap text-[15px] font-semibold tracking-tight text-fg", collapsed && "md:hidden")}>TriageDesk</span>
+              <span className={cn("rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none tracking-wide text-muted", collapsed && "md:hidden")}>
+                Beta
+              </span>
             </Link>
             <button
               type="button"

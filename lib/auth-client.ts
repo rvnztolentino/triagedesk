@@ -33,3 +33,18 @@ export function clerkErrorCode(error: unknown): string {
   const errors = (error as { errors?: Array<{ code?: string }> }).errors;
   return errors?.[0]?.code ?? "";
 }
+
+// Reads a human-readable message from a Clerk error, preferring the long-form
+// `message` and falling back to the short `longMessage`/`message` fields on both
+// the Signals API and classic ClerkAPIResponseError shapes. Returns "" when none
+// is present, so callers can fall back to their own generic copy.
+export function clerkErrorMessage(error: unknown): string {
+  if (!error || typeof error !== "object") return "";
+  const first = (error as { errors?: Array<{ longMessage?: string; message?: string }> }).errors?.[0];
+  const candidate =
+    first?.longMessage ??
+    first?.message ??
+    (error as { longMessage?: string; message?: string }).longMessage ??
+    (error as { message?: string }).message;
+  return typeof candidate === "string" ? candidate.trim() : "";
+}

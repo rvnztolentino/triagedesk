@@ -4,13 +4,14 @@ import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { useSignIn } from "@clerk/nextjs";
 import { SubmitButton } from "@/components/submit-button";
-import { clerkErrorCode, safeInternalNext } from "@/lib/auth-client";
+import { clerkErrorCode, clerkErrorMessage, safeInternalNext } from "@/lib/auth-client";
 
 // Maps Clerk's sign-in error codes to the actionable copy the app showed before.
 // `form_identifier_not_found` intentionally reveals that no account exists so the
-// user is steered to sign up, matching the prior behavior.
-function signInErrorMessage(code: string) {
-  switch (code) {
+// user is steered to sign up, matching the prior behavior. Unmapped codes fall back
+// to Clerk's own specific message rather than a generic "Sign in failed".
+function signInErrorMessage(error: unknown) {
+  switch (clerkErrorCode(error)) {
     case "form_identifier_not_found":
       return "No account found with this email. Create one to get started.";
     case "form_password_incorrect":
@@ -19,7 +20,7 @@ function signInErrorMessage(code: string) {
     case "form_param_format_invalid":
       return "Enter a valid email address.";
     default:
-      return "Sign in failed. Please try again.";
+      return clerkErrorMessage(error) || "Sign in failed. Please try again.";
   }
 }
 
@@ -41,7 +42,7 @@ export function LoginForm({ next }: { next?: string }) {
     try {
       const { error: signInError } = await signIn.password({ identifier: email, password });
       if (signInError) {
-        setError(signInErrorMessage(clerkErrorCode(signInError)));
+        setError(signInErrorMessage(signInError));
         setSubmitting(false);
         return;
       }
@@ -62,9 +63,9 @@ export function LoginForm({ next }: { next?: string }) {
       // this app doesn't configure. Surface a safe, generic message.
       setError("Additional verification is required to sign in.");
       setSubmitting(false);
-    } catch {
+    } catch (err) {
       setSubmitting(false);
-      setError("Sign in failed. Please try again.");
+      setError(signInErrorMessage(err));
     }
   }
 

@@ -3,7 +3,7 @@ import { addMonths, assertCleanDisplayName, MAX_NAME_CHANGES, nameChangeStatus, 
 
 describe("display name filter", () => {
   it("accepts a normal name and rejects profanity, links, and controls", () => {
-    expect(assertCleanDisplayName("  Vic  Marlowe ")).toBe("Vic Marlowe");
+    expect(assertCleanDisplayName("  Emma  Wells ")).toBe("Emma Wells");
     expect(() => assertCleanDisplayName("sh1t head")).toThrow();
     expect(() => assertCleanDisplayName("visit www.spam.example")).toThrow();
     expect(() => assertCleanDisplayName("a")).toThrow();

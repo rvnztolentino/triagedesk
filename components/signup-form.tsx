@@ -7,10 +7,12 @@ import { useSignUp } from "@clerk/nextjs";
 import { SubmitButton } from "@/components/submit-button";
 import { assertCleanDisplayName } from "@/lib/display-name";
 import { PublicError } from "@/lib/errors";
-import { clerkErrorCode, safeInternalNext } from "@/lib/auth-client";
+import { clerkErrorCode, clerkErrorMessage, safeInternalNext } from "@/lib/auth-client";
 
-function signUpErrorMessage(code: string) {
-  switch (code) {
+// Unmapped codes fall back to Clerk's own specific message rather than a generic
+// "Create account failed".
+function signUpErrorMessage(error: unknown) {
+  switch (clerkErrorCode(error)) {
     case "form_identifier_exists":
       return "An account with this email already exists. Sign in instead.";
     case "form_password_pwned":
@@ -20,7 +22,7 @@ function signUpErrorMessage(code: string) {
     case "form_param_format_invalid":
       return "Enter a valid email address.";
     default:
-      return "Create account failed. Please try again.";
+      return clerkErrorMessage(error) || "Create account failed. Please try again.";
   }
 }
 
@@ -62,7 +64,7 @@ export function SignupForm({ next }: { next?: string }) {
         unsafeMetadata: displayName ? { display_name: displayName } : {},
       });
       if (createError) {
-        setError(signUpErrorMessage(clerkErrorCode(createError)));
+        setError(signUpErrorMessage(createError));
         setSubmitting(false);
         return;
       }
@@ -78,9 +80,9 @@ export function SignupForm({ next }: { next?: string }) {
       const safeNext = safeInternalNext(next);
       if (safeNext) params.set("next", safeNext);
       router.push(`/signup/check-email?${params.toString()}`);
-    } catch {
+    } catch (err) {
       setSubmitting(false);
-      setError("Create account failed. Please try again.");
+      setError(signUpErrorMessage(err));
     }
   }
 
@@ -93,7 +95,7 @@ export function SignupForm({ next }: { next?: string }) {
       ) : null}
       <div className="field">
         <label htmlFor="displayName" className="label">Full name</label>
-        <input id="displayName" name="displayName" type="text" maxLength={80} className="input" placeholder="Vic Marlowe" />
+        <input id="displayName" name="displayName" type="text" maxLength={80} className="input" placeholder="Emma Wells" />
       </div>
       <div className="field">
         <label htmlFor="email" className="label">Work email</label>
