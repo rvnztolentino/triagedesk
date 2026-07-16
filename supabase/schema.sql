@@ -1,11 +1,28 @@
+-- Identity is owned by Clerk. `id` is an app-generated uuid (kept as the stable
+-- primary key every other table FKs to), and `clerk_user_id` maps the Clerk user
+-- (`user_...`) to that row. Auth is no longer backed by Supabase `auth.users`, so
+-- there is no foreign key to it.
 create table if not exists user_profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
+  clerk_user_id text unique,
   email text not null unique,
   display_name text not null default '',
   role text not null default 'requester' check (role in ('requester', 'admin', 'owner')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Migration for databases created before the Clerk migration: give `id` its own
+-- default, drop the legacy `auth.users` foreign key, and add the Clerk id mapping.
+alter table user_profiles add column if not exists clerk_user_id text;
+do $$
+begin
+  alter table user_profiles alter column id set default gen_random_uuid();
+  if exists (select 1 from pg_constraint where conname = 'user_profiles_id_fkey') then
+    alter table user_profiles drop constraint user_profiles_id_fkey;
+  end if;
+end $$;
+create unique index if not exists user_profiles_clerk_user_id_key on user_profiles (clerk_user_id);
 
 do $$
 begin

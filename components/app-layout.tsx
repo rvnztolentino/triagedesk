@@ -20,6 +20,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { useClerk } from "@clerk/nextjs";
 import { signOutAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
 import { ThemeToggle } from "@/components/theme-controls";
@@ -111,8 +112,22 @@ export function AppLayout({
   unreadNotifications?: number;
 }) {
   const pathname = usePathname();
+  const { signOut } = useClerk();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
+
+  // Clear app-owned cookies server-side, then terminate the Clerk session and
+  // return to the sign-in page. Clerk manages the session cookie, so sign-out has
+  // to run on the client.
+  async function handleSignOut() {
+    setProfileOpen(false);
+    try {
+      await signOutAction();
+    } catch {
+      // Non-fatal: the active-workspace cookie is membership-checked on next use.
+    }
+    await signOut({ redirectUrl: "/login" });
+  }
   const [pendingPath, setPendingPath] = React.useState<string | null>(null);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [collapsed, setCollapsed] = React.useState(false);
@@ -514,11 +529,9 @@ export function AppLayout({
                       </Link>
                     ) : null}
                     <div className="divider" style={{ margin: "6px 4px" }} />
-                    <form action={signOutAction}>
-                      <button type="submit" role="menuitem" className="menu-item danger">
-                        <LogOut size={15} /> Sign out
-                      </button>
-                    </form>
+                    <button type="button" role="menuitem" className="menu-item danger" onClick={handleSignOut}>
+                      <LogOut size={15} /> Sign out
+                    </button>
                   </div>
                 ) : null}
               </div>

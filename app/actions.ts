@@ -2,24 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { loginCredentialsSchema, requestSubmissionSchema, reviewApprovalSchema, ticketUpdateSchema, userRoleUpdateSchema, workspaceDepartmentCreateSchema, workspaceDepartmentDeleteSchema, workspaceSlugSchema, type NotificationView } from "@/lib/schema";
+import { requestSubmissionSchema, reviewApprovalSchema, ticketUpdateSchema, userRoleUpdateSchema, workspaceDepartmentCreateSchema, workspaceDepartmentDeleteSchema, workspaceSlugSchema, type NotificationView } from "@/lib/schema";
 import {
   clearSessionCookies,
   clearActiveWorkspaceCookie,
-  completeEmailVerificationFromTokens,
   deleteAccount,
   getActiveWorkspaceAccess,
   getCurrentUser,
-  getGoogleOAuthUrl,
-  getPostVerificationRedirect,
   requireAdmin,
   requireOperationalWorkspace,
   requireOwner,
   requireUser,
-  sanitizeInternalRedirect,
   setActiveWorkspaceCookie,
-  signInWithEmail,
-  signUpWithEmail,
   updateDisplayName,
 } from "@/lib/auth";
 import { requestReceivedHref, scopedWorkspaceHref } from "@/lib/workspace-routing";
@@ -51,7 +45,6 @@ import {
   deleteWorkspaceInvite,
   deleteWorkspace,
   assertWorkspaceMutable,
-  getPostAuthWorkspacePath,
   isWorkspaceAdmin,
   isWorkspacePreview,
   joinWorkspaceWithInvite,
@@ -73,15 +66,6 @@ function redirectWithError(path: string, error: unknown) {
   redirect(`${path}${path.includes("?") ? "&" : "?"}error=${encodeURIComponent(message)}`);
 }
 
-// Bounces back to signup with a flag the page turns into a "use Google instead"
-// callout, carrying the specific message so the copy stays accurate whether the
-// limit came from our app or from Supabase's confirmation-email throttling.
-function redirectSignupRateLimited(next: string | undefined, error: unknown) {
-  const params = new URLSearchParams({ rateLimited: "1", error: actionErrorMessage(error) });
-  if (next) params.set("next", next);
-  redirect(`/signup?${params.toString()}`);
-}
-
 // Turn a thrown action error into a user-facing message. Validation, rate-limit,
 // setup, and explicitly-public errors carry safe, actionable text; anything else
 // is reported generically so internal failures (e.g. DB constraint or connection
@@ -101,17 +85,6 @@ function actionErrorMessage(error: unknown): string {
 
 async function requireTrustedActionRequest() {
   await assertSameOriginRequest();
-}
-
-async function enforceAuthAttemptLimit(scope: "signin" | "signup" | "oauth", email?: string) {
-  const identity = await requestIdentity();
-  await enforceRateLimit({
-    scope: `auth_${scope}`,
-    keyParts: scope === "signin" ? [identity.ip, email || "unknown-email"] : [identity.ip],
-    limit: scope === "signin" ? 5 : scope === "signup" ? 3 : 10,
-    windowSeconds: scope === "signin" ? 10 * 60 : 60 * 60,
-    message: "Too many authentication attempts. Try again later.",
-  });
 }
 
 async function enforceInviteJoinLimit(workspaceSlug: string) {
@@ -472,80 +445,6 @@ export async function resetWorkspaceDataAction(_prevState: ActionState, formData
   redirect(destination);
 }
 
-export async function signInAction(formData: FormData) {
-  await requireTrustedActionRequest();
-  const next = sanitizeInternalRedirect(formText(formData, "next"));
-  let redirectTo = "/onboarding";
-  try {
-    const credentials = loginCredentialsSchema.parse({
-      email: formText(formData, "email"),
-      password: formText(formData, "password"),
-    });
-    await enforceAuthAttemptLimit("signin", credentials.email);
-    await signInWithEmail(credentials);
-    redirectTo = next ?? getPostAuthWorkspacePath();
-  } catch (error) {
-    redirectWithError(`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`, error);
-  }
-  redirect(redirectTo);
-}
-
-export async function signUpAction(formData: FormData) {
-  await requireTrustedActionRequest();
-  let redirectTo = "/signup/check-email";
-  const next = sanitizeInternalRedirect(formText(formData, "next"));
-  try {
-    await enforceAuthAttemptLimit("signup");
-    const result = await signUpWithEmail({
-      email: formText(formData, "email"),
-      password: formText(formData, "password"),
-      displayName: formText(formData, "displayName"),
-    }, next);
-    redirectTo = `/signup/check-email?email=${encodeURIComponent(result.email)}`;
-  } catch (error) {
-    // A rate limit (our per-IP cap or Supabase's email throttling) gets the
-    // dedicated "use Google instead" callout; everything else is a plain error.
-    if (error instanceof RateLimitError) {
-      redirectSignupRateLimited(next, error);
-    }
-    redirectWithError(`/signup${next ? `?next=${encodeURIComponent(next)}` : ""}`, error);
-  }
-  redirect(redirectTo);
-}
-
-export async function signInWithGoogleAction(formData: FormData) {
-  await requireTrustedActionRequest();
-  const next = sanitizeInternalRedirect(formText(formData, "next"));
-  const fallback = `/login${next ? `?next=${encodeURIComponent(next)}` : ""}`;
-  let redirectTo = fallback;
-  try {
-    await enforceAuthAttemptLimit("oauth");
-    redirectTo = await getGoogleOAuthUrl(next);
-  } catch (error) {
-    captureOperationalError(error, { area: "oauth_google" });
-    redirectWithError(fallback, error);
-  }
-  redirect(redirectTo);
-}
-
-export async function completeEmailVerificationFromTokensAction(formData: FormData) {
-  await requireTrustedActionRequest();
-  try {
-    const accessToken = formText(formData, "accessToken");
-    const refreshToken = formText(formData, "refreshToken");
-
-    if (!accessToken || !refreshToken) {
-      throw new PublicError("Verification link is missing a session token.");
-    }
-
-    await completeEmailVerificationFromTokens({ accessToken, refreshToken });
-    return { redirectTo: getPostVerificationRedirect(formText(formData, "next")) };
-  } catch (error) {
-    captureOperationalError(error, { area: "email_verification" });
-    return { error: actionErrorMessage(error) };
-  }
-}
-
 // Returns the current user's latest notifications + unread count for the active
 // workspace. Polled by the bell so new activity appears without a full navigation.
 // Reads auth from the httpOnly cookie server-side; never throws to the client.
@@ -601,10 +500,12 @@ export async function markNotificationsReadAction() {
   }
 }
 
+// Clears app-owned cookies before the client terminates the Clerk session. The
+// caller (the sign-out menu item) runs Clerk's signOut with a redirect afterward,
+// so this action intentionally does not redirect on its own.
 export async function signOutAction() {
   await requireTrustedActionRequest();
   await clearSessionCookies();
-  redirect("/login");
 }
 
 export async function updateAccountNameAction(formData: FormData) {

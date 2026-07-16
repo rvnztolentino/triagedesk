@@ -11,3 +11,5 @@ dist/
 .codex/
 .claude/
 .mcp.json
+# clerk configuration (can include secrets)
+/.clerk/

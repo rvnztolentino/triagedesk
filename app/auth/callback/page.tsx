@@ -1,37 +1,15 @@
-import { redirect } from "next/navigation";
-import { AuthHashCallback } from "@/app/auth/callback/hash-callback";
-import { completeEmailOtpVerification, completeEmailVerification, getPostVerificationRedirect } from "@/lib/auth";
+"use client";
 
-export default async function AuthCallbackPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ code?: string; token_hash?: string; type?: string; next?: string; error?: string; error_description?: string }>;
-}) {
-  const params = await searchParams;
+import { AuthenticateWithRedirectCallback } from "@clerk/nextjs";
 
-  if (params.code) {
-    let redirectTo = "/login";
-    try {
-      await completeEmailVerification(params.code);
-      redirectTo = getPostVerificationRedirect(params.next);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Email verification failed.";
-      redirectTo = `/login?error=${encodeURIComponent(message)}`;
-    }
-    redirect(redirectTo);
-  }
-
-  if (params.token_hash && params.type) {
-    let redirectTo = "/login";
-    try {
-      await completeEmailOtpVerification(params.token_hash, params.type);
-      redirectTo = getPostVerificationRedirect(params.next);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Email verification failed.";
-      redirectTo = `/login?error=${encodeURIComponent(message)}`;
-    }
-    redirect(redirectTo);
-  }
-
-  return <AuthHashCallback />;
+// OAuth (Google) return point. Clerk parses the provider response, finalizes the
+// session, and then navigates to the destination passed to authenticateWithRedirect
+// (redirectUrlComplete). On failure it falls back to the sign-in page.
+export default function AuthCallbackPage() {
+  return (
+    <AuthenticateWithRedirectCallback
+      signInFallbackRedirectUrl="/onboarding"
+      signUpFallbackRedirectUrl="/onboarding"
+    />
+  );
 }

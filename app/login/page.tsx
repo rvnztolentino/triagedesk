@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { signInAction } from "@/app/actions";
+import { LoginForm } from "@/components/login-form";
 import { AuthLayout } from "@/components/auth-layout";
 import { GoogleSignIn } from "@/components/google-sign-in";
-import { SubmitButton } from "@/components/submit-button";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string; deleted?: string }> }) {
   const params = await searchParams;
@@ -36,20 +34,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div className="divider grow" />
         </div>
 
-        <form action={signInAction} className="stack" style={{ gap: 12 }}>
-          {params.next ? <input type="hidden" name="next" value={params.next} /> : null}
-          <div className="field">
-            <label htmlFor="email" className="label">Email</label>
-            <input id="email" name="email" type="email" required className="input" placeholder="you@company.com" />
-          </div>
-          <div className="field">
-            <label htmlFor="password" className="label">Password</label>
-            <input id="password" name="password" type="password" required minLength={8} className="input" placeholder="••••••••" />
-          </div>
-          <SubmitButton pendingText="Signing in..." className="btn--primary btn--block btn--lg" style={{ marginTop: 4 }}>
-            Sign in <ArrowRight size={16} />
-          </SubmitButton>
-        </form>
+        <LoginForm next={params.next} />
       </div>
 
       <p className="muted" style={{ marginTop: 20, fontSize: 13.5, textAlign: "center" }}>
