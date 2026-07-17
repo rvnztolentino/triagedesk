@@ -564,7 +564,7 @@ export async function updateWorkspaceMemberRole(workspaceId: string, memberUserI
 
   // Saving an unchanged role is a no-op. Skip the write so repeated saves do not
   // notify the member about a change that never happened.
-  if (member.role === input.role) return;
+  // if (member.role === input.role) return;
 
   const { data, error } = await client
     .from("workspace_members")
