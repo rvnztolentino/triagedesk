@@ -73,7 +73,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
         <div className="st-danger rounded-[var(--radius-card)] border px-4 py-3 text-sm">{params.error}</div>
       ) : null}
 
-      <div className="split" style={{ gridTemplateColumns: "1fr 1fr", alignItems: "stretch" }}>
+      <div className="split split-even">
         <div className="stack" style={{ gap: 16 }}>
           <div className="card">
             <div className="panel-head">
@@ -115,11 +115,11 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
           </div>
         </div>
 
-        <div style={{ position: "relative", minHeight: 340 }}>
-        <div className="card" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column" }}>
-          <div className="panel-head">
+        <div className="stretch-frame">
+        <div className="card">
+          <div className="panel-head wrap">
             <div className="section-title">Departments</div>
-            <div className="cluster" style={{ gap: 10 }}>
+            <div className="cluster wrap" style={{ gap: 10 }}>
               <span className="badge" data-hue={departmentsAtLimit ? "danger" : "neutral"}>
                 {customDepartmentCount} / {MAX_CUSTOM_WORKSPACE_DEPARTMENTS} custom
               </span>
@@ -139,9 +139,9 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
                 <div key={department.id} className="row-link" style={{ cursor: "default" }}>
                   <div className="between" style={{ gap: 12 }}>
                     <div style={{ minWidth: 0 }}>
-                      <div className="cluster" style={{ gap: 8 }}>
+                      <div className="cluster wrap" style={{ gap: 8 }}>
                         <span style={{ fontWeight: 600 }}>{department.name}</span>
-                        <span className="mono faint" style={{ fontSize: 11 }}>
+                        <span className="mono faint" style={{ fontSize: 11, overflowWrap: "anywhere" }}>
                           {department.id}
                         </span>
                         {isDefault ? (

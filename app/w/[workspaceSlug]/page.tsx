@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowLeft, Link2, LogOut, Trash2 } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createWorkspaceInviteAction, deleteWorkspaceAction, deleteWorkspaceInviteAction, leaveWorkspaceAction, revokeWorkspaceInviteAction } from "@/app/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
-import { CopyInviteButton } from "@/components/copy-invite-button";
+import { CopyInviteButton, CopyInviteCode } from "@/components/copy-invite-button";
 import { SubmitButton } from "@/components/submit-button";
 import { requireUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
@@ -163,9 +163,7 @@ export default async function WorkspaceLandingPage({
                           <div className="between wrap" style={{ gap: 12 }}>
                             <div style={{ minWidth: 0 }}>
                               <div className="cluster wrap" style={{ gap: 8 }}>
-                                <span className="mono" style={{ fontWeight: 600, fontSize: 13 }}>
-                                  {invite.code}
-                                </span>
+                                <CopyInviteCode code={invite.code} />
                                 <span className="badge" data-hue={statusHue(status)}>
                                   {status}
                                 </span>
