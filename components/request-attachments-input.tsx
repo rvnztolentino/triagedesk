@@ -5,7 +5,7 @@ import type { ChangeEvent } from "react";
 import { FileText, Paperclip, X } from "lucide-react";
 import { AttachmentFileName } from "@/components/attachment-file-name";
 
-const maxFiles = 5;
+const maxFiles = 3;
 const maxBytes = 10 * 1024 * 1024;
 const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".pdf", ".docx", ".txt", ".csv", ".json"];
 
