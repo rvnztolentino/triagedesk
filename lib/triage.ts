@@ -28,6 +28,63 @@ function includesAny(text: string, words: string[]) {
   return words.some((word) => text.includes(word));
 }
 
+const PRIORITY_RANK: Record<TriageDraft["priority"], number> = {
+  low: 0,
+  medium: 1,
+  high: 2,
+  critical: 3,
+};
+
+// Physical-safety language that must never land in the routine (low) queue.
+// Kept deliberately tight: an over-broad list makes everything high, which is
+// as useless as everything being low.
+const SAFETY_HAZARD_KEYWORDS = [
+  "fall",
+  "falling",
+  "sagging",
+  "collapse",
+  "collapsing",
+  "leak",
+  "leaking",
+  "flood",
+  "flooding",
+  "smoke",
+  "sparking",
+  "gas leak",
+  "electric shock",
+  "exposed wire",
+  "live wire",
+  "injury",
+  "injured",
+  "bleeding",
+  "trip hazard",
+  "blocked exit",
+  "exit blocked",
+  "fumes",
+];
+
+function combinedRequestText(input: TriageInput) {
+  return `${input.description} ${input.location} ${input.urgencyNote}`.toLowerCase();
+}
+
+// General guardrail applied to every triage source: if the request text carries
+// safety-hazard language, the priority cannot be low. It is floored at high so a
+// falling tile or a leak is never left in the normal queue, regardless of how
+// routine the wording sounds. Vague-but-harmless input is untouched.
+function enforceSafetyFloor(
+  priority: TriageDraft["priority"],
+  reasoning: string,
+  text: string
+): { priority: TriageDraft["priority"]; reasoning: string } {
+  if (PRIORITY_RANK[priority] >= PRIORITY_RANK.high) return { priority, reasoning };
+  if (!includesAny(text, SAFETY_HAZARD_KEYWORDS)) return { priority, reasoning };
+
+  return {
+    priority: "high",
+    reasoning: "The request contains safety-hazard language and was flagged for prompt review rather than the routine queue.",
+  };
+}
+
 function pickDepartment(text: string): { department: TriageDraft["department"]; category: string; issue: string } {
   if (includesAny(text, ["badge", "keycard", "gate", "door", "lock", "intruder", "theft", "security", "turnstile"])) {
     return { department: "security", category: "Security", issue: "Access control" };
@@ -139,10 +196,11 @@ export function buildTriagePromptPayload(input: TriageInput) {
 }
 
 export function rulesTriage(input: TriageInput): TriageDraft {
-  const combinedText = `${input.description} ${input.location} ${input.urgencyNote}`.toLowerCase();
+  const combinedText = combinedRequestText(input);
   const classification = pickDepartment(combinedText);
   const department = normalizeDepartment(classification.department, input.departments);
   const priority = pickPriority(combinedText);
+  const safeguarded = enforceSafetyFloor(priority.priority, priority.reason, combinedText);
   const similarTicketIds = (input.similarTickets ?? []).slice(0, 3).map((ticket) => ticket.id);
   const title = createTitle(classification.issue, input.location, combinedText);
   const label = departmentName(department, input.departments);
@@ -151,10 +209,10 @@ export function rulesTriage(input: TriageInput): TriageDraft {
     source: "rules",
     title,
     category: classification.category,
-    priority: priority.priority,
+    priority: safeguarded.priority,
     department,
     summary: `${label} should review ${input.location}. ${input.description.trim()}`,
-    priorityReasoning: priority.reason,
+    priorityReasoning: safeguarded.reasoning,
     similarTicketIds,
   });
 }
@@ -235,8 +293,11 @@ async function groqTriage(input: TriageInput): Promise<TriageDraft> {
     ...(decoded && typeof decoded === "object" ? decoded : {}),
     source: "groq",
   });
+  const safeguarded = enforceSafetyFloor(parsed.priority, parsed.priorityReasoning, combinedRequestText(input));
   return {
     ...parsed,
+    priority: safeguarded.priority,
+    priorityReasoning: safeguarded.reasoning,
     department: normalizeDepartment(parsed.department, availableDepartments),
     similarTicketIds: parsed.similarTicketIds.filter((id) => allowedSimilarTicketIds.has(id)),
   };

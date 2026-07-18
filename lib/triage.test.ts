@@ -34,6 +34,70 @@ describe("rulesTriage", () => {
     expect(result.priority).toBe("high");
   });
 
+  it("never leaves safety-hazard requests in the routine queue", () => {
+    const result = rulesTriage({
+      description: "A ceiling tile near the elevator is sagging and might fall.",
+      location: "Building A, Room F705",
+      contactName: "",
+      urgencyNote: "",
+      similarTickets: [],
+    });
+
+    expect(result.priority).toBe("high");
+    expect(result.priorityReasoning).toContain("safety-hazard");
+  });
+
+  it("does not escalate vague requests without hazard language", () => {
+    const result = rulesTriage({
+      description: "help im stuck bro",
+      location: "",
+      contactName: "",
+      urgencyNote: "",
+      similarTickets: [],
+    });
+
+    expect(result.priority).toBe("low");
+  });
+
+  it("floors AI-returned low priority when the request describes a hazard", async () => {
+    vi.stubEnv("AI_PROVIDER", "groq");
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  title: "Sagging ceiling tile near elevator",
+                  category: "Maintenance",
+                  priority: "low",
+                  department: "maintenance",
+                  summary: "Maintenance should review the ceiling tile.",
+                  priorityReasoning: "The request appears routine.",
+                  similarTicketIds: [],
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 }
+      )
+    );
+
+    const result = await runTriage({
+      description: "A ceiling tile near the elevator is sagging and might fall.",
+      location: "Building A, Room F705",
+      contactName: "",
+      urgencyNote: "",
+      similarTickets: [],
+    });
+
+    expect(result.source).toBe("groq");
+    expect(result.priority).toBe("high");
+    fetchMock.mockRestore();
+  });
+
   it("requires Groq configuration for runtime triage", async () => {
     vi.stubEnv("AI_PROVIDER", "rules");
     vi.stubEnv("GROQ_API_KEY", "");
