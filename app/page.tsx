@@ -22,8 +22,7 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-// TODO: point this at the actual X post.
-const X_POST_URL = "https://x.com/";
+const X_POST_URL = "https://x.com/kusanagikeiji/status/2078347943812411560";
 
 function XIcon({ className = "" }: { className?: string }) {
   return (
