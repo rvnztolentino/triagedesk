@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { AppLayout } from "@/components/app-layout";
-import { getActiveWorkspaceAccess, getCurrentUser } from "@/lib/auth";
+import { getActiveWorkspaceAccess, getCurrentUser, getSiteUrl } from "@/lib/auth";
 import { isWorkspacePreview } from "@/lib/workspaces";
 import { countUnreadNotifications, listNotifications } from "@/lib/notifications";
 import type { NotificationView } from "@/lib/schema";
@@ -20,10 +20,45 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+const siteUrl = getSiteUrl();
+const siteTitle = "TriageDesk";
+const siteDescription =
+  "TriageDesk uses AI to read internal requests from staff, suggest a category, priority, and next action, then keeps an admin in the loop before anything becomes a tracked ticket.";
+
 export const metadata: Metadata = {
-  title: "TriageDesk",
-  description: "AI internal operations helpdesk",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: siteTitle,
+    template: `%s · ${siteTitle}`,
+  },
+  description: siteDescription,
+  applicationName: siteTitle,
   manifest: "/site.webmanifest",
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
+  openGraph: {
+    type: "website",
+    url: siteUrl,
+    siteName: siteTitle,
+    title: siteTitle,
+    description: siteDescription,
+    images: [{ url: "/icons/icon-512x512.png", width: 512, height: 512, alt: siteTitle }],
+  },
+  twitter: {
+    card: "summary",
+    title: siteTitle,
+    description: siteDescription,
+    images: ["/icons/icon-512x512.png"],
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
