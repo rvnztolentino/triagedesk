@@ -270,7 +270,9 @@ describe("workspace foundation", () => {
     expect(themeControlsSource).toContain("aria-checked={isDark}");
     expect(themeControlsSource).toContain('className="theme-switch-icon theme-switch-icon--sun"');
     expect(themeControlsSource).toContain('className="theme-switch-icon theme-switch-icon--moon"');
-    expect(globalStylesSource).toContain('.theme-switch[aria-checked="true"] .theme-switch-thumb { transform: translateX(22px); }');
+    // The thumb is vertically centered off the track, so the checked state
+    // slides it 22px while keeping the -50% centering offset.
+    expect(globalStylesSource).toContain('.theme-switch[aria-checked="true"] .theme-switch-thumb { transform: translate(22px, -50%); }');
     expect(rootLayoutSource).toContain('document.documentElement.dataset.theme = stored === "light" ? "light" : "dark";');
     expect(globalStylesSource).toContain("--accent: #ffffff;");
     expect(globalStylesSource).toContain("--accent: #000000;");
