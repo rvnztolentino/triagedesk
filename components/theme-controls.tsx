@@ -78,10 +78,10 @@ export function ThemeToggle() {
     >
       <span className="theme-switch-thumb" aria-hidden />
       <span className="theme-switch-icon theme-switch-icon--sun" aria-hidden>
-        <Sun size={13} />
+        <Sun size={14} />
       </span>
       <span className="theme-switch-icon theme-switch-icon--moon" aria-hidden>
-        <Moon size={13} />
+        <Moon size={14} />
       </span>
     </button>
   );

@@ -782,16 +782,20 @@ select {
   .theme-switch:focus-visible { outline: none; box-shadow: var(--ring); }
   .theme-switch-thumb {
     position: absolute;
-    top: 3px;
+    /* Centered off the track rather than offset by a hand-tuned `top`: the
+       icon slots overflow the padding box by 1px, so any fixed inset here
+       lands the thumb a pixel below them. */
+    top: 50%;
     left: 3px;
     width: 22px;
     height: 22px;
     border-radius: 999px;
     background: var(--accent);
     box-shadow: var(--shadow-sm);
+    transform: translate(0, -50%);
     transition: transform 0.24s cubic-bezier(0.34, 1.4, 0.5, 1);
   }
-  .theme-switch[aria-checked="true"] .theme-switch-thumb { transform: translateX(22px); }
+  .theme-switch[aria-checked="true"] .theme-switch-thumb { transform: translate(22px, -50%); }
   .theme-switch-icon {
     position: relative;
     z-index: 1;
