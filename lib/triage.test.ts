@@ -5,6 +5,24 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+const baseRequest = {
+  description: "Aircon in Room 304 is leaking again. Floor is wet near the outlet.",
+  location: "Building A, Room 304",
+  contactName: "",
+  urgencyNote: "",
+  similarTickets: [],
+};
+
+const validDraft = {
+  title: "Water leak at Room 304",
+  category: "Maintenance",
+  priority: "high",
+  department: "maintenance",
+  summary: "Maintenance should inspect the leaking aircon.",
+  priorityReasoning: "Wet floors can create a safety risk.",
+  similarTicketIds: [],
+};
+
 describe("rulesTriage", () => {
   it("classifies leaking aircon requests as high-priority maintenance", () => {
     const result = rulesTriage({
@@ -169,6 +187,107 @@ describe("rulesTriage", () => {
 
     expect(result.source).toBe("groq");
     expect(result.similarTicketIds).toEqual(["TRG-1"]);
+    fetchMock.mockRestore();
+  });
+
+  it("routes an unauthorized person to security even when the request names equipment", () => {
+    const result = rulesTriage({
+      description: "There is a stranger using the computer in here.",
+      location: "Building C, Room 89",
+      contactName: "",
+      urgencyNote: "",
+      similarTickets: [],
+    });
+
+    expect(result.department).toBe("security");
+    expect(result.priority).toBe("high");
+  });
+
+  it("does not match keywords inside unrelated words", () => {
+    const result = rulesTriage({
+      description: "Requesting a replacement gasket for the pantry sink tap.",
+      location: "Building A, Pantry",
+      contactName: "",
+      urgencyNote: "",
+      similarTickets: [],
+    });
+
+    // "gas" must not match inside "gasket" and escalate this to critical.
+    expect(result.priority).not.toBe("critical");
+  });
+
+  it("gives the model enough completion budget for reasoning plus JSON", async () => {
+    vi.stubEnv("AI_PROVIDER", "groq");
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(validDraft) } }] }), { status: 200 })
+    );
+
+    await runTriage(baseRequest);
+
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.max_completion_tokens).toBeGreaterThanOrEqual(1500);
+    expect(body.reasoning_effort).toBe("low");
+    fetchMock.mockRestore();
+  });
+
+  it("retries when Groq rejects a truncated generation instead of falling back", async () => {
+    vi.stubEnv("AI_PROVIDER", "groq");
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ error: { code: "json_validate_failed", message: "Failed to validate JSON." } }),
+          { status: 400 }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(validDraft) } }] }), { status: 200 })
+      );
+
+    const result = await runTriage(baseRequest);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.source).toBe("groq");
+    fetchMock.mockRestore();
+  });
+
+  it("drops reasoning_effort for models that reject it", async () => {
+    vi.stubEnv("AI_PROVIDER", "groq");
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+    vi.stubEnv("GROQ_MODEL", "llama-3.1-8b-instant");
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ error: { message: "`reasoning_effort` is not supported with this model" } }),
+          { status: 400 }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(validDraft) } }] }), { status: 200 })
+      );
+
+    const result = await runTriage(baseRequest);
+
+    const retryBody = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
+    expect("reasoning_effort" in retryBody).toBe(false);
+    expect(result.source).toBe("groq");
+    fetchMock.mockRestore();
+  });
+
+  it("stops retrying on an unusable API key", async () => {
+    vi.stubEnv("AI_PROVIDER", "groq");
+    vi.stubEnv("GROQ_API_KEY", "bad-key");
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ error: { code: "invalid_api_key" } }), { status: 401 }));
+
+    const result = await runTriage(baseRequest);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.source).toBe("rules");
     fetchMock.mockRestore();
   });
 

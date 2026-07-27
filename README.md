@@ -158,6 +158,8 @@ Legacy unscoped routes such as `/tickets`, `/review`, `/users`, `/settings`, and
 ## Notes
 
 - Runtime request submission requires `AI_PROVIDER=groq` and `GROQ_API_KEY`.
+- AI triage retries transient Groq failures and falls back to keyword rules only after that. A fallback is a degraded result, so it is always logged — via Sentry when a DSN is set, otherwise as a `[triagedesk] operational error` server warning.
+- `GROQ_MAX_COMPLETION_TOKENS` (default `1500`) must cover the model's hidden reasoning tokens *plus* the JSON response. Too low and Groq rejects the truncated generation, which demotes every request to rules triage. `GROQ_REASONING_EFFORT` (default `low`) is dropped automatically for models that reject it.
 - Supabase email confirmation must stay enabled; the app rejects immediate signup sessions.
 - Request attachments support JPG, PNG, WebP, PDF, DOCX, TXT, CSV, and JSON files up to 10 MB each.
 - The `request-attachments` bucket is private; attachment downloads are served through workspace access checks.

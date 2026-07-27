@@ -19,10 +19,18 @@ function scrubRecord(input: Record<string, unknown>) {
 }
 
 export function captureOperationalError(error: unknown, context: Record<string, unknown> = {}) {
-  if (!hasSentryDsn()) return;
+  const scrubbed = scrubRecord(context);
+
+  // Without a DSN there is no other record of the failure. Dropping it here is
+  // what made AI triage look healthy while every request fell back to rules,
+  // so the scrubbed context goes to the server log instead.
+  if (!hasSentryDsn()) {
+    console.warn("[triagedesk] operational error", scrubbed, error);
+    return;
+  }
 
   Sentry.withScope((scope) => {
-    scope.setContext("triagedesk", scrubRecord(context));
+    scope.setContext("triagedesk", scrubbed);
     Sentry.captureException(error);
   });
 }
