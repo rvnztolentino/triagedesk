@@ -71,41 +71,43 @@ export async function ReviewQueueView({ workspaceSlug }: { workspaceSlug?: strin
             </div>
           </div>
         ) : (
-          <div className="list">
-            {queue.map(({ request, triage }) => (
-              <Link key={request.id} href={href(`/review/${request.id}`)} className="row-link">
-                <div className="data-row" style={{ gridTemplateColumns: "auto 1fr auto" }}>
-                  <span className="badge" data-hue={PRIORITY_HUE[triage.priority] ?? "neutral"}>
-                    <span className="dot" /> {triage.priority}
-                  </span>
-                  <div style={{ minWidth: 0 }}>
-                    <div className="cluster wrap" style={{ gap: 8 }}>
-                      <span style={{ fontWeight: 600 }}>{triage.title}</span>
-                      <span className="chip" style={{ padding: "2px 8px", fontSize: 11 }}>
-                        <Building2 size={11} /> {deptNames[triage.department] ?? capitalize(triage.department)}
-                      </span>
+          <div className="table-scroll">
+            <div className="list">
+              {queue.map(({ request, triage }) => (
+                <Link key={request.id} href={href(`/review/${request.id}`)} className="row-link">
+                  <div className="data-row" style={{ gridTemplateColumns: "auto 1fr auto" }}>
+                    <span className="badge" data-hue={PRIORITY_HUE[triage.priority] ?? "neutral"}>
+                      <span className="dot" /> {triage.priority}
+                    </span>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="cluster wrap" style={{ gap: 8 }}>
+                        <span style={{ fontWeight: 600 }}>{triage.title}</span>
+                        <span className="chip" style={{ padding: "2px 8px", fontSize: 11 }}>
+                          <Building2 size={11} /> {deptNames[triage.department] ?? capitalize(triage.department)}
+                        </span>
+                      </div>
+                      <div
+                        className="muted"
+                        style={{ fontSize: 13, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                      >
+                        {request.description}
+                      </div>
+                      <div className="cluster wrap" style={{ gap: 10, marginTop: 5 }}>
+                        <span className="mono faint" style={{ fontSize: 11.5 }}>
+                          {new Date(request.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <span className="faint" style={{ fontSize: 11.5 }}>
+                          {request.location || "No location"} · {request.contactName || "Anonymous"}
+                        </span>
+                      </div>
                     </div>
-                    <div
-                      className="muted"
-                      style={{ fontSize: 13, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
-                    >
-                      {request.description}
-                    </div>
-                    <div className="cluster wrap" style={{ gap: 10, marginTop: 5 }}>
-                      <span className="mono faint" style={{ fontSize: 11.5 }}>
-                        {new Date(request.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                      <span className="faint" style={{ fontSize: 11.5 }}>
-                        {request.location || "No location"} · {request.contactName || "Anonymous"}
-                      </span>
-                    </div>
+                    <span className="badge" data-hue="accent">
+                      <Sparkles size={11} /> {triage.category}
+                    </span>
                   </div>
-                  <span className="badge hide-sm" data-hue="accent">
-                    <Sparkles size={11} /> {triage.category}
-                  </span>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </div>

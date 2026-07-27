@@ -72,14 +72,12 @@ export const metadata: Metadata = {
   },
 };
 
+// Applies the saved mode before paint so there is no flash of the wrong theme.
+// Dark is the default; the accent color is derived from the mode in globals.css.
 const themeScript = `
 try {
-  var theme = localStorage.getItem("triagedesk-theme") || "dark";
-  var rawAccent = localStorage.getItem("triagedesk-accent") || "#879D5A";
-  var legacy = { "#7b787a": "#879D5A", emerald: "#10b981", blue: "#3b82f6", orange: "#f97316", red: "#ef4444", violet: "#8b5cf6", yellow: "#eab308" };
-  var accent = legacy[rawAccent] || (/^#[0-9a-f]{6}$/i.test(rawAccent) ? rawAccent : "#879D5A");
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.style.setProperty("--accent", accent);
+  var stored = localStorage.getItem("triagedesk-theme");
+  document.documentElement.dataset.theme = stored === "light" ? "light" : "dark";
 } catch (_) {
   document.documentElement.dataset.theme = "dark";
 }

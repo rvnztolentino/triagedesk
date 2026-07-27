@@ -3,8 +3,8 @@
 /* ============================================================================
    TriageDesk design system — operations-console aesthetic.
    Dark is the default theme; light has full parity. A single `--accent`
-   custom property (set inline by the theme script / color picker) drives the
-   highlight color system-wide.
+   custom property drives the highlight color system-wide; it is monochrome and
+   derived from the theme (white on dark, black on light).
 
    The reusable component classes live in `@layer components` so Tailwind
    utilities (and the unlayered `.st-*` helpers) always win when a caller
@@ -37,9 +37,8 @@
 }
 
 /* ── Theme tokens ─────────────────────────────────────────────────────────
-   Accent is intentionally NOT defined here at runtime — the inline theme
-   script writes `--accent` on <html> before paint, so it persists across
-   both themes. The fallbacks below only matter if that script never runs. */
+   The accent is monochrome and owned by the theme: white in dark mode, black
+   in light mode. The inline theme script only sets `data-theme` before paint. */
 
 :root {
   /* DARK (default) */
@@ -53,11 +52,11 @@
   --muted: #8f8f8f;
   --faint: #5e5e5e;
 
-  --accent: #879d5a;
-  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
-  --accent-softer: color-mix(in srgb, var(--accent) 8%, transparent);
-  --accent-border: color-mix(in srgb, var(--accent) 30%, transparent);
-  --accent-text: color-mix(in srgb, var(--accent) 82%, white);
+  --accent: #ffffff;
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-softer: color-mix(in srgb, var(--accent) 6%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent) 26%, transparent);
+  --accent-text: var(--accent);
   --accent-fg: #000000;
   --accent-ink: var(--accent-fg);
 
@@ -112,10 +111,11 @@ html[data-theme="light"] {
   --muted: #666666;
   --faint: #999999;
 
-  --accent-soft: color-mix(in srgb, var(--accent) 16%, white);
-  --accent-softer: color-mix(in srgb, var(--accent) 9%, white);
-  --accent-border: color-mix(in srgb, var(--accent) 40%, white);
-  --accent-text: color-mix(in srgb, var(--accent) 70%, black);
+  --accent: #000000;
+  --accent-soft: color-mix(in srgb, var(--accent) 8%, white);
+  --accent-softer: color-mix(in srgb, var(--accent) 4%, white);
+  --accent-border: color-mix(in srgb, var(--accent) 22%, white);
+  --accent-text: var(--accent);
   --accent-fg: #ffffff;
 
   /* status hues (light) */
@@ -177,14 +177,6 @@ select {
 ::selection {
   background-color: var(--accent-soft);
   color: var(--fg);
-}
-
-/* Freeze transitions while dragging the color picker for 60fps updates. */
-html[data-accent-dragging="true"] *,
-html[data-accent-dragging="true"] *::before,
-html[data-accent-dragging="true"] *::after {
-  transition-duration: 0ms !important;
-  transition-delay: 0ms !important;
 }
 
 /* ── Status pills & indicators ──────────────────────────────────────────────
@@ -506,8 +498,10 @@ html[data-accent-dragging="true"] *::after {
     border-color: transparent;
     box-shadow: 0 8px 20px -10px var(--accent);
   }
+  /* Mixing toward the page background (not white) keeps the hover shift visible
+     in both directions now that the accent is white on dark / black on light. */
   .btn--primary:hover {
-    background: color-mix(in srgb, var(--accent) 90%, white);
+    background: color-mix(in srgb, var(--accent) 86%, var(--bg));
     border-color: transparent;
     box-shadow: 0 10px 26px -10px var(--accent);
   }
@@ -590,6 +584,13 @@ html[data-accent-dragging="true"] *::after {
   .row-link { display: block; padding: 14px 18px; transition: background 0.14s; }
   .row-link:hover { background: var(--surface-hover); }
   .data-row { display: grid; align-items: center; gap: 14px; }
+
+  /* Ticket / request tables keep every column on small screens instead of
+     dropping or squeezing them — the row holds its full width and the card
+     scrolls sideways. On desktop the min-width is never reached, so no
+     scrollbar appears. */
+  .table-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+  .table-scroll > .list { min-width: 720px; }
   .filter-bar {
     display: flex;
     flex-wrap: wrap;
@@ -721,8 +722,7 @@ html[data-accent-dragging="true"] *::after {
   .feed-line { width: 2px; flex: 1; background: var(--border); margin: 4px 0 -9px; }
   .feed-item:last-child .feed-line { display: none; }
 
-  /* ── appearance popover + segmented toggle + color picker ── */
-  .backdrop { position: fixed; inset: 0; z-index: 60; background: transparent; }
+  /* ── popovers ── */
   .popover {
     position: absolute;
     top: calc(100% + 8px);
@@ -760,106 +760,50 @@ html[data-accent-dragging="true"] *::after {
       animation-name: pop-down;
     }
   }
-  .seg {
+  /* ── dark/light switch ──────────────────────────────────────────────────
+     Track holds two 22px icon slots (sun, moon) that exactly fill its inner
+     width; the thumb slides between them and tints the active icon with
+     --accent-fg, so it stays legible against the accent in both themes. */
+  .theme-switch {
     position: relative;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    width: 52px;
+    height: 28px;
     padding: 3px;
+    border-radius: var(--r-pill);
     background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: var(--r-pill);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
   }
-  .seg-thumb {
+  .theme-switch:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+  .theme-switch:focus-visible { outline: none; box-shadow: var(--ring); }
+  .theme-switch-thumb {
     position: absolute;
     top: 3px;
-    bottom: 3px;
     left: 3px;
-    width: calc(50% - 3px);
-    border-radius: var(--r-pill);
-    background: var(--accent-soft);
-    border: 1px solid var(--accent-border);
-    transition: transform 0.26s cubic-bezier(0.34, 1.4, 0.5, 1);
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--accent);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.24s cubic-bezier(0.34, 1.4, 0.5, 1);
   }
-  .seg[data-on="light"] .seg-thumb { transform: translateX(calc(100% + 0px)); }
-  .seg-btn {
+  .theme-switch[aria-checked="true"] .theme-switch-thumb { transform: translateX(22px); }
+  .theme-switch-icon {
     position: relative;
     z-index: 1;
-    padding: 7px 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-    background: transparent;
-    border: 0;
-    cursor: pointer;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    color: var(--faint);
     transition: color 0.2s;
   }
-  .seg-btn.on { color: var(--accent-text); }
-  .color-field {
-    position: relative;
-    height: 132px;
-    border-radius: var(--r-ctrl);
-    cursor: crosshair;
-    overflow: hidden;
-    border: 0;
-    box-shadow: inset 0 0 0 1px var(--border);
-    touch-action: none;
-  }
-  .color-field-thumb {
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.5);
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-  }
-  .hue-slider {
-    position: relative;
-    height: 14px;
-    border-radius: 999px;
-    margin-top: 12px;
-    cursor: pointer;
-    touch-action: none;
-    background: linear-gradient(90deg, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
-    border: 1px solid var(--border);
-  }
-  .hue-thumb {
-    position: absolute;
-    top: 50%;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 2px 5px rgba(0, 0, 0, 0.5);
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-  }
-  .rgb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .mini-input {
-    width: 100%;
-    text-align: center;
-    padding: 7px 4px;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--r-ctrl);
-    color: var(--fg);
-  }
-  .mini-input:focus { outline: none; border-color: var(--accent-border); box-shadow: var(--ring); }
-  .swatch {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--r-ctrl);
-    border: 1px solid var(--border-strong);
-    flex-shrink: 0;
-  }
+  .theme-switch[aria-checked="false"] .theme-switch-icon--sun,
+  .theme-switch[aria-checked="true"] .theme-switch-icon--moon { color: var(--accent-fg); }
 
   /* ── profile menu / dropdowns ── */
   .menu {

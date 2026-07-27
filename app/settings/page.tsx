@@ -1,4 +1,4 @@
-import { Lock, Paintbrush, Trash2 } from "lucide-react";
+import { Lock, SunMoon, Trash2 } from "lucide-react";
 import { deleteWorkspaceDepartmentAction } from "@/app/actions";
 import { AddDepartmentPopover } from "@/components/add-department-popover";
 import { requireWorkspaceContext } from "@/lib/auth";
@@ -28,13 +28,12 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
         <div className="card card-pad">
           <div className="cluster" style={{ gap: 12 }}>
             <span className="metric-icon">
-              <Paintbrush size={18} />
+              <SunMoon size={18} />
             </span>
             <div>
               <div style={{ fontWeight: 600 }}>Customize your view</div>
               <p className="muted" style={{ fontSize: 13.5, marginTop: 2 }}>
-                Use the paintbrush in the header to switch theme and pick an accent color. Your preferences are saved on
-                this device.
+                Use the dark / light switch in the header to change the theme. Your preference is saved on this device.
               </p>
             </div>
           </div>

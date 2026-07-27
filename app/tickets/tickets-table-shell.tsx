@@ -41,22 +41,24 @@ function matchesCurrentRouteState(href: string, current: TicketRouteState) {
 
 export function TicketsTableSkeleton() {
   return (
-    <div className="card list">
-      {Array.from({ length: 6 }).map((_, index) => (
-        <div key={index} className="row-link" style={{ cursor: "default" }}>
-          <div className="data-row" style={{ gridTemplateColumns: "92px 1fr auto" }}>
-            <div className="h-3.5 w-14 animate-pulse rounded bg-surface-hover" />
-            <div>
-              <div className="h-4 w-52 animate-pulse rounded bg-surface-hover" />
-              <div className="mt-2 h-3 w-64 animate-pulse rounded bg-surface-hover" />
-            </div>
-            <div className="flex gap-2">
-              <div className="h-5 w-16 animate-pulse rounded-full bg-surface-hover" />
-              <div className="h-5 w-16 animate-pulse rounded-full bg-surface-hover" />
+    <div className="card table-scroll">
+      <div className="list">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="row-link" style={{ cursor: "default" }}>
+            <div className="data-row" style={{ gridTemplateColumns: "92px 1fr auto" }}>
+              <div className="h-3.5 w-14 animate-pulse rounded bg-surface-hover" />
+              <div>
+                <div className="h-4 w-52 animate-pulse rounded bg-surface-hover" />
+                <div className="mt-2 h-3 w-64 animate-pulse rounded bg-surface-hover" />
+              </div>
+              <div className="flex gap-2">
+                <div className="h-5 w-16 animate-pulse rounded-full bg-surface-hover" />
+                <div className="h-5 w-16 animate-pulse rounded-full bg-surface-hover" />
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

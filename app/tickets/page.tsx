@@ -118,37 +118,37 @@ async function TicketTable({
           </div>
         </div>
       ) : (
-        <div className="card list">
-          {visibleTickets.map((ticket) => (
-            <Link key={ticket.id} href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="row-link">
-              <div className="data-row" style={{ gridTemplateColumns: "84px 1fr auto" }}>
-                <span className="mono faint" style={{ fontSize: 12 }}>
-                  {ticket.id}
-                </span>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600 }}>{ticket.title}</div>
-                  <div className="cluster wrap" style={{ gap: 10, marginTop: 5 }}>
-                    <span className="chip" style={{ padding: "2px 8px", fontSize: 11 }}>
-                      <Building2 size={11} /> {deptNames[ticket.department] ?? capitalize(ticket.department)}
-                    </span>
-                    <span className="faint" style={{ fontSize: 11.5 }}>
-                      {ticket.location || "No location"} · updated {formatDate(ticket.updatedAt)}
-                    </span>
+        <div className="card table-scroll">
+          <div className="list">
+            {visibleTickets.map((ticket) => (
+              <Link key={ticket.id} href={scopedWorkspaceHref(workspaceSlug, `/tickets/${ticket.id}`)} className="row-link">
+                <div className="data-row" style={{ gridTemplateColumns: "84px 1fr auto" }}>
+                  <span className="mono faint" style={{ fontSize: 12 }}>
+                    {ticket.id}
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600 }}>{ticket.title}</div>
+                    <div className="cluster wrap" style={{ gap: 10, marginTop: 5 }}>
+                      <span className="chip" style={{ padding: "2px 8px", fontSize: 11 }}>
+                        <Building2 size={11} /> {deptNames[ticket.department] ?? capitalize(ticket.department)}
+                      </span>
+                      <span className="faint" style={{ fontSize: 11.5 }}>
+                        {ticket.location || "No location"} · updated {formatDate(ticket.updatedAt)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="cluster" style={{ gap: 10 }}>
-                  <span className="hide-sm">
+                  <div className="cluster" style={{ gap: 10 }}>
                     <span className="badge" data-hue={PRIORITY_HUE[ticket.priority] ?? "neutral"}>
                       <span className="dot" /> {ticket.priority}
                     </span>
-                  </span>
-                  <span className="badge" data-hue={STATUS_HUE[ticket.status] ?? "neutral"}>
-                    <span className="dot" /> {ticket.status.replace("-", " ")}
-                  </span>
+                    <span className="badge" data-hue={STATUS_HUE[ticket.status] ?? "neutral"}>
+                      <span className="dot" /> {ticket.status.replace("-", " ")}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

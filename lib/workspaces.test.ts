@@ -34,6 +34,10 @@ const appLayoutSource = readFileSync(new URL("../components/app-layout.tsx", imp
 const themeControlsSource = readFileSync(new URL("../components/theme-controls.tsx", import.meta.url), "utf8");
 const settingsSource = readFileSync(new URL("../app/settings/page.tsx", import.meta.url), "utf8");
 const globalStylesSource = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+const rootLayoutSource = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
+const reviewSource = readFileSync(new URL("../app/review/page.tsx", import.meta.url), "utf8");
+const loginSource = readFileSync(new URL("../app/login/page.tsx", import.meta.url), "utf8");
+const signupSource = readFileSync(new URL("../app/signup/page.tsx", import.meta.url), "utf8");
 
 describe("workspace foundation", () => {
   it("defines a stable demo workspace for transitional routes and seed data", () => {
@@ -252,12 +256,40 @@ describe("workspace foundation", () => {
     expect(globalStylesSource).toContain("--st-danger: #b91c1c;");
   });
 
-  it("disables transition lag while dragging custom accent colors", () => {
-    expect(themeControlsSource).toContain("document.documentElement.dataset.accentDragging = \"true\"");
-    expect(themeControlsSource).toContain("delete document.documentElement.dataset.accentDragging");
-    expect(themeControlsSource).toContain("onLostPointerCapture={endAccentDrag}");
-    expect(globalStylesSource).toContain('html[data-accent-dragging="true"] *');
-    expect(globalStylesSource).toContain("transition-duration: 0ms !important;");
-    expect(globalStylesSource).toContain("transition-delay: 0ms !important;");
+  it("reduces the appearance control to a dark/light switch with a theme-derived accent", () => {
+    // The accent picker is gone: no stored accent, no presets, no paintbrush.
+    expect(themeControlsSource).not.toContain("triagedesk-accent");
+    expect(themeControlsSource).not.toContain("Paintbrush");
+    expect(themeControlsSource).not.toContain("--accent");
+    expect(rootLayoutSource).not.toContain("--accent");
+    expect(globalStylesSource).not.toContain("data-accent-dragging");
+    // Dark stays the default; the accent is monochrome per theme.
+    expect(themeControlsSource).toContain('const DEFAULT_THEME: ThemeMode = "dark";');
+    // The control is a switch with both icons inside the track.
+    expect(themeControlsSource).toContain('role="switch"');
+    expect(themeControlsSource).toContain("aria-checked={isDark}");
+    expect(themeControlsSource).toContain('className="theme-switch-icon theme-switch-icon--sun"');
+    expect(themeControlsSource).toContain('className="theme-switch-icon theme-switch-icon--moon"');
+    expect(globalStylesSource).toContain('.theme-switch[aria-checked="true"] .theme-switch-thumb { transform: translateX(22px); }');
+    expect(rootLayoutSource).toContain('document.documentElement.dataset.theme = stored === "light" ? "light" : "dark";');
+    expect(globalStylesSource).toContain("--accent: #ffffff;");
+    expect(globalStylesSource).toContain("--accent: #000000;");
+  });
+
+  it("keeps ticket and request rows whole on mobile by scrolling them horizontally", () => {
+    expect(globalStylesSource).toContain(".table-scroll { overflow-x: auto;");
+    expect(globalStylesSource).toContain(".table-scroll > .list { min-width: 720px; }");
+    expect(ticketsSource).toContain('<div className="card table-scroll">');
+    expect(reviewSource).toContain('<div className="table-scroll">');
+    // Columns are no longer dropped on small screens.
+    expect(ticketsSource).not.toContain("hide-sm");
+    expect(reviewSource).not.toContain("hide-sm");
+  });
+
+  it("keeps signed-in visitors off the sign-in and sign-up pages", () => {
+    expect(authSource).toContain("export async function redirectSignedInAwayFromAuth(next?: string)");
+    expect(authSource).toContain('redirect(access ? scopedWorkspaceHref(access.workspace.slug, "/") : getPostAuthWorkspacePath());');
+    expect(loginSource).toContain("await redirectSignedInAwayFromAuth(params.next);");
+    expect(signupSource).toContain("await redirectSignedInAwayFromAuth(params.next);");
   });
 });

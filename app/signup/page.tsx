@@ -2,9 +2,11 @@ import Link from "next/link";
 import { SignupForm } from "@/components/signup-form";
 import { AuthLayout } from "@/components/auth-layout";
 import { GoogleSignIn } from "@/components/google-sign-in";
+import { redirectSignedInAwayFromAuth } from "@/lib/auth";
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
   const params = await searchParams;
+  await redirectSignedInAwayFromAuth(params.next);
   const loginHref = params.next ? `/login?next=${encodeURIComponent(params.next)}` : "/login";
 
   return (

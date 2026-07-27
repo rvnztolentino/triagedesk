@@ -333,6 +333,22 @@ export async function requireUser() {
   return user;
 }
 
+// The auth pages exist for signed-out visitors only. A signed-in user who lands
+// on /login or /signup (back button, bookmark, header link) is sent straight to
+// their active workspace dashboard — or the workspace hub when no workspace is
+// active — instead of being shown a sign-in form they don't need. An explicit
+// `next` target wins so a deep link the user was following still resolves.
+export async function redirectSignedInAwayFromAuth(next?: string) {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  const safeNext = sanitizeInternalRedirect(next);
+  if (safeNext) redirect(safeNext);
+
+  const access = await getActiveWorkspaceAccess(user.id);
+  redirect(access ? scopedWorkspaceHref(access.workspace.slug, "/") : getPostAuthWorkspacePath());
+}
+
 export async function setActiveWorkspaceCookie(workspaceSlug: string) {
   const slug = workspaceSlugSchema.parse(workspaceSlug);
   await setActiveWorkspaceCookieValue(slug);
