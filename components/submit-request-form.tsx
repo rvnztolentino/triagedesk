@@ -80,7 +80,7 @@ function FormBody({
 
         <div className="field">
           <label htmlFor="contactName" className="label" style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <User size={13} className="text-muted" /> Contact name
+            <User size={13} className="text-muted" /> Contact name (optional)
           </label>
           <input id="contactName" name="contactName" type="text" maxLength={80} placeholder="Who to reach" className="input" />
         </div>
