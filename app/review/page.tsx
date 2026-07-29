@@ -75,10 +75,7 @@ export async function ReviewQueueView({ workspaceSlug }: { workspaceSlug?: strin
             <div className="list">
               {queue.map(({ request, triage }) => (
                 <Link key={request.id} href={href(`/review/${request.id}`)} className="row-link">
-                  <div className="data-row" style={{ gridTemplateColumns: "auto 1fr auto" }}>
-                    <span className="badge" data-hue={PRIORITY_HUE[triage.priority] ?? "neutral"}>
-                      <span className="dot" /> {triage.priority}
-                    </span>
+                  <div className="data-row" style={{ gridTemplateColumns: "1fr auto" }}>
                     <div style={{ minWidth: 0 }}>
                       <div className="cluster wrap" style={{ gap: 8 }}>
                         <span style={{ fontWeight: 600 }}>{triage.title}</span>
@@ -101,9 +98,14 @@ export async function ReviewQueueView({ workspaceSlug }: { workspaceSlug?: strin
                         </span>
                       </div>
                     </div>
-                    <span className="badge" data-hue="accent">
-                      <Sparkles size={11} /> {triage.category}
-                    </span>
+                    <div className="cluster" style={{ gap: 10 }}>
+                      <span className="badge" data-hue={PRIORITY_HUE[triage.priority] ?? "neutral"}>
+                        <span className="dot" /> {triage.priority}
+                      </span>
+                      <span className="badge" data-hue="accent">
+                        <Sparkles size={11} /> {triage.category}
+                      </span>
+                    </div>
                   </div>
                 </Link>
               ))}
