@@ -4,7 +4,7 @@ import { useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { useSignIn } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
-import { safeInternalNext } from "@/lib/auth-client";
+import { clerkErrorMessage, safeInternalNext } from "@/lib/auth-client";
 
 // Plain single-color Google "G" mark (inherits the button text color) so it
 // reads clean in both themes instead of the multicolor brand logo.
@@ -19,39 +19,63 @@ function GoogleIcon() {
 export function GoogleSignIn({ next, label = "Continue with Google" }: { next?: string; label?: string }) {
   const { signIn } = useSignIn();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleClick() {
-    if (!signIn) return;
+    if (loading) return;
+    setError("");
     setLoading(true);
+
     try {
       // Hand the browser off to Google. Clerk returns to /auth/callback to finalize
       // the session, then forwards to redirectUrl (the post-auth destination).
-      await signIn.sso({
+      //
+      // sso() RESOLVES with `{ error }` rather than throwing — the same Signals API
+      // contract that login-form and signup-form already destructure. A bare `await`
+      // here treated a failed SSO start as success, so the button stayed disabled on
+      // "Redirecting to Google..." forever with nothing to explain why. Check the
+      // returned error, not just thrown ones.
+      const { error: ssoError } = await signIn.sso({
         strategy: "oauth_google",
         redirectUrl: safeInternalNext(next) ?? "/onboarding",
         redirectCallbackUrl: "/auth/callback",
       });
-    } catch {
+
+      if (ssoError) {
+        setError(clerkErrorMessage(ssoError) || "We couldn't start Google sign-in. Please try again.");
+        setLoading(false);
+      }
+      // On success the browser navigates to Google, so `loading` stays set on purpose —
+      // clearing it would flash the idle button during the redirect.
+    } catch (err) {
+      setError(clerkErrorMessage(err) || "We couldn't start Google sign-in. Please try again.");
       setLoading(false);
     }
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={loading}
-      className={cn("btn btn--neutral btn--block")}
-    >
-      {loading ? (
-        <>
-          <LoaderCircle size={16} className="animate-spin" /> Redirecting to Google...
-        </>
-      ) : (
-        <>
-          <GoogleIcon /> {label}
-        </>
-      )}
-    </button>
+    <div className="stack" style={{ gap: 10 }}>
+      {error ? (
+        <div className="st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm" role="alert">
+          {error}
+        </div>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={loading}
+        className={cn("btn btn--neutral btn--block")}
+      >
+        {loading ? (
+          <>
+            <LoaderCircle size={16} className="animate-spin" /> Redirecting to Google...
+          </>
+        ) : (
+          <>
+            <GoogleIcon /> {label}
+          </>
+        )}
+      </button>
+    </div>
   );
 }
