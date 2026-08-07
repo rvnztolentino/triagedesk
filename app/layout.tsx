@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { AppLayout } from "@/components/app-layout";
-import { getActiveWorkspaceAccess, getCurrentUser, getSiteUrl } from "@/lib/auth";
+import { getActiveWorkspaceAccess, getClerkFapiOrigin, getCurrentUser, getSiteUrl } from "@/lib/auth";
 import { isWorkspacePreview } from "@/lib/workspaces";
 import { countUnreadNotifications, listNotifications } from "@/lib/notifications";
 import type { NotificationView } from "@/lib/schema";
@@ -21,6 +21,7 @@ const geistMono = Geist_Mono({
 });
 
 const siteUrl = getSiteUrl();
+const clerkFapiOrigin = getClerkFapiOrigin();
 const siteTitle = "TriageDesk";
 const siteDescription =
   "TriageDesk uses AI to read internal requests from staff, suggest a category, priority, and next action, then keeps an admin in the loop before anything becomes a tracked ticket.";
@@ -107,6 +108,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <ClerkProvider>
       <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
         <head>
+          {/* Warm the connection to Clerk's Frontend API before clerk.browser.js is
+              discovered, so the OAuth return on /auth/callback isn't waiting on a
+              cold DNS + TLS handshake to a third-party origin. */}
+          {clerkFapiOrigin ? (
+            <>
+              <link rel="preconnect" href={clerkFapiOrigin} crossOrigin="anonymous" />
+              <link rel="dns-prefetch" href={clerkFapiOrigin} />
+            </>
+          ) : null}
           <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         </head>
         <body className="font-sans bg-bg text-fg min-h-screen antialiased" suppressHydrationWarning>
