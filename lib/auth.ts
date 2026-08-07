@@ -300,8 +300,26 @@ export async function deleteAccount(userId: string) {
 // Wrapped in React `cache()` so the root layout and the page it renders share a
 // single resolution per request instead of each re-hitting Clerk + Supabase. The
 // first-request profile seeding runs at most once per request as a result.
+// `auth()` throws when a request reaches the app without clerkMiddleware having run.
+// With a correct matcher that only happens for asset-shaped paths the matcher skips
+// but no static file satisfies (e.g. Safari probing /apple-touch-icon.png), which
+// Next renders through the root layout as a 404. Treating that one error as "signed
+// out" keeps a missing file a 404 instead of a 500 for the whole layout, while every
+// other auth failure still propagates and the cause is logged.
+async function getClerkUserId() {
+  try {
+    return (await auth()).userId;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("clerkMiddleware")) {
+      console.error("[auth] Request reached the app without clerkMiddleware; check the proxy.ts matcher.", error.message);
+      return null;
+    }
+    throw error;
+  }
+}
+
 export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
-  const { userId } = await auth();
+  const userId = await getClerkUserId();
   if (!userId) return null;
   if (!getSupabaseAdminClient()) return null;
 
@@ -456,6 +474,25 @@ export async function requireWorkspaceOwner(workspaceSlug: string) {
   const access = await requireWorkspaceUser(workspaceSlug);
   if (access.membership.role !== "owner") redirect(`/w/${workspaceSlug}`);
   return access;
+}
+
+// Clerk's publishable key encodes the instance's Frontend API host (it is base64 of
+// "<host>$"). That host is a third-party origin, so the browser pays a DNS + TCP + TLS
+// handshake before clerk.browser.js can even start downloading, and again for the
+// environment/client calls that follow. Exposing it lets the root layout preconnect
+// during HTML parse instead of at script-discovery time. This matters most on
+// /auth/callback, where the OAuth return boots Clerk from a cold cache before it can
+// finalize the session. Returns undefined when the key is absent or malformed.
+export function getClerkFapiOrigin() {
+  const encoded = (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "").replace(/^pk_(test|live)_/, "");
+  if (!encoded) return undefined;
+
+  try {
+    const host = Buffer.from(encoded, "base64").toString("utf8").replace(/\$$/, "");
+    return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(host) ? `https://${host}` : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function getSiteUrl() {

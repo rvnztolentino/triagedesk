@@ -8,9 +8,15 @@ export default clerkMiddleware();
 
 export const config = {
   matcher: [
-    // Skip Next internals and static assets, but run on everything else so `auth()`
-    // is populated; always run on API routes and Clerk's frontend API routes.
-    "/((?!_next/static|_next/image|favicon.ico|icons|uploads|docs|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|json|webmanifest)$).*)",
+    // Clerk's maintained matcher: skip Next internals and static assets, but run on
+    // everything else so `auth()` is populated. The previous hand-rolled pattern also
+    // excluded whole directories (icons, uploads, docs), which meant a request under
+    // one of them that did NOT resolve to a real file fell through to the app and
+    // rendered the root layout with no Clerk context, throwing instead of 404ing.
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     "/(api|trpc)(.*)",
+    // Clerk's frontend API proxy path, so enabling `frontendApiProxy` later works
+    // without a matcher change.
+    "/__clerk/(.*)",
   ],
 };

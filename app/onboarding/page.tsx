@@ -20,12 +20,17 @@ function glyph(name: string) {
 
 export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const user = await requireUser();
-  const workspaces = await listUserWorkspaces(user.id);
-  const ownedCount = await countOwnedWorkspaces(user.id);
+  // These three are independent, and this page is the post-sign-in landing spot, so
+  // running them together removes two serial round trips from the first authenticated
+  // render (the slowest one, since it also seeds the profile).
+  const [workspaces, ownedCount, activeWorkspace, params] = await Promise.all([
+    listUserWorkspaces(user.id),
+    countOwnedWorkspaces(user.id),
+    getActiveWorkspaceAccess(user.id),
+    searchParams,
+  ]);
   const atWorkspaceLimit = ownedCount >= MAX_WORKSPACES_PER_USER;
-  const activeWorkspace = await getActiveWorkspaceAccess(user.id);
   const activeWorkspaceIsPreview = activeWorkspace ? isWorkspacePreview(activeWorkspace.workspace.id) : false;
-  const params = await searchParams;
 
   return (
     <div className="mx-auto w-full max-w-[1120px]">
