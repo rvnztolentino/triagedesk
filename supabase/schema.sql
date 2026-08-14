@@ -795,6 +795,108 @@ $$;
 revoke all on function check_rate_limit(text, text, integer, integer, bigint) from public, anon, authenticated;
 grant execute on function check_rate_limit(text, text, integer, integer, bigint) to service_role;
 
+-- ── Human-readable entity ids (REQ-1042, TRG-1043, …) ───────────────────────
+-- These used to be generated in the app by selecting every row in the target table,
+-- taking the highest id in JS, and adding one. That was a full-table scan on every
+-- insert (shared by every workspace) and a read-modify-write race: two concurrent
+-- inserts computed the same id and one failed on the primary key. Sequences make
+-- allocation O(1) and atomic. Gaps are expected and harmless — a rolled-back
+-- transaction burns a value — which is normal for ticket numbering.
+create sequence if not exists entity_id_requests_seq;
+create sequence if not exists entity_id_tickets_seq;
+create sequence if not exists entity_id_triage_seq;
+create sequence if not exists entity_id_activity_seq;
+create sequence if not exists entity_id_notes_seq;
+
+-- Seed each sequence ONCE, on the run that creates it, from the highest id already
+-- present so existing rows are never re-issued. setval() sets last_value, so the next
+-- nextval() returns max + 1, and the 999 floor preserves the original "first generated
+-- id is 1000" behaviour.
+--
+-- The `is null` guard means every later run of this file is a no-op for sequences.
+-- That matters because this file is re-run to pick up other schema changes while the
+-- app is live: re-seeding from max(id) at that point would move a sequence BACKWARDS
+-- onto ids that concurrent writers had already taken but not yet committed. Once a
+-- sequence has been used it is always at or ahead of every id it has issued, so
+-- leaving it alone is the correct and safe action.
+--
+-- A sequence that has never been read reports last_value as null in pg_sequences.
+do $$
+begin
+  if (select last_value from pg_sequences
+      where schemaname = 'public' and sequencename = 'entity_id_requests_seq') is null then
+    perform setval('entity_id_requests_seq', greatest(999,
+      coalesce((select max((regexp_replace(id, '^REQ-', ''))::bigint)
+                from requests where id ~ '^REQ-[0-9]+$'), 0)));
+  end if;
+
+  if (select last_value from pg_sequences
+      where schemaname = 'public' and sequencename = 'entity_id_tickets_seq') is null then
+    perform setval('entity_id_tickets_seq', greatest(999,
+      coalesce((select max((regexp_replace(id, '^TRG-', ''))::bigint)
+                from tickets where id ~ '^TRG-[0-9]+$'), 0)));
+  end if;
+
+  if (select last_value from pg_sequences
+      where schemaname = 'public' and sequencename = 'entity_id_triage_seq') is null then
+    perform setval('entity_id_triage_seq', greatest(999,
+      coalesce((select max((regexp_replace(id, '^TRI-', ''))::bigint)
+                from ai_triage_results where id ~ '^TRI-[0-9]+$'), 0)));
+  end if;
+
+  if (select last_value from pg_sequences
+      where schemaname = 'public' and sequencename = 'entity_id_activity_seq') is null then
+    perform setval('entity_id_activity_seq', greatest(999,
+      coalesce((select max((regexp_replace(id, '^ACT-', ''))::bigint)
+                from ticket_activity where id ~ '^ACT-[0-9]+$'), 0)));
+  end if;
+
+  if (select last_value from pg_sequences
+      where schemaname = 'public' and sequencename = 'entity_id_notes_seq') is null then
+    perform setval('entity_id_notes_seq', greatest(999,
+      coalesce((select max((regexp_replace(id, '^NOTE-', ''))::bigint)
+                from ticket_notes where id ~ '^NOTE-[0-9]+$'), 0)));
+  end if;
+end $$;
+
+create or replace function next_entity_id(target_prefix text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_sequence text;
+begin
+  -- A whitelist, not interpolation: the prefix selects a known sequence by name, so
+  -- a caller can never steer nextval() at an arbitrary sequence in the database.
+  target_sequence := case target_prefix
+    when 'REQ' then 'entity_id_requests_seq'
+    when 'TRG' then 'entity_id_tickets_seq'
+    when 'TRI' then 'entity_id_triage_seq'
+    when 'ACT' then 'entity_id_activity_seq'
+    when 'NOTE' then 'entity_id_notes_seq'
+    else null
+  end;
+
+  if target_sequence is null then
+    raise exception 'Unknown entity id prefix: %', target_prefix;
+  end if;
+
+  return target_prefix || '-' || nextval(target_sequence);
+end;
+$$;
+
+revoke all on function next_entity_id(text) from public, anon, authenticated;
+grant execute on function next_entity_id(text) to service_role;
+grant usage on sequence
+  entity_id_requests_seq,
+  entity_id_tickets_seq,
+  entity_id_triage_seq,
+  entity_id_activity_seq,
+  entity_id_notes_seq
+to service_role;
+
 alter table departments enable row level security;
 alter table user_profiles enable row level security;
 alter table workspaces enable row level security;

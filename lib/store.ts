@@ -598,17 +598,21 @@ async function insertRows(client: SupabaseClient, table: string, rows: SupabaseR
   requireNoError(error, `Insert ${table}`);
 }
 
-async function nextNumericId(client: SupabaseClient, table: string, column: string, prefix: string) {
-  const { data, error } = await client.from(table).select(column).like(column, `${prefix}-%`);
+// Mirrors the prefix whitelist inside the next_entity_id RPC, so an unknown prefix
+// is a type error here rather than a runtime exception from Postgres.
+type EntityIdPrefix = "REQ" | "TRG" | "TRI" | "ACT" | "NOTE";
+
+// Human-readable ids come from Postgres sequences via next_entity_id, which is
+// atomic and O(1). This previously selected every row in the table to find the
+// highest id, which meant a full-table scan on every insert and a read-modify-write
+// race that could hand the same id to two concurrent writers.
+export async function nextEntityId(client: SupabaseClient, prefix: EntityIdPrefix) {
+  const { data, error } = await client.rpc("next_entity_id", { target_prefix: prefix });
   requireNoError(error, `Generate ${prefix} id`);
 
-  const max = ((data ?? []) as unknown as SupabaseRow[]).reduce((highest, row) => {
-    const value = asString(row[column]);
-    const numeric = Number(value.replace(`${prefix}-`, ""));
-    return Number.isFinite(numeric) ? Math.max(highest, numeric) : highest;
-  }, 999);
-
-  return `${prefix}-${Math.max(1000, max + 1)}`;
+  const id = asString(data);
+  if (!id) throw new Error(`Generate ${prefix} id failed: the database returned no id.`);
+  return id;
 }
 
 async function addActivity(
@@ -616,7 +620,7 @@ async function addActivity(
   input: Omit<TicketActivityRecord, "id" | "createdAt"> & { createdAt?: string }
 ) {
   const activity: TicketActivityRecord = {
-    id: await nextNumericId(client, "ticket_activity", "id", "ACT"),
+    id: await nextEntityId(client, "ACT"),
     createdAt: input.createdAt ?? now(),
     ...input,
   };
@@ -847,7 +851,7 @@ export async function createRequest(input: RequestSubmission, requester: AppUser
   const client = requireSupabaseAdminClient();
   const timestamp = now();
   const request: RequestRecord = {
-    id: await nextNumericId(client, "requests", "id", "REQ"),
+    id: await nextEntityId(client, "REQ"),
     workspaceId,
     requesterUserId: requester.id,
     ...input,
@@ -913,7 +917,7 @@ export async function saveTriageResult(requestId: string, triage: TriageDraft, w
   const client = requireSupabaseAdminClient();
   await requireWorkspaceRequest(client, requestId, workspaceId);
   const record: TriageResultRecord = {
-    id: await nextNumericId(client, "ai_triage_results", "id", "TRI"),
+    id: await nextEntityId(client, "TRI"),
     workspaceId,
     requestId,
     ...triage,
@@ -1138,7 +1142,7 @@ export async function approveRequest(input: {
   const request = requestFromRow(requestData as SupabaseRow);
   const timestamp = now();
   const ticket: TicketRecord = {
-    id: await nextNumericId(client, "tickets", "id", "TRG"),
+    id: await nextEntityId(client, "TRG"),
     workspaceId,
     requestId: request.id,
     requesterUserId: request.requesterUserId,
@@ -1317,7 +1321,7 @@ export async function updateTicket(input: {
   if (input.note) {
     changes.push(input.note);
     const note: TicketNoteRecord = {
-      id: await nextNumericId(client, "ticket_notes", "id", "NOTE"),
+      id: await nextEntityId(client, "NOTE"),
       workspaceId,
       ticketId: ticket.id,
       actor,
