@@ -208,6 +208,18 @@ alter table workspace_invites alter column created_by drop not null;
 alter table departments add column if not exists workspace_id uuid references workspaces(id) on delete cascade;
 alter table request_attachments add column if not exists file_name text not null default 'Attachment';
 
+-- Live demo (no account required). A demo visitor gets their own throwaway workspace
+-- cloned from the Demo Clinic template, owned by a profile with no clerk_user_id.
+-- `is_demo` marks both so every demo-only rule (deny-list, cleanup, id space) keys off
+-- a column rather than off a name convention. `expires_at` is null for real workspaces.
+alter table workspaces add column if not exists is_demo boolean not null default false;
+alter table workspaces add column if not exists expires_at timestamptz;
+alter table user_profiles add column if not exists is_demo boolean not null default false;
+
+-- Partial index: the cleanup sweep only ever scans expired demo workspaces, and demo
+-- rows are a small minority, so keeping real workspaces out of the index keeps it tiny.
+create index if not exists workspaces_demo_expiry_idx on workspaces (expires_at) where is_demo;
+
 -- Retire the ticket-level 'needs-review' status (review is a request-stage concept).
 -- Migrate any existing rows, then tighten the status check constraint. Idempotent.
 update tickets set status = 'open' where status = 'needs-review';
@@ -539,6 +551,13 @@ begin
     raise exception 'Workspace slug is invalid.';
   end if;
 
+  -- Demo visitors are denied extra workspaces in the app layer too; this is the
+  -- backstop, so an app-layer miss can't turn into unbounded anonymous workspace
+  -- creation. create_demo_workspace inserts directly and is unaffected.
+  if exists (select 1 from user_profiles p where p.id = target_user_id and p.is_demo) then
+    raise exception 'Demo sessions cannot create workspaces.';
+  end if;
+
   insert into workspaces (name, slug, created_by)
   values (trim(target_name), target_slug, target_user_id)
   returning * into created_workspace;
@@ -572,6 +591,12 @@ declare
   matched_invite_id uuid;
   matched_invite_role text;
 begin
+  -- The highest-value target for a demo session is a real workspace's invite link,
+  -- so this is checked first and enforced in the database, not only in the app.
+  if exists (select 1 from user_profiles p where p.id = target_user_id and p.is_demo) then
+    raise exception 'Demo sessions cannot join workspaces.';
+  end if;
+
   -- Lock the matched invite row so two users cannot redeem the same single-use
   -- invite concurrently. Under READ COMMITTED, a second waiter re-evaluates the
   -- predicate after the lock is released and sees used_at populated, so it falls
@@ -859,6 +884,16 @@ begin
   end if;
 end $$;
 
+-- Demo rows draw from their own high-offset sequences so demo traffic never burns
+-- ticket numbers a real workspace would otherwise use, and demo rows stay obvious in
+-- the database. `start with` seeds them on creation, so unlike the sequences above
+-- they need no backfill block: they have no existing rows to catch up to.
+create sequence if not exists entity_id_demo_requests_seq start with 900000;
+create sequence if not exists entity_id_demo_tickets_seq start with 900000;
+create sequence if not exists entity_id_demo_triage_seq start with 900000;
+create sequence if not exists entity_id_demo_activity_seq start with 900000;
+create sequence if not exists entity_id_demo_notes_seq start with 900000;
+
 create or replace function next_entity_id(target_prefix text)
 returns text
 language plpgsql
@@ -867,15 +902,23 @@ set search_path = public
 as $$
 declare
   target_sequence text;
+  visible_prefix text;
 begin
   -- A whitelist, not interpolation: the prefix selects a known sequence by name, so
   -- a caller can never steer nextval() at an arbitrary sequence in the database.
+  -- The DEMO_ keys pick the demo sequence while still rendering the normal prefix,
+  -- so a demo ticket reads TRG-900123 — same shape, visibly separate number space.
   target_sequence := case target_prefix
     when 'REQ' then 'entity_id_requests_seq'
     when 'TRG' then 'entity_id_tickets_seq'
     when 'TRI' then 'entity_id_triage_seq'
     when 'ACT' then 'entity_id_activity_seq'
     when 'NOTE' then 'entity_id_notes_seq'
+    when 'DEMO_REQ' then 'entity_id_demo_requests_seq'
+    when 'DEMO_TRG' then 'entity_id_demo_tickets_seq'
+    when 'DEMO_TRI' then 'entity_id_demo_triage_seq'
+    when 'DEMO_ACT' then 'entity_id_demo_activity_seq'
+    when 'DEMO_NOTE' then 'entity_id_demo_notes_seq'
     else null
   end;
 
@@ -883,7 +926,13 @@ begin
     raise exception 'Unknown entity id prefix: %', target_prefix;
   end if;
 
-  return target_prefix || '-' || nextval(target_sequence);
+  -- Strip the DEMO_ selector so the id a user sees is the same shape either way.
+  visible_prefix := case
+    when target_prefix like 'DEMO\_%' then substring(target_prefix from 6)
+    else target_prefix
+  end;
+
+  return visible_prefix || '-' || nextval(target_sequence);
 end;
 $$;
 
@@ -894,8 +943,305 @@ grant usage on sequence
   entity_id_tickets_seq,
   entity_id_triage_seq,
   entity_id_activity_seq,
-  entity_id_notes_seq
+  entity_id_notes_seq,
+  entity_id_demo_requests_seq,
+  entity_id_demo_tickets_seq,
+  entity_id_demo_triage_seq,
+  entity_id_demo_activity_seq,
+  entity_id_demo_notes_seq
 to service_role;
+
+-- Deletes a bounded batch of expired demo workspaces plus any demo profile left
+-- without a membership. Bounded on purpose: it runs opportunistically on the demo
+-- create path, so it must never turn into an unbounded sweep that stalls a visitor.
+-- `skip locked` keeps two concurrent creates from fighting over the same rows.
+create or replace function delete_expired_demo_workspaces(target_batch_size integer default 5)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  batch_size integer;
+  deleted_count integer;
+begin
+  batch_size := least(greatest(coalesce(target_batch_size, 5), 0), 50);
+  if batch_size = 0 then
+    return 0;
+  end if;
+
+  with doomed as (
+    select w.id
+    from workspaces w
+    where w.is_demo
+      and w.expires_at is not null
+      and w.expires_at <= now()
+    order by w.expires_at
+    limit batch_size
+    for update skip locked
+  ),
+  removed as (
+    delete from workspaces w
+    using doomed d
+    where w.id = d.id
+    returning w.id
+  )
+  select count(*) into deleted_count from removed;
+
+  -- Workspace deletion cascades to its rows and memberships, which strands the demo
+  -- profile that owned it. Bounded the same way, and scoped to is_demo so a real
+  -- profile between signup and first workspace is never touched.
+  delete from user_profiles p
+  where p.id in (
+    select p2.id
+    from user_profiles p2
+    where p2.is_demo
+      and not exists (
+        select 1 from workspace_members m where m.user_id = p2.id
+      )
+    limit batch_size
+    for update skip locked
+  );
+
+  return deleted_count;
+end;
+$$;
+
+-- Creates one visitor's throwaway demo workspace in a single transaction: the demo
+-- profile, the workspace, the owner membership, and a full clone of the Demo Clinic
+-- template's departments, requests, tickets, triage results, activity, and notes.
+-- Single transaction is the point — a partial failure must never leave a visitor in a
+-- half-built workspace, so every insert either lands together or not at all.
+create or replace function create_demo_workspace(target_session_id text, target_lifetime_hours integer default 24)
+returns table (workspace_id uuid, workspace_slug text, demo_user_id uuid, workspace_expires_at timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  template_id constant uuid := '00000000-0000-4000-8000-000000000001';
+  new_profile_id uuid;
+  new_workspace workspaces%rowtype;
+  lifetime_hours integer;
+  -- old id -> new id, built before any insert so both directions of the
+  -- request/ticket cross-references can be rewritten in one pass.
+  request_map jsonb;
+  ticket_map jsonb;
+begin
+  -- The session id comes from a signed cookie, but this function is the last line of
+  -- defense: constrain it to a uuid so it can never widen the slug or the email past
+  -- what the unique constraints expect.
+  if target_session_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
+    raise exception 'Demo session id is invalid.';
+  end if;
+
+  lifetime_hours := least(greatest(coalesce(target_lifetime_hours, 24), 1), 72);
+
+  -- Pay for cleanup on the create path rather than adding a cron. Bounded, and it
+  -- runs before the inserts so an expired slug can be reclaimed in the same call.
+  perform delete_expired_demo_workspaces(5);
+
+  -- .invalid is reserved by RFC 2606, so a demo email can never collide with a real
+  -- Clerk signup. clerk_user_id stays null: this profile has no Clerk account.
+  insert into user_profiles (email, display_name, role, is_demo)
+  values ('demo-' || target_session_id || '@demo.invalid', 'Demo user', 'requester', true)
+  returning id into new_profile_id;
+
+  insert into workspaces (name, slug, created_by, is_demo, expires_at)
+  values (
+    'Demo Workspace',
+    'demo-' || replace(target_session_id, '-', ''),
+    new_profile_id,
+    true,
+    now() + make_interval(hours => lifetime_hours)
+  )
+  returning * into new_workspace;
+
+  insert into workspace_members (workspace_id, user_id, role)
+  values (new_workspace.id, new_profile_id, 'owner');
+
+  insert into departments (workspace_id, id, name, description)
+  select new_workspace.id, d.id, d.name, d.description
+  from departments d
+  where d.workspace_id = template_id;
+
+  -- next_entity_id is volatile, so it is called once per row here, giving each
+  -- cloned row its own id from the demo sequence.
+  select coalesce(jsonb_object_agg(r.id, next_entity_id('DEMO_REQ')), '{}'::jsonb)
+  into request_map
+  from requests r
+  where r.workspace_id = template_id;
+
+  select coalesce(jsonb_object_agg(t.id, next_entity_id('DEMO_TRG')), '{}'::jsonb)
+  into ticket_map
+  from tickets t
+  where t.workspace_id = template_id;
+
+  -- Every cloned row is attributed to the demo visitor, who owns the workspace, so
+  -- no real user's id leaks into the copy.
+  insert into requests (
+    id, workspace_id, requester_user_id, description, location, contact_name,
+    urgency_note, image_url, status, duplicate_of_ticket_id, created_at, reviewed_at
+  )
+  select
+    request_map ->> r.id,
+    new_workspace.id,
+    new_profile_id,
+    r.description, r.location, r.contact_name, r.urgency_note, r.image_url, r.status,
+    ticket_map ->> r.duplicate_of_ticket_id,
+    r.created_at, r.reviewed_at
+  from requests r
+  where r.workspace_id = template_id;
+
+  insert into tickets (
+    id, workspace_id, request_id, requester_user_id, title, description, location,
+    contact_name, urgency_note, status, priority, department, category, triage_summary,
+    priority_reasoning, resolution_notes, duplicate_of_ticket_id, created_at, updated_at,
+    resolved_at, closed_at
+  )
+  select
+    ticket_map ->> t.id,
+    new_workspace.id,
+    request_map ->> t.request_id,
+    new_profile_id,
+    t.title, t.description, t.location, t.contact_name, t.urgency_note, t.status,
+    t.priority, t.department, t.category, t.triage_summary, t.priority_reasoning,
+    t.resolution_notes,
+    ticket_map ->> t.duplicate_of_ticket_id,
+    t.created_at, t.updated_at, t.resolved_at, t.closed_at
+  from tickets t
+  where t.workspace_id = template_id;
+
+  insert into ai_triage_results (
+    id, workspace_id, request_id, source, title, category, priority, department,
+    summary, priority_reasoning, similar_ticket_ids, raw_response, created_at
+  )
+  select
+    next_entity_id('DEMO_TRI'),
+    new_workspace.id,
+    request_map ->> a.request_id,
+    a.source, a.title, a.category, a.priority, a.department, a.summary, a.priority_reasoning,
+    -- similar_ticket_ids is a plain text[] with no foreign key, so it has to be
+    -- rewritten by hand or it would keep pointing at the template's tickets.
+    (
+      select coalesce(array_agg(coalesce(ticket_map ->> old_ticket_id, old_ticket_id)), '{}')
+      from unnest(a.similar_ticket_ids) as old_ticket_id
+    ),
+    a.raw_response, a.created_at
+  from ai_triage_results a
+  where a.workspace_id = template_id
+    and request_map ? a.request_id;
+
+  insert into ticket_activity (id, workspace_id, ticket_id, request_id, action, actor, details, created_at)
+  select
+    next_entity_id('DEMO_ACT'),
+    new_workspace.id,
+    ticket_map ->> v.ticket_id,
+    request_map ->> v.request_id,
+    v.action, v.actor, v.details, v.created_at
+  from ticket_activity v
+  where v.workspace_id = template_id
+    and (v.ticket_id is null or ticket_map ? v.ticket_id)
+    and (v.request_id is null or request_map ? v.request_id);
+
+  insert into ticket_notes (id, workspace_id, ticket_id, actor, body, created_at)
+  select
+    next_entity_id('DEMO_NOTE'),
+    new_workspace.id,
+    ticket_map ->> n.ticket_id,
+    n.actor, n.body, n.created_at
+  from ticket_notes n
+  where n.workspace_id = template_id
+    and ticket_map ? n.ticket_id;
+
+  return query
+    select new_workspace.id, new_workspace.slug, new_profile_id, new_workspace.expires_at;
+end;
+$$;
+
+-- Converts a demo workspace into a real one owned by a Clerk-backed profile. Keeps
+-- the visitor's work instead of making them rebuild it after signing up. Raises
+-- rather than half-converting, so a failure leaves the demo intact and retryable.
+create or replace function claim_demo_workspace(target_session_id text, target_profile_id uuid)
+returns table (workspace_id uuid, workspace_slug text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  demo_profile_id uuid;
+  claimed_workspace workspaces%rowtype;
+begin
+  select p.id into demo_profile_id
+  from user_profiles p
+  where p.email = 'demo-' || target_session_id || '@demo.invalid'
+    and p.is_demo;
+
+  if demo_profile_id is null then
+    raise exception 'Demo session not found.';
+  end if;
+
+  if not exists (select 1 from user_profiles p where p.id = target_profile_id and not p.is_demo) then
+    raise exception 'A real account is required to keep a demo workspace.';
+  end if;
+
+  -- Lock the workspace so a concurrent expiry sweep cannot delete it mid-claim.
+  select w.* into claimed_workspace
+  from workspaces w
+  where w.created_by = demo_profile_id
+    and w.is_demo
+  limit 1
+  for update;
+
+  if not found then
+    raise exception 'Demo workspace not found.';
+  end if;
+
+  if claimed_workspace.expires_at is not null and claimed_workspace.expires_at <= now() then
+    raise exception 'This demo has already expired.';
+  end if;
+
+  -- Same cap real workspace creation enforces; keep in sync with
+  -- MAX_WORKSPACES_PER_USER in lib/workspaces.ts.
+  if (select count(*) from workspaces w where w.created_by = target_profile_id) >= 3 then
+    raise exception 'Workspace limit reached.';
+  end if;
+
+  if exists (
+    select 1 from workspace_members m
+    where m.workspace_id = claimed_workspace.id and m.user_id = target_profile_id
+  ) then
+    raise exception 'You are already a member of this workspace.';
+  end if;
+
+  update workspaces
+  set is_demo = false, expires_at = null, created_by = target_profile_id
+  where id = claimed_workspace.id;
+
+  update workspace_members
+  set user_id = target_profile_id
+  where workspace_id = claimed_workspace.id and user_id = demo_profile_id;
+
+  update requests set requester_user_id = target_profile_id
+  where workspace_id = claimed_workspace.id and requester_user_id = demo_profile_id;
+
+  update tickets set requester_user_id = target_profile_id
+  where workspace_id = claimed_workspace.id and requester_user_id = demo_profile_id;
+
+  -- The demo identity is single-use: once claimed, its cookie must resolve to
+  -- signed-out rather than back into the now-real workspace.
+  delete from user_profiles where id = demo_profile_id;
+
+  return query select claimed_workspace.id, claimed_workspace.slug;
+end;
+$$;
+
+revoke all on function delete_expired_demo_workspaces(integer) from public, anon, authenticated;
+revoke all on function create_demo_workspace(text, integer) from public, anon, authenticated;
+revoke all on function claim_demo_workspace(text, uuid) from public, anon, authenticated;
+grant execute on function delete_expired_demo_workspaces(integer) to service_role;
+grant execute on function create_demo_workspace(text, integer) to service_role;
+grant execute on function claim_demo_workspace(text, uuid) to service_role;
 
 alter table departments enable row level security;
 alter table user_profiles enable row level security;

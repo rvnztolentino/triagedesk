@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireWorkspaceContext } from "@/lib/auth";
+import { isDemoUser, requireWorkspaceContext } from "@/lib/auth";
 import { getVisibleRequestAttachment } from "@/lib/store";
 import { requireSupabaseAdminClient } from "@/lib/supabase";
 import { enforceRateLimit, RateLimitError } from "@/lib/security";
@@ -13,6 +13,12 @@ function attachmentBucket() {
 export async function GET(_: Request, { params }: { params: Promise<{ workspaceSlug: string; id: string }> }) {
   const { workspaceSlug, id } = await params;
   const { user, workspace, membership } = await requireWorkspaceContext(workspaceSlug);
+  // Demo sessions have no attachments of their own (uploads are denied), so any
+  // download attempt is either pointless or aimed at someone else's file. Refuse
+  // before the signed storage URL is ever minted.
+  if (isDemoUser(user)) {
+    return new NextResponse("Attachments are available on a real workspace.", { status: 403 });
+  }
   try {
     await enforceRateLimit({
       scope: "attachment_download_user_hour",

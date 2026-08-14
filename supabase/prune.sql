@@ -69,6 +69,26 @@ where (
 delete from security_rate_limits
 where updated_at < now() - interval '7 days';
 
+-- ── 4b. Expired live-demo workspaces and orphaned demo profiles ─────────────
+-- Backstop only. The demo create path already sweeps a small batch on every call, so
+-- this exists for the case where nobody has started a demo in a while and expired
+-- workspaces are sitting around holding rows. Unbounded on purpose: unlike the
+-- opportunistic sweep, nothing is waiting on this.
+--
+-- Deleting the workspace cascades to its requests, tickets, triage results, activity,
+-- notes, departments, and memberships. Demo workspaces never have attachments (uploads
+-- are denied for demo sessions), so the storage-bucket caveat above does not apply.
+delete from workspaces
+where is_demo
+  and expires_at is not null
+  and expires_at <= now();
+
+-- Demo profiles left without a membership by the delete above. Scoped to is_demo so a
+-- real account that has not created a workspace yet is never touched.
+delete from user_profiles p
+where p.is_demo
+  and not exists (select 1 from workspace_members m where m.user_id = p.id);
+
 -- ── 5. (OPTIONAL, DISABLED) Trim ticket_activity audit log ──────────────────
 -- ticket_activity is the fastest-growing table (~6 rows per ticket) and is the
 -- highest-leverage thing to trim IF you ever grow 100x. It is an AUDIT LOG, so
