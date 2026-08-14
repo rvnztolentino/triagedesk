@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { joinWorkspaceAction } from "@/app/actions";
 import { OpenWorkspaceButton } from "@/components/open-workspace-button";
 import { SubmitButton } from "@/components/submit-button";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isDemoUser } from "@/lib/auth";
 import { workspaceSlugSchema } from "@/lib/schema";
 import { getWorkspaceBySlug, getWorkspaceInviteByCode, getWorkspaceMembership, isWorkspaceInviteActive, isWorkspacePreview } from "@/lib/workspaces";
 
@@ -26,7 +26,10 @@ export default async function JoinWorkspacePage({
   const code = query.code?.trim() ?? "";
   const next = `/join/${workspaceSlug}${code ? `?code=${encodeURIComponent(code)}` : ""}`;
   const user = await getCurrentUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(next)}`);
+  // Accepting an invite requires a Clerk account. A demo visitor is sent to sign in
+  // rather than shown the join form, so the invite can only ever be redeemed by a real
+  // identity — signing in wins over the demo cookie, so this is also the way out.
+  if (!user || isDemoUser(user)) redirect(`/login?next=${encodeURIComponent(next)}`);
 
   const workspace = await getWorkspaceBySlug(workspaceSlug);
   const membership = workspace ? await getWorkspaceMembership(workspace.id, user.id) : undefined;

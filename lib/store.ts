@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getRuntimeSetupStatus,
@@ -602,12 +603,28 @@ async function insertRows(client: SupabaseClient, table: string, rows: SupabaseR
 // is a type error here rather than a runtime exception from Postgres.
 type EntityIdPrefix = "REQ" | "TRG" | "TRI" | "ACT" | "NOTE";
 
+// Is this workspace a live-demo workspace? Cached per request so the five id call
+// sites below share one lookup instead of each re-asking, and so a signed-in user's
+// write path costs a single extra primary-key read at most. Resolved here rather than
+// threaded through every store function so no call site can forget to pass it.
+export const isDemoWorkspace = cache(async (client: SupabaseClient, workspaceId: string) => {
+  const { data, error } = await client.from("workspaces").select("is_demo").eq("id", workspaceId).maybeSingle();
+  requireNoError(error, "Check demo workspace");
+  return (data as SupabaseRow | null)?.is_demo === true;
+});
+
 // Human-readable ids come from Postgres sequences via next_entity_id, which is
 // atomic and O(1). This previously selected every row in the table to find the
 // highest id, which meant a full-table scan on every insert and a read-modify-write
 // race that could hand the same id to two concurrent writers.
-export async function nextEntityId(client: SupabaseClient, prefix: EntityIdPrefix) {
-  const { data, error } = await client.rpc("next_entity_id", { target_prefix: prefix });
+//
+// Demo workspaces draw from a parallel set of sequences starting at 900000, so demo
+// traffic never consumes ticket numbers a real workspace would otherwise use. The
+// DEMO_ selector picks the sequence; the id it returns still reads TRG-900123, so the
+// format users see is unchanged.
+export async function nextEntityId(client: SupabaseClient, prefix: EntityIdPrefix, workspaceId: string) {
+  const targetPrefix = (await isDemoWorkspace(client, workspaceId)) ? `DEMO_${prefix}` : prefix;
+  const { data, error } = await client.rpc("next_entity_id", { target_prefix: targetPrefix });
   requireNoError(error, `Generate ${prefix} id`);
 
   const id = asString(data);
@@ -620,7 +637,7 @@ async function addActivity(
   input: Omit<TicketActivityRecord, "id" | "createdAt"> & { createdAt?: string }
 ) {
   const activity: TicketActivityRecord = {
-    id: await nextEntityId(client, "ACT"),
+    id: await nextEntityId(client, "ACT", input.workspaceId),
     createdAt: input.createdAt ?? now(),
     ...input,
   };
@@ -851,7 +868,7 @@ export async function createRequest(input: RequestSubmission, requester: AppUser
   const client = requireSupabaseAdminClient();
   const timestamp = now();
   const request: RequestRecord = {
-    id: await nextEntityId(client, "REQ"),
+    id: await nextEntityId(client, "REQ", workspaceId),
     workspaceId,
     requesterUserId: requester.id,
     ...input,
@@ -917,7 +934,7 @@ export async function saveTriageResult(requestId: string, triage: TriageDraft, w
   const client = requireSupabaseAdminClient();
   await requireWorkspaceRequest(client, requestId, workspaceId);
   const record: TriageResultRecord = {
-    id: await nextEntityId(client, "TRI"),
+    id: await nextEntityId(client, "TRI", workspaceId),
     workspaceId,
     requestId,
     ...triage,
@@ -1142,7 +1159,7 @@ export async function approveRequest(input: {
   const request = requestFromRow(requestData as SupabaseRow);
   const timestamp = now();
   const ticket: TicketRecord = {
-    id: await nextEntityId(client, "TRG"),
+    id: await nextEntityId(client, "TRG", workspaceId),
     workspaceId,
     requestId: request.id,
     requesterUserId: request.requesterUserId,
@@ -1321,7 +1338,7 @@ export async function updateTicket(input: {
   if (input.note) {
     changes.push(input.note);
     const note: TicketNoteRecord = {
-      id: await nextEntityId(client, "NOTE"),
+      id: await nextEntityId(client, "NOTE", workspaceId),
       workspaceId,
       ticketId: ticket.id,
       actor,

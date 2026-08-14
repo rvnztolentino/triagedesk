@@ -258,6 +258,9 @@ export interface UserProfileRecord {
   // rows written before the migration and the AppUser projection stay valid.
   nameChangeCount?: number;
   nameChangeWindowStart?: string;
+  // Set on profiles created for a live-demo visitor. Optional because rows written
+  // before the demo migration have no such column value to project.
+  isDemo?: boolean;
 }
 
 export interface AppUser {
@@ -265,6 +268,10 @@ export interface AppUser {
   email: string;
   displayName: string;
   role: UserRole;
+  // True only for a live-demo visitor with no Clerk account. Required rather than
+  // optional so every place that builds an AppUser has to state which it is — a demo
+  // principal that silently defaulted to "real" would bypass the whole deny-list.
+  isDemo: boolean;
 }
 
 export interface WorkspaceRecord {

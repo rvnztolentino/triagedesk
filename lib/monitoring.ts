@@ -31,6 +31,12 @@ export function captureOperationalError(error: unknown, context: Record<string, 
 
   Sentry.withScope((scope) => {
     scope.setContext("triagedesk", scrubbed);
+    // Live-demo traffic is anonymous and self-service, so its failures are both more
+    // frequent and less urgent than a paying workspace's. Promoting it to a tag makes
+    // it filterable in Sentry instead of drowning real signal in the same stream.
+    if ("demo" in scrubbed) {
+      scope.setTag("demo", String(scrubbed.demo === true));
+    }
     Sentry.captureException(error);
   });
 }

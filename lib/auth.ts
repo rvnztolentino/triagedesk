@@ -9,6 +9,7 @@ import { SetupRequiredError } from "@/lib/supabase";
 import { PublicError } from "@/lib/errors";
 import { assertCleanDisplayName, addMonths, nameChangeStatus, NAME_CHANGE_WINDOW_MONTHS } from "@/lib/display-name";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
+import { getDemoUser } from "@/lib/demo";
 import { countOwnedWorkspaces, getPostAuthWorkspacePath, isWorkspaceAdmin, isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
 
 // Keep app-owned cookies (active workspace) for a week. Clerk manages the auth
@@ -67,6 +68,7 @@ function profileFromRow(row: ProfileRow): UserProfileRecord {
     updatedAt: asString(row.updated_at),
     nameChangeCount: typeof row.name_change_count === "number" ? row.name_change_count : Number(row.name_change_count ?? 0) || 0,
     nameChangeWindowStart: row.name_change_window_start ? asString(row.name_change_window_start) : undefined,
+    isDemo: row.is_demo === true,
   };
 }
 
@@ -76,6 +78,7 @@ function toAppUser(profile: UserProfileRecord): AppUser {
     email: profile.email,
     displayName: profile.displayName || profile.email.split("@")[0],
     role: profile.role,
+    isDemo: profile.isDemo === true,
   };
 }
 
@@ -320,7 +323,16 @@ async function getClerkUserId() {
 
 export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
   const userId = await getClerkUserId();
-  if (!userId) return null;
+  // No Clerk session: fall back to a live-demo principal if this visitor holds a valid
+  // signed demo cookie. Resolving demo visitors here rather than in a parallel path is
+  // what lets every downstream guard (requireWorkspaceUser, requireWorkspaceAdmin,
+  // membership lookups) keep working unmodified. The cost is that a demo principal is
+  // now accepted everywhere a real one is, which is exactly why assertRealUser() below
+  // is applied to every action a demo session must not reach.
+  if (!userId) {
+    if (!getSupabaseAdminClient()) return null;
+    return getDemoUser();
+  }
   if (!getSupabaseAdminClient()) return null;
 
   let profile = await getUserProfileByClerkId(userId);
@@ -348,6 +360,30 @@ export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
 export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  return user;
+}
+
+// The live-demo deny-list. A demo principal owns exactly one throwaway workspace and
+// must never reach anything that touches a real account, a real workspace, or storage.
+// Throwing (rather than redirecting) keeps this usable inside server actions, where the
+// message is surfaced to the visitor as a prompt to sign up.
+export const DEMO_ACTION_BLOCKED_MESSAGE = "That's available once you create a free account. Your demo workspace stays as it is.";
+
+export function isDemoUser(user: Pick<AppUser, "isDemo"> | null | undefined) {
+  return user?.isDemo === true;
+}
+
+export function assertRealUser(user: Pick<AppUser, "isDemo"> | null | undefined) {
+  if (isDemoUser(user)) {
+    throw new PublicError(DEMO_ACTION_BLOCKED_MESSAGE);
+  }
+}
+
+// Guard for pages and route handlers, where a redirect is the right response and there
+// is no action state to carry a message back through.
+export async function requireRealUser(redirectTo = "/onboarding") {
+  const user = await requireUser();
+  if (isDemoUser(user)) redirect(redirectTo);
   return user;
 }
 

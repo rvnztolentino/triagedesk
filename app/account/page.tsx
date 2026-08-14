@@ -3,7 +3,7 @@ import { AlertTriangle, UserRound } from "lucide-react";
 import { updateAccountNameAction } from "@/app/actions";
 import { DeleteAccountForm } from "@/components/delete-account-form";
 import { SubmitButton } from "@/components/submit-button";
-import { getUserProfile, requireUser } from "@/lib/auth";
+import { getUserProfile, requireRealUser } from "@/lib/auth";
 import { MAX_NAME_CHANGES, nameChangeStatus } from "@/lib/display-name";
 import { countOwnedWorkspaces } from "@/lib/workspaces";
 
@@ -18,7 +18,9 @@ const SUCCESS_MESSAGES: Record<string, string> = {
 };
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ error?: string; updated?: string }> }) {
-  const user = await requireUser();
+  // Account settings belong to a real account. A demo visitor has no Clerk user behind
+  // their profile, so send them back rather than render a form that can only fail.
+  const user = await requireRealUser();
   const [profile, ownedWorkspaces] = await Promise.all([
     getUserProfile(user.id),
     countOwnedWorkspaces(user.id),
