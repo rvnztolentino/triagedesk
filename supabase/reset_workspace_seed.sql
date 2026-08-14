@@ -187,4 +187,43 @@ alter table ticket_activity alter column workspace_id drop default;
 alter table ticket_notes alter column workspace_id drop default;
 alter table workspace_metadata alter column workspace_id drop default;
 
+-- The seed rows above insert explicit ids (REQ-1001, TRG-1043, …), which bypass the
+-- entity id sequences and leave them behind. Re-point each sequence at the highest
+-- id now present — across every workspace, not just the demo — or the next insert
+-- after a reset collides on the primary key.
+--
+-- Requires supabase/schema.sql to have been applied first; without the sequences
+-- these statements error and the whole transaction rolls back.
+--
+-- greatest() includes the sequence's own last_value so an already-advanced sequence
+-- is left alone rather than pulled backwards. On a database with live traffic this
+-- read-then-setval is not atomic: a nextval landing between the two could be undone.
+-- Resetting the demo seed is a deliberate, rare admin action, so run it when the app
+-- is quiet rather than mid-traffic.
+select setval('entity_id_requests_seq', greatest(
+  999,
+  coalesce((select max((regexp_replace(id, '^REQ-', ''))::bigint) from requests where id ~ '^REQ-[0-9]+$'), 0),
+  coalesce((select last_value from pg_sequences where schemaname = 'public' and sequencename = 'entity_id_requests_seq'), 0)
+));
+select setval('entity_id_tickets_seq', greatest(
+  999,
+  coalesce((select max((regexp_replace(id, '^TRG-', ''))::bigint) from tickets where id ~ '^TRG-[0-9]+$'), 0),
+  coalesce((select last_value from pg_sequences where schemaname = 'public' and sequencename = 'entity_id_tickets_seq'), 0)
+));
+select setval('entity_id_triage_seq', greatest(
+  999,
+  coalesce((select max((regexp_replace(id, '^TRI-', ''))::bigint) from ai_triage_results where id ~ '^TRI-[0-9]+$'), 0),
+  coalesce((select last_value from pg_sequences where schemaname = 'public' and sequencename = 'entity_id_triage_seq'), 0)
+));
+select setval('entity_id_activity_seq', greatest(
+  999,
+  coalesce((select max((regexp_replace(id, '^ACT-', ''))::bigint) from ticket_activity where id ~ '^ACT-[0-9]+$'), 0),
+  coalesce((select last_value from pg_sequences where schemaname = 'public' and sequencename = 'entity_id_activity_seq'), 0)
+));
+select setval('entity_id_notes_seq', greatest(
+  999,
+  coalesce((select max((regexp_replace(id, '^NOTE-', ''))::bigint) from ticket_notes where id ~ '^NOTE-[0-9]+$'), 0),
+  coalesce((select last_value from pg_sequences where schemaname = 'public' and sequencename = 'entity_id_notes_seq'), 0)
+));
+
 commit;
