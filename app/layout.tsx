@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { AppLayout } from "@/components/app-layout";
 import { getActiveWorkspaceAccess, getClerkFapiOrigin, getCurrentUser, getSiteUrl } from "@/lib/auth";
+import { formatDemoRemaining } from "@/lib/demo-ui";
 import { isWorkspacePreview } from "@/lib/workspaces";
 import { countUnreadNotifications, listNotifications } from "@/lib/notifications";
 import type { NotificationView } from "@/lib/schema";
@@ -127,6 +128,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               slug: activeWorkspace.workspace.slug,
               role: activeWorkspace.membership.role,
               isPreview: isWorkspacePreview(activeWorkspace.workspace.id),
+              isDemo: activeWorkspace.workspace.isDemo === true,
+            } : null}
+            // The countdown's first frame is rendered on the server so hydration has a
+            // stable string to match; the banner's own interval takes over after mount.
+            demo={currentUser?.isDemo ? {
+              expiresAt: activeWorkspace?.workspace.expiresAt,
+              remainingLabel: formatDemoRemaining(activeWorkspace?.workspace.expiresAt),
             } : null}
             notifications={notifications}
             unreadNotifications={unreadNotifications}

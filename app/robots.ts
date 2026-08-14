@@ -21,6 +21,7 @@ export default function robots(): MetadataRoute.Robots {
         "/attachments/",
         "/join/",
         "/auth/",
+        "/demo/",
         "/w/",
         "/tickets",
         "/requests",

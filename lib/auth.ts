@@ -9,7 +9,7 @@ import { SetupRequiredError } from "@/lib/supabase";
 import { PublicError } from "@/lib/errors";
 import { assertCleanDisplayName, addMonths, nameChangeStatus, NAME_CHANGE_WINDOW_MONTHS } from "@/lib/display-name";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
-import { getDemoUser } from "@/lib/demo";
+import { getDemoUser, readDemoSessionId } from "@/lib/demo";
 import { countOwnedWorkspaces, getPostAuthWorkspacePath, isWorkspaceAdmin, isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
 
 // Keep app-owned cookies (active workspace) for a week. Clerk manages the auth
@@ -359,8 +359,16 @@ export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
 
 export async function requireUser() {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  return user;
+  if (user) return user;
+
+  // A demo cookie that still verifies but no longer resolves to a profile means the
+  // workspace expired and the cleanup sweep took it. Dropping that visitor on /login
+  // is technically correct and completely baffling — they never had an account. The
+  // expired screen explains what happened and offers a way onward. This is a cookie
+  // read with no database query, so signed-out visitors pay nothing for it.
+  if (await readDemoSessionId()) redirect("/demo/expired");
+
+  redirect("/login");
 }
 
 // The live-demo deny-list. A demo principal owns exactly one throwaway workspace and
@@ -395,6 +403,12 @@ export async function requireRealUser(redirectTo = "/onboarding") {
 export async function redirectSignedInAwayFromAuth(next?: string) {
   const user = await getCurrentUser();
   if (!user) return;
+
+  // A demo visitor resolves as a user here, but they are exactly who these pages are
+  // for: converting them is the point of the demo. Bouncing them back to their
+  // workspace would make signing up impossible. Their cookie survives sign-up, and
+  // the workspace hub then offers to keep the workspace they just built.
+  if (isDemoUser(user)) return;
 
   const safeNext = sanitizeInternalRedirect(next);
   if (safeNext) redirect(safeNext);

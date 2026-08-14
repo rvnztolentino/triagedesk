@@ -280,6 +280,12 @@ export interface WorkspaceRecord {
   slug: string;
   createdBy?: string;
   createdAt: string;
+  // Live-demo state. Optional because the workspace-shaped rows returned by the
+  // create/join RPCs don't carry these columns; absent means "a real workspace",
+  // which is the safe reading — the demo chrome stays hidden rather than showing
+  // an expiry countdown on somebody's real data.
+  isDemo?: boolean;
+  expiresAt?: string;
 }
 
 export interface WorkspaceMemberRecord {

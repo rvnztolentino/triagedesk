@@ -18,7 +18,7 @@ import {
   setActiveWorkspaceCookie,
   updateDisplayName,
 } from "@/lib/auth";
-import { clearDemoSessionCookie, enforceDemoTriageLimits, enforceDemoWriteLimit, readDemoSessionId } from "@/lib/demo";
+import { claimDemoWorkspace, clearDemoSessionCookie, enforceDemoTriageLimits, enforceDemoWriteLimit, readDemoSessionId } from "@/lib/demo";
 import { requestReceivedHref, scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { requireSupabaseAdminClient, SetupRequiredError } from "@/lib/supabase";
 import { ZodError } from "zod";
@@ -570,6 +570,58 @@ export async function signOutAction() {
   // A demo visitor has no Clerk session to end, so the demo cookie is the only thing
   // that makes them "signed in". Drop it or signing out is a no-op for them.
   await clearDemoSessionCookie();
+}
+
+// Conversion. A visitor who signed up still carries their demo cookie, so the
+// workspace hub offers to hand the demo workspace to the account they just made.
+// Everything that can go wrong here (workspace cap, an expiry that landed mid-flow,
+// a session that already ended) comes back from claimDemoWorkspace as a PublicError
+// with text worth showing, and leaves the demo untouched and retryable.
+export async function keepDemoWorkspaceAction() {
+  await requireTrustedActionRequest();
+  const user = await requireUser();
+  let redirectTo = "/onboarding";
+  try {
+    // The RPC refuses a demo profile too. Checking first turns a raw Postgres error
+    // into a sentence that tells the visitor what to do about it.
+    if (isDemoUser(user)) {
+      throw new PublicError("Create your free account first, then this workspace can be kept.");
+    }
+    const claimed = await claimDemoWorkspace(user.id);
+    await setActiveWorkspaceCookie(claimed.workspaceSlug);
+    // The header, sidebar, and hub all read the active workspace from the cookie.
+    revalidatePath("/", "layout");
+    revalidatePath("/onboarding");
+    redirectTo = `/w/${claimed.workspaceSlug}`;
+  } catch (error) {
+    captureOperationalError(error, { area: "demo_workspace_keep", demo: true });
+    redirectWithError("/onboarding", error);
+  }
+  redirect(redirectTo);
+}
+
+// "No thanks" on the same card. Only the cookie is dropped — the workspace keeps its
+// original expiry and the sweep collects it, which is also what happens when someone
+// abandons sign-up halfway. Nothing is deleted here that a visitor might want back.
+export async function discardDemoWorkspaceAction() {
+  await requireTrustedActionRequest();
+  await requireUser();
+  await clearDemoSessionCookie();
+  revalidatePath("/onboarding");
+  redirect("/onboarding");
+}
+
+// Backs the expired-demo screen. There is no session left to authorize against, so
+// this deliberately does not require a user — it just clears the cookies that would
+// otherwise keep routing the visitor back to that screen. The active-workspace cookie
+// is only dropped when a demo cookie was actually present, so a real signed-in user
+// who reaches this action can't be made to lose their open workspace.
+export async function endDemoSessionAction() {
+  await requireTrustedActionRequest();
+  const hadDemoSession = Boolean(await readDemoSessionId());
+  await clearDemoSessionCookie();
+  if (hadDemoSession) await clearActiveWorkspaceCookie();
+  redirect("/");
 }
 
 export async function updateAccountNameAction(formData: FormData) {

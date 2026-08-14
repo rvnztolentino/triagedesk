@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, Link2, LogOut, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Link2, LogOut, Trash2 } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createWorkspaceInviteAction, deleteWorkspaceAction, deleteWorkspaceInviteAction, leaveWorkspaceAction, revokeWorkspaceInviteAction } from "@/app/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { CopyInviteButton, CopyInviteCode } from "@/components/copy-invite-button";
 import { SubmitButton } from "@/components/submit-button";
-import { requireUser } from "@/lib/auth";
+import { isDemoUser, requireUser } from "@/lib/auth";
+import { DEMO_SIGNUP_HREF } from "@/lib/demo-ui";
 import { formatDate } from "@/lib/format";
 import { workspaceSlugSchema } from "@/lib/schema";
 import { canManageWorkspaceInvite, countWorkspaceMembers, getWorkspaceBySlug, getWorkspaceMembership, isWorkspaceAdmin, isWorkspaceInviteActive, isWorkspacePreview, listWorkspaceInvites, MAX_ACTIVE_WORKSPACE_INVITES, MAX_WORKSPACE_MEMBERS, workspaceInviteLink } from "@/lib/workspaces";
@@ -48,7 +49,12 @@ export default async function WorkspaceLandingPage({
 
   const query = await searchParams;
   const isPreview = isWorkspacePreview(workspace.id);
-  const canManageInvites = !isPreview && isWorkspaceAdmin(membership.role);
+  // A demo visitor owns this workspace, so the role checks below would happily show
+  // them invite management and the danger zone. Every one of those actions is refused
+  // server-side and again in the database; showing the controls anyway would just be
+  // a set of buttons that fail.
+  const isDemo = isDemoUser(user);
+  const canManageInvites = !isPreview && !isDemo && isWorkspaceAdmin(membership.role);
   const invites = canManageInvites ? await listWorkspaceInvites(workspace.id, user.id) : [];
   const memberCount = canManageInvites ? await countWorkspaceMembers(workspace.id) : 0;
   const activeInviteCount = invites.filter((invite) => isWorkspaceInviteActive(invite)).length;
@@ -210,8 +216,15 @@ export default async function WorkspaceLandingPage({
               <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
                 {isPreview
                   ? "Demo Clinic is a read-only preview. Create your own workspace to invite members and use workspace management actions."
-                  : "Requesters can submit requests and view their own tickets. Workspace invite sharing is available to admins and owners."}
+                  : isDemo
+                    ? "Demo workspaces are yours alone — inviting people and deleting the workspace need a free account. Sign up and this workspace becomes a real one, with everything you've done so far still in it."
+                    : "Requesters can submit requests and view their own tickets. Workspace invite sharing is available to admins and owners."}
               </p>
+              {isDemo ? (
+                <Link href={DEMO_SIGNUP_HREF} className="btn btn--primary btn--sm" style={{ marginTop: 14, width: "fit-content" }}>
+                  Create free account <ArrowRight size={14} />
+                </Link>
+              ) : null}
             </div>
           )}
         </div>
@@ -243,7 +256,7 @@ export default async function WorkspaceLandingPage({
             ) : null}
           </div>
 
-          {membership.role === "owner" && !isPreview ? (
+          {membership.role === "owner" && !isPreview && !isDemo ? (
             <div className="card card-pad" style={{ borderColor: "color-mix(in srgb, var(--danger) 30%, var(--border))" }}>
               <div className="cluster" style={{ gap: 8, marginBottom: 8 }}>
                 <AlertTriangle size={16} style={{ color: "var(--danger)" }} />
