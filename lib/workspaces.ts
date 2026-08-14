@@ -83,6 +83,10 @@ function workspaceFromRow(row: SupabaseRow): WorkspaceRecord {
     slug: asString(row.slug),
     createdBy: row.created_by ? asString(row.created_by) : undefined,
     createdAt: asString(row.created_at),
+    // Carried on the existing `select *` rather than fetched separately, so the demo
+    // banner and its countdown cost no extra round trip on any request.
+    isDemo: row.is_demo === true,
+    expiresAt: row.expires_at ? asString(row.expires_at) : undefined,
   };
 }
 

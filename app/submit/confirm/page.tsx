@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, Building2, Check, FileText, Plus, Sparkles } from "lucide-react";
 import { AttachmentFileName } from "@/components/attachment-file-name";
-import { requireWorkspaceContext } from "@/lib/auth";
+import { isDemoUser, requireWorkspaceContext } from "@/lib/auth";
+import { DEMO_SIGNUP_HREF } from "@/lib/demo-ui";
 import type { Priority } from "@/lib/schema";
 import { getLatestRequestBundle, getRequestBundle } from "@/lib/store";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
@@ -91,6 +92,22 @@ export async function SubmitConfirmView({ searchParams, requestId, workspaceSlug
             </div>
           ) : null}
         </div>
+
+        {/* The one moment a demo visitor has seen the product actually work on their
+            own words — the highest-intent place in the whole demo to ask. */}
+        {isDemoUser(user) ? (
+          <div className="callout callout--accent" style={{ marginTop: 18, textAlign: "left" }}>
+            <div className="eyebrow">That was real AI triage</div>
+            <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+              A live model read what you wrote and chose the title, priority, and department above.
+              Create a free account to keep this workspace &mdash; otherwise it deletes itself when
+              the demo expires.
+            </p>
+            <Link href={DEMO_SIGNUP_HREF} className="btn btn--primary btn--sm" style={{ marginTop: 12 }}>
+              Create free account <ArrowRight size={14} />
+            </Link>
+          </div>
+        ) : null}
 
         <div className="cluster" style={{ gap: 10, marginTop: 20, justifyContent: "center" }}>
           <Link href={href("/submit")} className="btn btn--sm">

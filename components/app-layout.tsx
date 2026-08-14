@@ -15,16 +15,20 @@ import {
   Menu,
   PlusCircle,
   Settings,
+  Sparkles,
   Ticket,
+  Timer,
   UserRound,
   Users,
   X,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useClerk } from "@clerk/nextjs";
 import { signOutAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
 import { ThemeToggle } from "@/components/theme-controls";
 import { NotificationBell } from "@/components/notification-bell";
+import { DEMO_SIGNUP_HREF } from "@/lib/demo-ui";
 import type { AppUser, NotificationView, UserRole } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
@@ -78,14 +82,24 @@ function isAuthPath(path: string) {
 // Standalone pages render without the active-workspace chrome (sidebar, header,
 // preview banner). Invite pages live at `/join` and are cross-workspace by
 // nature, so showing the currently-open workspace's chrome around them — e.g. a
-// "Preview locked" banner from demo-clinic — is misleading.
+// "Preview locked" banner from demo-clinic — is misleading. `/demo/expired` is
+// reached with no resolvable user at all, so the shell would render an empty
+// sidebar around it.
 function isStandalonePath(path: string) {
-  return isAuthPath(path) || path.startsWith("/join");
+  return isAuthPath(path) || path.startsWith("/join") || path.startsWith("/demo");
 }
 
 function isPublicPath(path: string) {
   return path === "/" || isAuthPath(path);
 }
+
+// This shell is the client bundle for every route, landing page included. The demo
+// chrome only ever renders for a demo principal, so it is code-split rather than
+// shipped to the logged-out visitors who make up the landing page's entire audience.
+// Both keep SSR: the banner's first frame has to be server-rendered or the countdown
+// pops in after hydration.
+const DemoBanner = dynamic(() => import("@/components/demo-banner").then((m) => m.DemoBanner));
+const DemoLockButton = dynamic(() => import("@/components/demo-lock").then((m) => m.DemoLockButton));
 
 const SIDEBAR_COLLAPSED_KEY = "triagedesk-sidebar-collapsed";
 
@@ -102,17 +116,25 @@ export function AppLayout({
   children,
   currentUser,
   activeWorkspace,
+  demo = null,
   notifications = [],
   unreadNotifications = 0,
 }: {
   children: React.ReactNode;
   currentUser: AppUser | null;
-  activeWorkspace: { name: string; slug: string; role: UserRole; isPreview: boolean } | null;
+  activeWorkspace: { name: string; slug: string; role: UserRole; isPreview: boolean; isDemo?: boolean } | null;
+  demo?: { expiresAt?: string; remainingLabel?: string } | null;
   notifications?: NotificationView[];
   unreadNotifications?: number;
 }) {
   const pathname = usePathname();
   const { signOut } = useClerk();
+  // Keyed off the principal rather than the active workspace, so the demo chrome
+  // still renders on pages reached before the active-workspace cookie is set.
+  const isDemoSession = currentUser?.isDemo === true;
+  // Static on purpose. The countdown lives in the banner only, so the shell runs one
+  // timer rather than two ticking the same value in two places.
+  const demoPillLabel = "Demo workspace";
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
 
@@ -125,6 +147,13 @@ export function AppLayout({
       await signOutAction();
     } catch {
       // Non-fatal: the active-workspace cookie is membership-checked on next use.
+    }
+    // A demo visitor has no Clerk session to terminate — the demo cookie the action
+    // just dropped was the whole identity — so go straight home instead of asking
+    // Clerk to end a session that was never created.
+    if (isDemoSession) {
+      window.location.href = "/";
+      return;
     }
     await signOut({ redirectUrl: "/login" });
   }
@@ -334,7 +363,7 @@ export function AppLayout({
               </div>
               <div className={cn("min-w-0 flex-1", collapsed && "md:hidden")}>
                 <div className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-faint leading-none">
-                  {activeWorkspace?.isPreview ? "Preview" : "Workspace"}
+                  {activeWorkspace?.isPreview ? "Preview" : isDemoSession ? "Demo" : "Workspace"}
                 </div>
                 <div className="mt-1 truncate text-sm font-medium text-fg leading-tight transition-colors">
                   {activeWorkspace?.name ?? "Choose workspace"}
@@ -397,6 +426,17 @@ export function AppLayout({
             >
               <LockKeyhole size={12} className="shrink-0" />
               <span className={cn("whitespace-nowrap text-[11px] font-medium", collapsed && "md:hidden")}>Preview - read-only</span>
+            </div>
+          ) : isDemoSession ? (
+            <div
+              className={cn(
+                "mb-3 flex items-center gap-2 rounded-[var(--radius-control)] border border-accent-border bg-accent-soft px-3 py-2 text-accent",
+                collapsed && "md:justify-center md:px-0"
+              )}
+              title={collapsed ? demoPillLabel : undefined}
+            >
+              <Timer size={12} className="shrink-0" />
+              <span className={cn("whitespace-nowrap text-[11px] font-medium", collapsed && "md:hidden")}>{demoPillLabel}</span>
             </div>
           ) : null}
           <button
@@ -510,17 +550,33 @@ export function AppLayout({
                         </div>
                       </div>
                       <div style={{ marginTop: 10 }}>
-                        <span className="badge" data-hue={activeWorkspace?.isPreview ? "warn" : roleHue(activeWorkspace?.role ?? currentUser.role)}>
-                          {activeWorkspace?.isPreview ? "Preview" : activeWorkspace?.role ?? currentUser.role}
+                        <span
+                          className="badge"
+                          data-hue={activeWorkspace?.isPreview ? "warn" : isDemoSession ? "accent" : roleHue(activeWorkspace?.role ?? currentUser.role)}
+                        >
+                          {activeWorkspace?.isPreview ? "Preview" : isDemoSession ? "Demo" : activeWorkspace?.role ?? currentUser.role}
                         </span>
                       </div>
                     </div>
+                    {isDemoSession ? (
+                      <Link href={DEMO_SIGNUP_HREF} role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
+                        <Sparkles size={15} className="text-accent" /> Create free account
+                      </Link>
+                    ) : null}
                     <Link href="/onboarding" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
                       <Building2 size={15} className="text-muted" /> Workspaces
                     </Link>
-                    <Link href="/account" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
-                      <UserRound size={15} className="text-muted" /> Account
-                    </Link>
+                    {/* Account settings are account-only. A demo visitor clicking through
+                        would just be redirected back out, so explain it here instead. */}
+                    {isDemoSession ? (
+                      <DemoLockButton className="menu-item" body="Your display name, email, and account settings live on a real account. Create a free one and this workspace comes with you.">
+                        <UserRound size={15} className="text-muted" /> Account
+                      </DemoLockButton>
+                    ) : (
+                      <Link href="/account" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
+                        <UserRound size={15} className="text-muted" /> Account
+                      </Link>
+                    )}
                     {activeWorkspace ? (
                       <Link
                         href={scopedWorkspaceHref(activeWorkspace.slug, "/settings")}
@@ -533,7 +589,7 @@ export function AppLayout({
                     ) : null}
                     <div className="divider" style={{ margin: "6px 4px" }} />
                     <button type="button" role="menuitem" className="menu-item danger" onClick={handleSignOut}>
-                      <LogOut size={15} /> Sign out
+                      <LogOut size={15} /> {isDemoSession ? "End demo" : "Sign out"}
                     </button>
                   </div>
                 ) : null}
@@ -561,6 +617,7 @@ export function AppLayout({
               </div>
             </div>
           ) : null}
+          {isDemoSession ? <DemoBanner expiresAt={demo?.expiresAt} initialLabel={demo?.remainingLabel} /> : null}
           <div key={pathname} className="app-page-in">{children}</div>
         </main>
       </div>
