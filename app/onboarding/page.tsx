@@ -95,7 +95,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
         </div>
       ) : null}
 
-      <div className="split" style={{ gridTemplateColumns: "1.4fr 1fr" }}>
+      <div className="split split-hub">
         <div className="stack" style={{ gap: 14 }}>
           <div className="eyebrow">All your workspaces · {workspaces.length}</div>
           {workspaces.length === 0 ? (

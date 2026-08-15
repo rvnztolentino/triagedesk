@@ -131,7 +131,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
               )}
             </div>
           </div>
-          <div className="list" style={{ flex: "1 1 0", minHeight: 0, overflowY: "auto" }}>
+          <div className="list">
             {departments.map((department) => {
               const isDefault = (defaultDepartmentIds as readonly string[]).includes(department.id);
               return (

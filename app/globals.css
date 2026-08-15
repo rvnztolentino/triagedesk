@@ -362,11 +362,15 @@ select {
   }
   .split-review { grid-template-columns: 1fr 1.15fr; }
   .split-even { grid-template-columns: 1fr 1fr; align-items: stretch; }
+  .split-hub { grid-template-columns: 1.4fr 1fr; }
 
   /* Lets the departments card stretch to the height of the column beside it
      while its own list scrolls. Collapses to natural height once stacked. */
   .stretch-frame { position: relative; min-height: 340px; }
   .stretch-frame > .card { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  /* Only safe while the card has a definite height from the frame above. Kept in
+     CSS rather than inline so the stacked breakpoint can actually undo it. */
+  .stretch-frame > .card > .list { flex: 1 1 0; min-height: 0; overflow-y: auto; }
 
   /* ── cards / panels / sections ── */
   .card {
@@ -1028,12 +1032,15 @@ select {
   @media (max-width: 900px) {
     .split,
     .split-even,
+    .split-hub,
     .split-review { grid-template-columns: 1fr; }
     .cols-4 { grid-template-columns: repeat(2, 1fr); }
     .cols-3 { grid-template-columns: 1fr; }
     .stretch-frame { position: static; min-height: 0; }
     .stretch-frame > .card { position: static; }
-    .stretch-frame > .card > .list { max-height: 420px; }
+    /* Stacked, the card is auto-height, so a `flex: 1 1 0` list would resolve to
+       zero and hide every row. Size it to its content and cap the scroll instead. */
+    .stretch-frame > .card > .list { flex: 0 1 auto; max-height: 420px; }
   }
   @media (max-width: 620px) {
     .cols-2,
