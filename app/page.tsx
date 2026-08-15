@@ -17,6 +17,7 @@ import {
 import { BrandIcon } from "@/components/brand-icon";
 import { DashboardView } from "@/components/dashboard-view";
 import { HomeHeader } from "@/components/home-header";
+import { ScrollReveal } from "@/components/scroll-reveal";
 import { TryDemoButton } from "@/components/try-demo-button";
 import { getCurrentUser } from "@/lib/auth";
 import { isDemoEnabled } from "@/lib/demo";
@@ -24,7 +25,7 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const X_POST_URL = "https://x.com/kusanagikeiji/status/2078347943812411560";
+const X_POST_URL = "https://x.com/rvnztolentino/status/2078347943812411560";
 
 function XIcon({ className = "" }: { className?: string }) {
   return (
@@ -101,7 +102,7 @@ function HeroDemoCta({ demoEnabled }: { demoEnabled: boolean }) {
 
 function SectionHead({ eyebrow, title, sub, center = false }: { eyebrow: string; title: string; sub?: string; center?: boolean }) {
   return (
-    <div className={cn("max-w-2xl", center && "mx-auto text-center")}>
+    <div data-reveal className={cn("max-w-2xl", center && "mx-auto text-center")}>
       <span className="eyebrow">{eyebrow}</span>
       <h2 className="mt-3 text-3xl font-semibold tracking-tight text-fg sm:text-4xl" style={{ letterSpacing: "-0.03em" }}>
         {title}
@@ -269,7 +270,13 @@ function StepWindow({ step }: { step: string }) {
 function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
   return (
     <div className="min-h-screen bg-bg text-fg">
-      <HomeHeader demoEnabled={demoEnabled} />
+      {/* Without JS nothing flips `data-reveal`, so unhide everything up front.
+          The hero is deliberately untagged: it is on screen at first paint. */}
+      <noscript>
+        <style>{`[data-reveal]{opacity:1;transform:none}`}</style>
+      </noscript>
+      <ScrollReveal />
+      <HomeHeader />
 
       <main>
         <section className="atmos border-b border-border">
@@ -332,6 +339,7 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
               {workflowSteps.map(({ icon: Icon, step, title, desc }) => (
                 <div
                   key={step}
+                  data-reveal
                   className="grid grid-cols-1 items-center gap-6 lg:grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)] lg:gap-10"
                 >
                   <div className="mono" style={{ fontSize: 52, fontWeight: 800, lineHeight: 1, color: "var(--faint)" }}>
@@ -356,8 +364,15 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
             <SectionHead eyebrow="Product highlights" title="Everything an operations team needs" />
 
             <div className="cols-3 mt-10">
-              {highlights.map(({ icon: Icon, title, desc }) => (
-                <div key={title} className="card card-pad card-hover">
+              {/* --i staggers across the row, not the whole grid: a card in a later row
+                  reveals on its own scroll, so a running index would only make it lag. */}
+              {highlights.map(({ icon: Icon, title, desc }, i) => (
+                <div
+                  key={title}
+                  data-reveal
+                  style={{ "--i": i % 3 } as React.CSSProperties}
+                  className="card card-pad card-hover"
+                >
                   <span className="metric-icon">
                     <Icon className="h-[18px] w-[18px]" />
                   </span>
@@ -370,7 +385,7 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
         </section>
 
         <section className="border-b border-border">
-          <div className="mx-auto max-w-4xl px-5 py-24 text-center">
+          <div data-reveal className="mx-auto max-w-4xl px-5 py-24 text-center">
             <Layers className="mx-auto h-6 w-6 text-accent" />
             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-fg sm:text-4xl">Bring order to your internal requests</h2>
             <p className="mx-auto mt-3 max-w-xl text-muted">
