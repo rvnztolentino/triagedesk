@@ -31,7 +31,7 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
           </div>
           <div className="bg-bg border border-border rounded-[var(--radius-control)] p-4 text-sm text-muted leading-relaxed">
             Complete the manual setup in{" "}
-            <span className="font-mono text-fg">.codex/setup.md</span>, then restart the dev server.
+            <span className="font-mono text-fg">README.md</span>, then restart the dev server.
           </div>
           <div className="pt-6 flex items-center justify-between">
             <Link href={href("/tickets")} className="text-sm font-medium text-muted hover:text-fg px-4 py-2 transition-colors">

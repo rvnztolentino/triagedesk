@@ -1,6 +1,6 @@
 # TriageDesk Icons
 
-These files are generated from `.codex/triagedesk.png` and should stay in sync with the shared in-app `BrandIcon` image source.
+These files are generated from `public/icons/triagedesk.png` and should stay in sync with the shared in-app `BrandIcon` image source.
 
 Current icon outputs:
 

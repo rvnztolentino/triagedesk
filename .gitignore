@@ -8,7 +8,6 @@ public/uploads/
 coverage/
 dist/
 *.tsbuildinfo
-.codex/
 .claude/
 .mcp.json
 # clerk configuration (can include secrets)

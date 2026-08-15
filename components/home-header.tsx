@@ -5,6 +5,7 @@ import { ArrowRight, Mail, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BrandIcon } from "@/components/brand-icon";
 import { ThemeToggle } from "@/components/theme-controls";
+import { TryDemoButton } from "@/components/try-demo-button";
 import { cn } from "@/lib/utils";
 
 const CONTACT_EMAIL = "rvnztolentino@gmail.com";
@@ -27,7 +28,11 @@ function GithubIcon({ className = "" }: { className?: string }) {
   );
 }
 
-export function HomeHeader() {
+// Resolved on the server from DEMO_SESSION_SECRET and the DEMO_ENABLED kill switch.
+// Only the boolean crosses to the client, never the secret. With the demo off the
+// header simply drops the button rather than advertising one that can only fail;
+// the closing CTA on the landing page stays the way to /login.
+export function HomeHeader({ demoEnabled }: { demoEnabled: boolean }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -169,9 +174,10 @@ export function HomeHeader() {
             <GithubIcon className="h-[18px] w-[18px]" />
           </a>
           <ThemeToggle />
-          <Link href="/login" className="btn btn--neutral btn--sm">
-            Sign in
-          </Link>
+          {/* The demo takes the slot `Sign in` used to hold. Everyone reading this
+              page is logged out, and "Sign in" is a dead end to a visitor with no
+              account. Returning users still have the link in the closing CTA. */}
+          {demoEnabled ? <TryDemoButton buttonClassName="btn--neutral btn--sm" /> : null}
           <Link href="/signup?next=/onboarding" className="btn btn--primary btn--sm">
             Start now
             <ArrowRight className="h-4 w-4" />
@@ -220,13 +226,7 @@ export function HomeHeader() {
             </a>
           ))}
 
-          <Link
-            href="/login"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="btn btn--primary btn--block mt-2"
-          >
-            Sign in
-          </Link>
+          {demoEnabled ? <TryDemoButton className="mt-2" buttonClassName="btn--primary btn--block" /> : null}
 
           <div className="mt-3 rounded-[var(--radius-card)] border border-border bg-surface">
             {contactPanel}

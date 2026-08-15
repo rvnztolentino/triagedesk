@@ -276,7 +276,7 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
         <style>{`[data-reveal]{opacity:1;transform:none}`}</style>
       </noscript>
       <ScrollReveal />
-      <HomeHeader />
+      <HomeHeader demoEnabled={demoEnabled} />
 
       <main>
         <section className="atmos border-b border-border">

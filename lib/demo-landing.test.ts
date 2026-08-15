@@ -219,7 +219,9 @@ describe("no em-dashes in the project", () => {
     // cannot match itself, and so it still covers this file.
     const char = String.fromCharCode(0x2014);
     const forms = [char, `&${"mdash"};`, `&#${8212};`, `&#${"x2014"};`, `\\${"u2014"}`];
-    const skip = new Set(["node_modules", ".next", ".git", ".codex", "public"]);
+    // Gitignored directories are skipped: the rule covers what we ship, and local
+    // agent/tooling notes would otherwise fail this run for everyone but CI.
+    const skip = new Set(["node_modules", ".next", ".git", ".claude", "public"]);
     const offenders: string[] = [];
 
     const walk = (dir: URL, label: string) => {
