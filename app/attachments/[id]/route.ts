@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
 import { isDemoUser, requireOperationalWorkspace } from "@/lib/auth";
 import { getVisibleRequestAttachment } from "@/lib/store";
-import { requireSupabaseAdminClient } from "@/lib/supabase";
+import { requestAttachmentBucket as attachmentBucket, requireSupabaseAdminClient } from "@/lib/supabase";
 import { enforceRateLimit, RateLimitError } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
-
-function attachmentBucket() {
-  return process.env.SUPABASE_REQUEST_ATTACHMENTS_BUCKET || process.env.SUPABASE_REQUEST_IMAGES_BUCKET || "request-attachments";
-}
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { user, workspace, membership } = await requireOperationalWorkspace();

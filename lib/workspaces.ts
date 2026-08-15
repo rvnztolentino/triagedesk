@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { requireSupabaseAdminClient } from "@/lib/supabase";
+import { requestAttachmentBucket, requireSupabaseAdminClient } from "@/lib/supabase";
 import { PublicError } from "@/lib/errors";
 import {
   notifyMemberJoined,
@@ -588,6 +588,45 @@ export async function updateWorkspaceMemberRole(workspaceId: string, memberUserI
   });
 }
 
+// PostgREST truncates a select at the project's `db-max-rows` ceiling when one is
+// configured, and it reports a short page rather than an error. Reading the paths
+// in one shot would therefore hand back a silent prefix of a large workspace, and
+// the cascade then drops the rows naming everything left behind. Page instead, so
+// the sweep never depends on a server setting this app does not control.
+const ATTACHMENT_PAGE_SIZE = 1000;
+
+// storage.remove() sends every path in a single request body, so a workspace with
+// tens of thousands of files would build one oversized request. Delete in batches.
+const ATTACHMENT_DELETE_BATCH = 1000;
+
+export async function listWorkspaceAttachmentPaths(
+  client: ReturnType<typeof requireSupabaseAdminClient>,
+  workspaceId: string,
+) {
+  const paths: string[] = [];
+
+  // Ordered by primary key so successive windows can't overlap or skip a row.
+  for (let offset = 0; ; offset += ATTACHMENT_PAGE_SIZE) {
+    const { data, error } = await client
+      .from("request_attachments")
+      .select("storage_path")
+      .eq("workspace_id", workspaceId)
+      .order("id", { ascending: true })
+      .range(offset, offset + ATTACHMENT_PAGE_SIZE - 1);
+    if (error) throw new Error(`List workspace attachments failed: ${error.message}`);
+
+    const rows = (data ?? []) as SupabaseRow[];
+    for (const row of rows) {
+      const path = asString(row.storage_path);
+      if (path) paths.push(path);
+    }
+
+    // A short page is the only reliable end-of-set signal: a full page may or may
+    // not be the last one, so it always costs one more round-trip to find out.
+    if (rows.length < ATTACHMENT_PAGE_SIZE) return paths;
+  }
+}
+
 export async function deleteWorkspace(workspaceId: string, confirmation: string, userId: string) {
   const client = requireSupabaseAdminClient();
   const input = workspaceDeleteSchema.parse({ workspaceId, confirmation });
@@ -603,17 +642,16 @@ export async function deleteWorkspace(workspaceId: string, confirmation: string,
     throw new Error("Workspace owner access is required.");
   }
 
-  const { data: attachments, error: attachmentError } = await client
-    .from("request_attachments")
-    .select("storage_path")
-    .eq("workspace_id", input.workspaceId);
-  if (attachmentError) throw new Error(`List workspace attachments failed: ${attachmentError.message}`);
-
-  const storagePaths = ((attachments ?? []) as SupabaseRow[]).map((row) => asString(row.storage_path)).filter(Boolean);
+  // Storage first, rows second. The cascade cannot reach the bucket, so once the
+  // rows are gone nothing names the objects any more. A failure here aborts before
+  // the RPC, which leaves the workspace intact and the delete safe to retry.
+  const storagePaths = await listWorkspaceAttachmentPaths(client, input.workspaceId);
   if (storagePaths.length > 0) {
-    const bucket = process.env.SUPABASE_REQUEST_ATTACHMENTS_BUCKET || process.env.SUPABASE_REQUEST_IMAGES_BUCKET || "request-attachments";
-    const { error } = await client.storage.from(bucket).remove(storagePaths);
-    if (error) throw new Error(`Delete workspace attachments failed: ${error.message}`);
+    const bucket = requestAttachmentBucket();
+    for (let start = 0; start < storagePaths.length; start += ATTACHMENT_DELETE_BATCH) {
+      const { error } = await client.storage.from(bucket).remove(storagePaths.slice(start, start + ATTACHMENT_DELETE_BATCH));
+      if (error) throw new Error(`Delete workspace attachments failed: ${error.message}`);
+    }
   }
 
   const { error } = await client.rpc("delete_workspace_as_owner", {

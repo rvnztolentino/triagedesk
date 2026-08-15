@@ -14,6 +14,7 @@ import {
   isWorkspaceAdmin,
   isWorkspaceInviteActive,
   isWorkspacePreview,
+  listWorkspaceAttachmentPaths,
   MAX_ACTIVE_WORKSPACE_INVITES,
   MAX_WORKSPACE_MEMBERS,
   normalizeWorkspaceInviteCode,
@@ -25,6 +26,12 @@ const schemaSql = readFileSync(new URL("../supabase/schema.sql", import.meta.url
 const resetSql = readFileSync(new URL("../supabase/reset_workspace_seed.sql", import.meta.url), "utf8");
 const authSource = readFileSync(new URL("./auth.ts", import.meta.url), "utf8");
 const actionsSource = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
+const workspacesSource = readFileSync(new URL("./workspaces.ts", import.meta.url), "utf8");
+const supabaseSource = readFileSync(new URL("./supabase.ts", import.meta.url), "utf8");
+const attachmentRouteSources = [
+  readFileSync(new URL("../app/attachments/[id]/route.ts", import.meta.url), "utf8"),
+  readFileSync(new URL("../app/w/[workspaceSlug]/attachments/[id]/route.ts", import.meta.url), "utf8"),
+];
 const storeSource = readFileSync(new URL("./store.ts", import.meta.url), "utf8");
 const ticketsSource = readFileSync(new URL("../app/tickets/page.tsx", import.meta.url), "utf8");
 const workspaceDashboardSource = readFileSync(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8");
@@ -293,5 +300,93 @@ describe("workspace foundation", () => {
     expect(authSource).toContain('redirect(access ? scopedWorkspaceHref(access.workspace.slug, "/") : getPostAuthWorkspacePath());');
     expect(loginSource).toContain("await redirectSignedInAwayFromAuth(params.next);");
     expect(signupSource).toContain("await redirectSignedInAwayFromAuth(params.next);");
+  });
+});
+
+// Deleting a workspace cascades its rows away, but the cascade cannot reach the
+// storage bucket, so the path list gathered here is the only thing standing
+// between an attachment and becoming an unreachable orphan. A truncated read is
+// silent by construction, which is exactly why these assert the loop directly
+// rather than the source text.
+describe("workspace attachment sweep", () => {
+  const PAGE_SIZE = 1000;
+
+  function stubClient(pages: string[][]) {
+    const ranges: Array<[number, number]> = [];
+    const remaining = [...pages];
+    const builder = {
+      select: () => builder,
+      eq: () => builder,
+      order: () => builder,
+      range: (from: number, to: number) => {
+        ranges.push([from, to]);
+        const page = remaining.shift() ?? [];
+        return Promise.resolve({ data: page.map((storage_path) => ({ storage_path })), error: null });
+      },
+    };
+    return { client: { from: () => builder } as never, ranges };
+  }
+
+  function fullPage(prefix: string) {
+    return Array.from({ length: PAGE_SIZE }, (_, index) => `${prefix}/${index}.png`);
+  }
+
+  it("returns every path when the workspace fits in one page", async () => {
+    const { client, ranges } = stubClient([["ws/a.png", "ws/b.png"]]);
+    await expect(listWorkspaceAttachmentPaths(client, "ws-1")).resolves.toEqual(["ws/a.png", "ws/b.png"]);
+    // A short page proves the end of the set, so it must not cost a second query.
+    expect(ranges).toEqual([[0, PAGE_SIZE - 1]]);
+  });
+
+  it("keeps paging past a full page instead of silently truncating", async () => {
+    const { client, ranges } = stubClient([fullPage("ws/first"), ["ws/second/tail.png"]]);
+    const paths = await listWorkspaceAttachmentPaths(client, "ws-1");
+
+    expect(paths).toHaveLength(PAGE_SIZE + 1);
+    expect(paths.at(-1)).toBe("ws/second/tail.png");
+    // Contiguous, non-overlapping windows: nothing is fetched twice or skipped.
+    expect(ranges).toEqual([[0, PAGE_SIZE - 1], [PAGE_SIZE, PAGE_SIZE * 2 - 1]]);
+  });
+
+  it("stops on an exact page boundary once the next page comes back empty", async () => {
+    const { client, ranges } = stubClient([fullPage("ws/only"), []]);
+    await expect(listWorkspaceAttachmentPaths(client, "ws-1")).resolves.toHaveLength(PAGE_SIZE);
+    expect(ranges).toHaveLength(2);
+  });
+
+  it("drops rows with no usable storage path", async () => {
+    const { client } = stubClient([["ws/a.png", "", "ws/b.png"]]);
+    await expect(listWorkspaceAttachmentPaths(client, "ws-1")).resolves.toEqual(["ws/a.png", "ws/b.png"]);
+  });
+
+  it("throws instead of returning a partial list when a page fails", async () => {
+    const builder = {
+      select: () => builder,
+      eq: () => builder,
+      order: () => builder,
+      range: () => Promise.resolve({ data: null, error: { message: "boom" } }),
+    };
+    await expect(listWorkspaceAttachmentPaths({ from: () => builder } as never, "ws-1")).rejects.toThrow(
+      "List workspace attachments failed: boom",
+    );
+  });
+
+  it("deletes storage before the cascade, in bounded batches", () => {
+    // Order matters: the RPC drops the rows that name these objects, so a failed
+    // storage sweep has to abort before it, leaving the delete safe to retry.
+    const body = workspacesSource.slice(workspacesSource.indexOf("export async function deleteWorkspace("));
+    expect(body.indexOf("listWorkspaceAttachmentPaths(")).toBeLessThan(body.indexOf("delete_workspace_as_owner"));
+    expect(body).toContain("start += ATTACHMENT_DELETE_BATCH");
+    expect(body).toContain("requestAttachmentBucket()");
+  });
+
+  it("resolves the bucket name from one shared helper", () => {
+    // Three call sites (upload, signed download, workspace delete) must agree, or
+    // a delete sweeps a bucket the uploads never wrote to.
+    expect(supabaseSource).toContain("export function requestAttachmentBucket()");
+    for (const source of [actionsSource, workspacesSource, ...attachmentRouteSources]) {
+      expect(source).toContain("requestAttachmentBucket");
+      expect(source).not.toContain('process.env.SUPABASE_REQUEST_ATTACHMENTS_BUCKET || process.env.SUPABASE_REQUEST_IMAGES_BUCKET || "request-attachments"');
+    }
   });
 });

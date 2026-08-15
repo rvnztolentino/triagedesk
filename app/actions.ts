@@ -20,7 +20,7 @@ import {
 } from "@/lib/auth";
 import { clearDemoSessionCookie, enforceDemoTriageLimits, enforceDemoWriteLimit, hasDemoSessionCookie, readDemoSessionId, startDemoSession } from "@/lib/demo";
 import { requestReceivedHref, scopedWorkspaceHref } from "@/lib/workspace-routing";
-import { requireSupabaseAdminClient, SetupRequiredError } from "@/lib/supabase";
+import { requestAttachmentBucket, requireSupabaseAdminClient, SetupRequiredError } from "@/lib/supabase";
 import { ZodError } from "zod";
 import { type ActionState, PublicError } from "@/lib/errors";
 import { captureOperationalError } from "@/lib/monitoring";
@@ -219,10 +219,6 @@ const allowedAttachmentTypes = new Map([
   [".csv", "text/csv"],
   [".json", "application/json"],
 ]);
-
-function requestAttachmentBucket() {
-  return process.env.SUPABASE_REQUEST_ATTACHMENTS_BUCKET || process.env.SUPABASE_REQUEST_IMAGES_BUCKET || "request-attachments";
-}
 
 function sanitizeFileName(name: string) {
   const normalized = name.trim().replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");

@@ -10,6 +10,14 @@ export class SetupRequiredError extends Error {
   }
 }
 
+// Single source of truth for the attachments bucket. Upload, signed-download, and
+// workspace-delete all have to resolve the same name from the same fallback chain:
+// if one copy of this expression ever drifts, deletes start missing the objects
+// uploads created and the files outlive the workspace that owned them.
+export function requestAttachmentBucket() {
+  return process.env.SUPABASE_REQUEST_ATTACHMENTS_BUCKET || process.env.SUPABASE_REQUEST_IMAGES_BUCKET || "request-attachments";
+}
+
 export function getRuntimeSetupStatus() {
   const missing: string[] = [];
   const aiProvider = process.env.AI_PROVIDER || "groq";
@@ -47,7 +55,7 @@ export function getRuntimeSetupStatus() {
     clerkConfigured: Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY),
     supabaseConfigured: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
     groqConfigured: aiProvider === "groq" && Boolean(process.env.GROQ_API_KEY),
-    storageBucket: process.env.SUPABASE_REQUEST_ATTACHMENTS_BUCKET || process.env.SUPABASE_REQUEST_IMAGES_BUCKET || "request-attachments",
+    storageBucket: requestAttachmentBucket(),
     missing,
   };
 }
