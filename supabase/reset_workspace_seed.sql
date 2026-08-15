@@ -189,7 +189,7 @@ alter table workspace_metadata alter column workspace_id drop default;
 
 -- The seed rows above insert explicit ids (REQ-1001, TRG-1043, …), which bypass the
 -- entity id sequences and leave them behind. Re-point each sequence at the highest
--- id now present — across every workspace, not just the demo — or the next insert
+-- id now present (across every workspace, not just the demo) or the next insert
 -- after a reset collides on the primary key.
 --
 -- Requires supabase/schema.sql to have been applied first; without the sequences

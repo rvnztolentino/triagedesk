@@ -269,7 +269,7 @@ export interface AppUser {
   displayName: string;
   role: UserRole;
   // True only for a live-demo visitor with no Clerk account. Required rather than
-  // optional so every place that builds an AppUser has to state which it is — a demo
+  // optional so every place that builds an AppUser has to state which it is. A demo
   // principal that silently defaulted to "real" would bypass the whole deny-list.
   isDemo: boolean;
 }
@@ -282,7 +282,7 @@ export interface WorkspaceRecord {
   createdAt: string;
   // Live-demo state. Optional because the workspace-shaped rows returned by the
   // create/join RPCs don't carry these columns; absent means "a real workspace",
-  // which is the safe reading — the demo chrome stays hidden rather than showing
+  // which is the safe reading: the demo chrome stays hidden rather than showing
   // an expiry countdown on somebody's real data.
   isDemo?: boolean;
   expiresAt?: string;

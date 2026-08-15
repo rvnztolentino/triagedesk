@@ -99,7 +99,7 @@ describe("entity id generation", () => {
   });
 
   // The old generator selected every row in the table across all workspaces, took the
-  // highest id in JS, and added one — a full-table scan per insert and a
+  // highest id in JS, and added one, a full-table scan per insert and a
   // read-modify-write race that could hand two concurrent writers the same id.
   it("no longer derives ids from a client-side scan", () => {
     expect(storeSource).not.toContain("nextNumericId");
@@ -226,16 +226,19 @@ describe("live demo schema", () => {
     expect(schemaSql).toContain("raise exception 'Demo sessions cannot join workspaces.';");
   });
 
-  it("enforces the workspace cap when a demo workspace is claimed", () => {
-    expect(schemaSql).toContain("raise exception 'Workspace limit reached.';");
-    expect(schemaSql).toContain("raise exception 'This demo has already expired.';");
+  // The only function in the schema that could reassign workspace ownership. It is
+  // dropped rather than left dormant, so re-running this file removes it from a
+  // database that still has it.
+  it("drops the claim RPC instead of leaving it callable", () => {
+    expect(schemaSql).toContain("drop function if exists claim_demo_workspace(text, uuid);");
+    expect(schemaSql).not.toContain("create or replace function claim_demo_workspace");
+    expect(schemaSql).not.toContain("grant execute on function claim_demo_workspace");
   });
 
   it("keeps every demo RPC off the public REST API", () => {
     for (const signature of [
       "delete_expired_demo_workspaces(integer)",
       "create_demo_workspace(text, integer)",
-      "claim_demo_workspace(text, uuid)",
     ]) {
       expect(schemaSql).toContain(`revoke all on function ${signature} from public, anon, authenticated;`);
       expect(schemaSql).toContain(`grant execute on function ${signature} to service_role;`);

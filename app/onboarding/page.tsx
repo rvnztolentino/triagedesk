@@ -1,15 +1,9 @@
 import Link from "next/link";
 import { ArrowRight, LayoutGrid, Link2, Plus, SlidersHorizontal, Sparkles } from "lucide-react";
-import {
-  createWorkspaceAction,
-  discardDemoWorkspaceAction,
-  joinWorkspaceAction,
-  keepDemoWorkspaceAction,
-} from "@/app/actions";
+import { createWorkspaceAction, joinWorkspaceAction } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { WorkspaceOpenLink } from "@/components/workspace-open-link";
 import { getActiveWorkspaceAccess, isDemoUser, requireUser } from "@/lib/auth";
-import { readDemoSessionId } from "@/lib/demo";
 import { DEMO_SIGNUP_HREF } from "@/lib/demo-ui";
 import { countOwnedWorkspaces, DEMO_WORKSPACE_INVITE_CODE, isWorkspacePreview, listUserWorkspaces, MAX_WORKSPACES_PER_USER } from "@/lib/workspaces";
 
@@ -30,21 +24,15 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   // These three are independent, and this page is the post-sign-in landing spot, so
   // running them together removes two serial round trips from the first authenticated
   // render (the slowest one, since it also seeds the profile).
-  const [workspaces, ownedCount, activeWorkspace, params, demoSessionId] = await Promise.all([
+  const [workspaces, ownedCount, activeWorkspace, params] = await Promise.all([
     listUserWorkspaces(user.id),
     countOwnedWorkspaces(user.id),
     getActiveWorkspaceAccess(user.id),
     searchParams,
-    // Cookie read, no query. A signed-in visitor still holding a demo cookie is
-    // someone who just converted, and this is the page they land on afterwards.
-    readDemoSessionId(),
   ]);
   const atWorkspaceLimit = ownedCount >= MAX_WORKSPACES_PER_USER;
   const activeWorkspaceIsPreview = activeWorkspace ? isWorkspacePreview(activeWorkspace.workspace.id) : false;
   const isDemo = isDemoUser(user);
-  // Only a real account can claim a demo workspace, so the offer is shown to the
-  // Clerk-backed side of that same cookie, never to the demo principal itself.
-  const canKeepDemoWorkspace = !isDemo && Boolean(demoSessionId);
 
   return (
     <div className="mx-auto w-full max-w-[1120px]">
@@ -59,34 +47,6 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
       {params.error ? (
         <div className="st-danger rounded-[var(--radius-card)] border px-4 py-3 text-sm" style={{ marginBottom: 18 }}>
           {params.error}
-        </div>
-      ) : null}
-
-      {canKeepDemoWorkspace ? (
-        <div className="card card-pad" style={{ marginBottom: 22, borderColor: "var(--accent-border)" }}>
-          <div className="cluster" style={{ gap: 10, marginBottom: 10 }}>
-            <span className="metric-icon">
-              <Sparkles size={17} />
-            </span>
-            <div className="section-title">Keep your demo workspace</div>
-          </div>
-          <p className="muted" style={{ fontSize: 13.5, marginBottom: 14 }}>
-            {atWorkspaceLimit
-              ? `You own ${MAX_WORKSPACES_PER_USER} workspaces already, which is the limit, so the demo can't be added to this account. Delete one first, or discard the demo and let it expire on its own.`
-              : "The workspace you explored before signing up — its requests, tickets, and triage results — can move onto this account exactly as you left it. Otherwise it expires and deletes itself."}
-          </p>
-          <div className="cluster wrap" style={{ gap: 10 }}>
-            <form action={keepDemoWorkspaceAction}>
-              <SubmitButton pendingText="Keeping workspace..." className="btn--sm w-auto" disabled={atWorkspaceLimit}>
-                <Sparkles size={14} /> Keep this workspace
-              </SubmitButton>
-            </form>
-            <form action={discardDemoWorkspaceAction}>
-              <SubmitButton pendingText="Discarding..." className="btn--neutral btn--sm w-auto">
-                Discard the demo
-              </SubmitButton>
-            </form>
-          </div>
         </div>
       ) : null}
 
@@ -168,12 +128,12 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
                 <span className="metric-icon">
                   <Sparkles size={17} />
                 </span>
-                <div className="section-title">Make it permanent</div>
+                <div className="section-title">Get your own workspace</div>
               </div>
               <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
                 You&apos;re in a demo workspace, so creating another workspace and joining one by
-                invite both need a free account. Sign up and this workspace comes with you —
-                nothing you&apos;ve done here is lost.
+                invite both need a free account. Signing up starts you a workspace of your own
+                that keeps everything you put in it. This demo stays a demo, and expires.
               </p>
               <Link href={DEMO_SIGNUP_HREF} className="btn btn--primary btn--sm btn--block">
                 <ArrowRight size={14} /> Create free account

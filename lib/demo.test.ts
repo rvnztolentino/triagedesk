@@ -14,6 +14,9 @@ const joinPageSource = readFileSync(new URL("../app/join/[workspaceSlug]/page.ts
 const accountPageSource = readFileSync(new URL("../app/account/page.tsx", import.meta.url), "utf8");
 
 const SESSION_ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
+// Epoch seconds. Tokens carry their own expiry, so every fixture needs one.
+const FUTURE = Math.floor(Date.now() / 1000) + 60 * 60;
+const PAST = Math.floor(Date.now() / 1000) - 60;
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -30,14 +33,14 @@ describe("demo session cookie", () => {
   it("round-trips a session id it signed itself", async () => {
     const { createDemoSessionToken, verifyDemoSessionToken } = await importDemo();
 
-    expect(verifyDemoSessionToken(createDemoSessionToken(SESSION_ID))).toBe(SESSION_ID);
+    expect(verifyDemoSessionToken(createDemoSessionToken(SESSION_ID, FUTURE))).toBe(SESSION_ID);
   });
 
   // The signature is the only thing separating two demo visitors. Without it, anyone
   // could set a cookie naming another visitor's session id and open their workspace.
   it("rejects a session id whose signature was tampered with", async () => {
     const { createDemoSessionToken, verifyDemoSessionToken } = await importDemo();
-    const token = createDemoSessionToken(SESSION_ID);
+    const token = createDemoSessionToken(SESSION_ID, FUTURE);
     const tampered = `${token.slice(0, -1)}${token.endsWith("a") ? "b" : "a"}`;
 
     expect(verifyDemoSessionToken(tampered)).toBeUndefined();
@@ -45,23 +48,53 @@ describe("demo session cookie", () => {
 
   it("rejects another session id pasted onto a valid signature", async () => {
     const { createDemoSessionToken, verifyDemoSessionToken } = await importDemo();
-    const signature = createDemoSessionToken(SESSION_ID).split(".")[1];
+    const signature = createDemoSessionToken(SESSION_ID, FUTURE).split(".")[2];
 
-    expect(verifyDemoSessionToken(`11111111-1111-4111-8111-111111111111.${signature}`)).toBeUndefined();
+    expect(
+      verifyDemoSessionToken(`11111111-1111-4111-8111-111111111111.${FUTURE}.${signature}`)
+    ).toBeUndefined();
   });
 
   it("rejects a token signed with a different secret", async () => {
     const { createDemoSessionToken } = await importDemo("first-secret");
-    const token = createDemoSessionToken(SESSION_ID);
+    const token = createDemoSessionToken(SESSION_ID, FUTURE);
     const { verifyDemoSessionToken } = await importDemo("rotated-secret");
 
     expect(verifyDemoSessionToken(token)).toBeUndefined();
   });
 
+  // Cookie maxAge is a browser courtesy, not a control: a scripted client keeps
+  // sending the cookie forever. Without an expiry inside the signed token, a demo
+  // session lasted until some unrelated visitor triggered the cleanup sweep.
+  it("rejects a token whose signed expiry has passed", async () => {
+    const { createDemoSessionToken, verifyDemoSessionToken } = await importDemo();
+
+    expect(verifyDemoSessionToken(createDemoSessionToken(SESSION_ID, PAST))).toBeUndefined();
+  });
+
+  // The expiry is inside the signature, so pushing it forward invalidates the token
+  // rather than extending the session.
+  it("rejects a token whose expiry was extended by hand", async () => {
+    const { createDemoSessionToken, verifyDemoSessionToken } = await importDemo();
+    const signature = createDemoSessionToken(SESSION_ID, PAST).split(".")[2];
+
+    expect(verifyDemoSessionToken(`${SESSION_ID}.${FUTURE}.${signature}`)).toBeUndefined();
+  });
+
   it("rejects malformed tokens instead of throwing", async () => {
     const { verifyDemoSessionToken } = await importDemo();
 
-    for (const token of [undefined, "", "no-dot", `${SESSION_ID}.`, `${SESSION_ID}.a.b`, ".sig"]) {
+    for (const token of [
+      undefined,
+      "",
+      "no-dot",
+      `${SESSION_ID}.`,
+      `${SESSION_ID}.a.b`,
+      ".sig",
+      `${SESSION_ID}.${FUTURE}`,
+      `${SESSION_ID}.not-a-number.sig`,
+      `${SESSION_ID}.${FUTURE}.sig.extra`,
+    ]) {
       expect(verifyDemoSessionToken(token)).toBeUndefined();
     }
   });
@@ -71,8 +104,8 @@ describe("demo session cookie", () => {
   it("rejects a signed token whose session id is not a uuid", async () => {
     const { verifyDemoSessionToken, createDemoSessionToken } = await importDemo();
 
-    expect(verifyDemoSessionToken(createDemoSessionToken("../../etc/passwd"))).toBeUndefined();
-    expect(verifyDemoSessionToken(createDemoSessionToken("' or 1=1--"))).toBeUndefined();
+    expect(verifyDemoSessionToken(createDemoSessionToken("../../etc/passwd", FUTURE))).toBeUndefined();
+    expect(verifyDemoSessionToken(createDemoSessionToken("' or 1=1--", FUTURE))).toBeUndefined();
   });
 });
 
@@ -253,7 +286,32 @@ describe("demo rate limits", () => {
   // pointing at a workspace that was never created.
   it("sets the session cookie only after the workspace exists", () => {
     expect(demoSource.indexOf('client.rpc("create_demo_workspace"')).toBeLessThan(
-      demoSource.indexOf("await setDemoSessionCookie(sessionId);")
+      demoSource.indexOf("await setDemoSessionCookie(sessionId, expiresAt);")
     );
+  });
+
+  // Signing the expiry the database actually stored, rather than recomputing it here,
+  // means the token can never outlive the workspace row it points at. The RPC clamps
+  // the lifetime, so this is the only value that reflects the clamp.
+  it("signs the expiry the database returned, not one computed in Node", () => {
+    expect(demoSource).toContain("const expiresAt = asString(row.workspace_expires_at);");
+    expect(demoSource).toContain("await setDemoSessionCookie(sessionId, expiresAt);");
+  });
+
+  // Four hours, not twenty-four: the write budget is per hour, so a long lifetime
+  // only widens the worst case for row growth.
+  it("keeps the demo lifetime short and inside the range the RPC accepts", async () => {
+    const { DEMO_LIFETIME_HOURS } = await importDemo();
+    expect(DEMO_LIFETIME_HOURS).toBe(4);
+    expect(DEMO_LIFETIME_HOURS).toBeGreaterThanOrEqual(1);
+    expect(DEMO_LIFETIME_HOURS).toBeLessThanOrEqual(72);
+  });
+
+  // The cookie outlives the workspace on purpose. Expiry is enforced inside the token,
+  // so the grace window grants nothing; it only keeps the cookie present long enough
+  // for the visitor to reach the expired screen.
+  it("gives the cookie a grace window past the signed expiry", () => {
+    expect(demoSource).toContain("const DEMO_COOKIE_GRACE_SECONDS = 60 * 60;");
+    expect(demoSource).toContain("maxAge: secondsRemaining + DEMO_COOKIE_GRACE_SECONDS,");
   });
 });

@@ -8,7 +8,7 @@ const LEVEL_COLOR: Record<ConfidenceLevel, string> = {
 };
 
 // A clean status-bar style indicator for the AI triage confidence. Purely
-// presentational — the score is derived deterministically in lib/confidence.
+// presentational. The score is derived deterministically in lib/confidence.
 export function ConfidenceMeter({
   seed,
   similarCount = 0,

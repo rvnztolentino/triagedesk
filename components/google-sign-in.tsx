@@ -17,8 +17,8 @@ function GoogleIcon() {
 }
 
 // Clerk queues every signIn.* call until its JS reports `loaded`, and that internal
-// wait has no timeout. When Clerk never finishes loading, sso() simply never settles —
-// it neither resolves nor rejects — so the button spins forever with no error to show.
+// wait has no timeout. When Clerk never finishes loading, sso() simply never settles:
+// it neither resolves nor rejects, so the button spins forever with no error to show.
 // That is the Safari failure mode: development instances serve their Frontend API from
 // a cross-site *.accounts.dev domain and carry the session in a "dev browser" token
 // that Safari's tracking prevention will not let Clerk refresh, so initialization
@@ -40,7 +40,7 @@ export function GoogleSignIn({ next, label = "Continue with Google" }: { next?: 
       // Hand the browser off to Google. Clerk returns to /auth/callback to finalize
       // the session, then forwards to redirectUrl (the post-auth destination).
       //
-      // sso() RESOLVES with `{ error }` rather than throwing — the same Signals API
+      // sso() RESOLVES with `{ error }` rather than throwing, the same Signals API
       // contract that login-form and signup-form already destructure. A bare `await`
       // here treated a failed SSO start as success, so the button stayed disabled on
       // "Redirecting to Google..." forever with nothing to explain why. Check the
@@ -60,12 +60,12 @@ export function GoogleSignIn({ next, label = "Continue with Google" }: { next?: 
         setError(clerkErrorMessage(ssoError) || "We couldn't start Google sign-in. Please try again.");
         setLoading(false);
       }
-      // On success the browser navigates to Google, so `loading` stays set on purpose —
+      // On success the browser navigates to Google, so `loading` stays set on purpose:
       // clearing it would flash the idle button during the redirect.
     } catch (err) {
       setError(
         err instanceof Error && err.message === SSO_TIMEOUT
-          ? "Google sign-in couldn't start. If you're on Safari, tracking prevention can block this — try a private window, or sign in with your email and password below."
+          ? "Google sign-in couldn't start. If you're on Safari, tracking prevention can block this. Try a private window, or sign in with your email and password below."
           : clerkErrorMessage(err) || "We couldn't start Google sign-in. Please try again."
       );
       setLoading(false);

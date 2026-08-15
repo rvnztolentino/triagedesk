@@ -18,7 +18,7 @@ import {
   setActiveWorkspaceCookie,
   updateDisplayName,
 } from "@/lib/auth";
-import { claimDemoWorkspace, clearDemoSessionCookie, enforceDemoTriageLimits, enforceDemoWriteLimit, readDemoSessionId } from "@/lib/demo";
+import { clearDemoSessionCookie, enforceDemoTriageLimits, enforceDemoWriteLimit, hasDemoSessionCookie, readDemoSessionId, startDemoSession } from "@/lib/demo";
 import { requestReceivedHref, scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { requireSupabaseAdminClient, SetupRequiredError } from "@/lib/supabase";
 import { ZodError } from "zod";
@@ -48,11 +48,13 @@ import {
   deleteWorkspaceInvite,
   deleteWorkspace,
   assertWorkspaceMutable,
+  getPostAuthWorkspacePath,
   isWorkspaceAdmin,
   isWorkspacePreview,
   joinWorkspaceWithInvite,
   joinWorkspaceWithInviteCode,
   leaveWorkspace,
+  listUserWorkspaces,
   removeWorkspaceMember,
   requireWorkspaceMembership,
   revokeWorkspaceInvite,
@@ -92,7 +94,7 @@ async function requireTrustedActionRequest() {
 
 // Every action a live-demo visitor must not reach funnels through here. The database
 // backs the two highest-value cases (creating and joining workspaces) with its own
-// check, so an omission here degrades to a worse error rather than to a hole — but
+// check, so an omission here degrades to a worse error rather than to a hole, but
 // this layer is what turns the block into a message the visitor can act on.
 async function assertRealActionUser() {
   const user = await requireUser();
@@ -156,7 +158,7 @@ async function enforceRequestSubmissionLimits(userId: string, workspaceId: strin
 }
 
 // Per-user, per-workspace hourly cap for admin mutations that write to the DB and
-// fan out notifications/activity-log entries. Loose by design — sized to stop a
+// fan out notifications/activity-log entries. Loose by design, sized to stop a
 // runaway loop or compromised session, not to throttle normal admin work.
 async function enforceAdminMutationLimit(
   scope: string,
@@ -572,53 +574,80 @@ export async function signOutAction() {
   await clearDemoSessionCookie();
 }
 
-// Conversion. A visitor who signed up still carries their demo cookie, so the
-// workspace hub offers to hand the demo workspace to the account they just made.
-// Everything that can go wrong here (workspace cap, an expiry that landed mid-flow,
-// a session that already ended) comes back from claimDemoWorkspace as a PublicError
-// with text worth showing, and leaves the demo untouched and retryable.
-export async function keepDemoWorkspaceAction() {
-  await requireTrustedActionRequest();
-  const user = await requireUser();
-  let redirectTo = "/onboarding";
-  try {
-    // The RPC refuses a demo profile too. Checking first turns a raw Postgres error
-    // into a sentence that tells the visitor what to do about it.
-    if (isDemoUser(user)) {
-      throw new PublicError("Create your free account first, then this workspace can be kept.");
-    }
-    const claimed = await claimDemoWorkspace(user.id);
-    await setActiveWorkspaceCookie(claimed.workspaceSlug);
-    // The header, sidebar, and hub all read the active workspace from the cookie.
-    revalidatePath("/", "layout");
-    revalidatePath("/onboarding");
-    redirectTo = `/w/${claimed.workspaceSlug}`;
-  } catch (error) {
-    captureOperationalError(error, { area: "demo_workspace_keep", demo: true });
-    redirectWithError("/onboarding", error);
+// A visitor who already has somewhere to be must never mint a second workspace. A
+// demo double-submit would strand the first one until its expiry and burn another
+// slot of the 3/hour IP budget; a signed-in user would get a workspace their Clerk
+// identity can never open, because getCurrentUser() always prefers Clerk over the
+// demo cookie. Costs nothing on the path that matters: with no session at all this is
+// a cookie read and no query.
+async function existingSessionDestination() {
+  const user = await getCurrentUser();
+  if (!user) return undefined;
+
+  if (!isDemoUser(user)) {
+    const access = await getActiveWorkspaceAccess(user.id);
+    return access ? scopedWorkspaceHref(access.workspace.slug, "/") : getPostAuthWorkspacePath();
   }
-  redirect(redirectTo);
+
+  // A demo principal owns exactly one workspace. If it has already been swept, fall
+  // through and mint a fresh one rather than stranding the visitor.
+  const [existing] = await listUserWorkspaces(user.id);
+  return existing ? scopedWorkspaceHref(existing.workspace.slug, "/") : undefined;
 }
 
-// "No thanks" on the same card. Only the cookie is dropped — the workspace keeps its
-// original expiry and the sweep collects it, which is also what happens when someone
-// abandons sign-up halfway. Nothing is deleted here that a visitor might want back.
-export async function discardDemoWorkspaceAction() {
+// The demo entry point, and the only action an anonymous visitor can reach that
+// writes rows. startDemoSession owns the same-origin check and the IP and global
+// caps, so that protection travels with the session rather than depending on whoever
+// wires up the button.
+//
+// Failures come back inline instead of redirecting with a query param: the buttons
+// that call this sit in a fixed header and at the bottom of a long landing page, and
+// a banner at the top of the page would never be seen from either.
+export async function startDemoAction(_prevState: ActionState, _formData?: FormData): Promise<ActionState> {
   await requireTrustedActionRequest();
-  await requireUser();
-  await clearDemoSessionCookie();
-  revalidatePath("/onboarding");
-  redirect("/onboarding");
+
+  let destination = "";
+  try {
+    const existing = await existingSessionDestination();
+    if (existing) {
+      destination = existing;
+    } else {
+      const session = await startDemoSession();
+      await setActiveWorkspaceCookie(session.workspaceSlug);
+      // The header and sidebar read the active workspace from the cookie.
+      revalidatePath("/", "layout");
+      destination = scopedWorkspaceHref(session.workspaceSlug, "/");
+    }
+  } catch (error) {
+    // A rate-limited or paused demo is an expected outcome on a public button that
+    // bots will find, not an operational failure. Reporting those would bury the real
+    // ones in noise.
+    if (!(error instanceof RateLimitError) && !(error instanceof PublicError)) {
+      captureOperationalError(error, { area: "demo_session_start", demo: true });
+    }
+    return { error: actionErrorMessage(error) };
+  }
+
+  redirect(destination);
 }
+
+// There is deliberately no action that hands a demo workspace to a real account.
+// Signing up starts a fresh workspace; the demo is left to its own expiry and the
+// sweep collects it. Removing the claim path also removes the only code that could
+// ever reassign workspace ownership, which is worth keeping absent.
 
 // Backs the expired-demo screen. There is no session left to authorize against, so
-// this deliberately does not require a user — it just clears the cookies that would
+// this deliberately does not require a user. It just clears the cookies that would
 // otherwise keep routing the visitor back to that screen. The active-workspace cookie
 // is only dropped when a demo cookie was actually present, so a real signed-in user
 // who reaches this action can't be made to lose their open workspace.
 export async function endDemoSessionAction() {
   await requireTrustedActionRequest();
-  const hadDemoSession = Boolean(await readDemoSessionId());
+  // Presence, not validity. The visitor who reaches this screen usually holds a token
+  // that has passed its signed expiry, and that is precisely who needs the stale
+  // active-workspace cookie cleared. A real signed-in user carries no demo cookie at
+  // all, so they still cannot be made to lose their open workspace.
+  const hadDemoSession = await hasDemoSessionCookie();
   await clearDemoSessionCookie();
   if (hadDemoSession) await clearActiveWorkspaceCookie();
   redirect("/");
@@ -744,7 +773,7 @@ export async function createWorkspaceAction(formData: FormData) {
     const access = await createWorkspace(formText(formData, "name"), user.id);
     // Only make the new workspace active when the user has no workspace open yet.
     // If another workspace is already open, keep it active so creating a workspace
-    // doesn't yank the user out of the one they're working in — the scoped layout
+    // doesn't yank the user out of the one they're working in. The scoped layout
     // then shows the switch prompt on the new workspace's page, matching how
     // opening a link to a non-active workspace behaves.
     const activeWorkspace = await getActiveWorkspaceAccess(user.id);

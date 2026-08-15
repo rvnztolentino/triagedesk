@@ -81,8 +81,8 @@ function isAuthPath(path: string) {
 
 // Standalone pages render without the active-workspace chrome (sidebar, header,
 // preview banner). Invite pages live at `/join` and are cross-workspace by
-// nature, so showing the currently-open workspace's chrome around them — e.g. a
-// "Preview locked" banner from demo-clinic — is misleading. `/demo/expired` is
+// nature, so showing the currently-open workspace's chrome around them, e.g. a
+// "Preview locked" banner from demo-clinic, is misleading. `/demo/expired` is
 // reached with no resolvable user at all, so the shell would render an empty
 // sidebar around it.
 function isStandalonePath(path: string) {
@@ -148,8 +148,8 @@ export function AppLayout({
     } catch {
       // Non-fatal: the active-workspace cookie is membership-checked on next use.
     }
-    // A demo visitor has no Clerk session to terminate — the demo cookie the action
-    // just dropped was the whole identity — so go straight home instead of asking
+    // A demo visitor has no Clerk session to terminate. The demo cookie the action
+    // just dropped was the whole identity, so go straight home instead of asking
     // Clerk to end a session that was never created.
     if (isDemoSession) {
       window.location.href = "/";
@@ -299,7 +299,7 @@ export function AppLayout({
   return (
     <div className="bg-bg text-fg h-dvh w-full flex overflow-hidden font-sans">
       <RouteProgress active={!!pendingPath} />
-      {/* Mobile overlay — kept mounted so it can fade in/out with the sidebar */}
+      {/* Mobile overlay: kept mounted so it can fade in/out with the sidebar */}
       <button
         type="button"
         aria-label="Close sidebar"
@@ -342,7 +342,7 @@ export function AppLayout({
           </div>
         </div>
 
-        {/* Workspace indicator — compact pill */}
+        {/* Workspace indicator: compact pill */}
         {currentUser ? (
           <div className={cn("px-4 pb-3", collapsed && "md:px-2")}>
             <Link
@@ -486,7 +486,7 @@ export function AppLayout({
 
           {/* Right side: actions */}
           <div className="flex items-center gap-2">
-            {/* Workspace switcher — header (visible on tablet+) */}
+            {/* Workspace switcher: header (visible on tablet+) */}
             {currentUser ? (
               <Link
                 href="/onboarding"
@@ -569,7 +569,7 @@ export function AppLayout({
                     {/* Account settings are account-only. A demo visitor clicking through
                         would just be redirected back out, so explain it here instead. */}
                     {isDemoSession ? (
-                      <DemoLockButton className="menu-item" body="Your display name, email, and account settings live on a real account. Create a free one and this workspace comes with you.">
+                      <DemoLockButton className="menu-item" body="Your display name, email, and account settings live on a real account. Create a free one to get a workspace that keeps what you put in it.">
                         <UserRound size={15} className="text-muted" /> Account
                       </DemoLockButton>
                     ) : (

@@ -9,7 +9,7 @@ import { SetupRequiredError } from "@/lib/supabase";
 import { PublicError } from "@/lib/errors";
 import { assertCleanDisplayName, addMonths, nameChangeStatus, NAME_CHANGE_WINDOW_MONTHS } from "@/lib/display-name";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
-import { getDemoUser, readDemoSessionId } from "@/lib/demo";
+import { getDemoUser, hasDemoSessionCookie } from "@/lib/demo";
 import { countOwnedWorkspaces, getPostAuthWorkspacePath, isWorkspaceAdmin, isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
 
 // Keep app-owned cookies (active workspace) for a week. Clerk manages the auth
@@ -361,12 +361,13 @@ export async function requireUser() {
   const user = await getCurrentUser();
   if (user) return user;
 
-  // A demo cookie that still verifies but no longer resolves to a profile means the
-  // workspace expired and the cleanup sweep took it. Dropping that visitor on /login
-  // is technically correct and completely baffling — they never had an account. The
-  // expired screen explains what happened and offers a way onward. This is a cookie
-  // read with no database query, so signed-out visitors pay nothing for it.
-  if (await readDemoSessionId()) redirect("/demo/expired");
+  // Any demo cookie at all, valid or not, means this visitor came from the demo.
+  // Presence rather than validity on purpose: the common case is now a token that has
+  // passed its signed expiry, and dropping that visitor on /login is technically
+  // correct and completely baffling, because they never had an account. The expired
+  // screen explains what happened and offers a way onward. This is a cookie read with
+  // no database query, so signed-out visitors pay nothing for it.
+  if (await hasDemoSessionCookie()) redirect("/demo/expired");
 
   redirect("/login");
 }
@@ -397,17 +398,17 @@ export async function requireRealUser(redirectTo = "/onboarding") {
 
 // The auth pages exist for signed-out visitors only. A signed-in user who lands
 // on /login or /signup (back button, bookmark, header link) is sent straight to
-// their active workspace dashboard — or the workspace hub when no workspace is
-// active — instead of being shown a sign-in form they don't need. An explicit
+// their active workspace dashboard, or the workspace hub when no workspace is
+// active, instead of being shown a sign-in form they don't need. An explicit
 // `next` target wins so a deep link the user was following still resolves.
 export async function redirectSignedInAwayFromAuth(next?: string) {
   const user = await getCurrentUser();
   if (!user) return;
 
   // A demo visitor resolves as a user here, but they are exactly who these pages are
-  // for: converting them is the point of the demo. Bouncing them back to their
-  // workspace would make signing up impossible. Their cookie survives sign-up, and
-  // the workspace hub then offers to keep the workspace they just built.
+  // for: getting them onto a real account is the point of the demo. Bouncing them
+  // back to their workspace would make signing up impossible. The workspace they
+  // leave behind is not carried over, it simply expires.
   if (isDemoUser(user)) return;
 
   const safeNext = sanitizeInternalRedirect(next);

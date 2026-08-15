@@ -26,7 +26,7 @@ export default function Error({
         </div>
         <h1 className="text-xl font-semibold tracking-tight text-fg mb-2">Something went wrong</h1>
         <p className="text-sm text-muted mb-6">
-          An unexpected error interrupted this page. You can try again &mdash; if it keeps
+          An unexpected error interrupted this page. You can try again. If it keeps
           happening, it has already been reported.
         </p>
         {error.digest ? (

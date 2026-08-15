@@ -8,13 +8,20 @@ import { captureOperationalError } from "@/lib/monitoring";
 
 // Signed, HttpOnly cookie holding "<sessionId>.<hmac>". The signature is what stops a
 // visitor from guessing or forging another visitor's session id and walking into their
-// workspace — the id alone is the only thing standing between two demo sessions.
+// workspace. The id alone is the only thing standing between two demo sessions.
 export const DEMO_SESSION_COOKIE = "td_demo_session";
 
-// How long a demo workspace lives before the cleanup sweep removes it. The cookie is
-// given the same lifetime so a stale cookie expires alongside the data it points at.
-export const DEMO_LIFETIME_HOURS = 24;
-const DEMO_COOKIE_MAX_AGE = DEMO_LIFETIME_HOURS * 60 * 60;
+// How long a demo workspace lives before the cleanup sweep removes it. Four hours,
+// not twenty-four: a demo visit lasts minutes, and the write budget is per hour, so a
+// long lifetime only widens the worst case for row growth without helping anyone.
+// The RPC clamps this to 1-72h, so changing it needs no migration.
+export const DEMO_LIFETIME_HOURS = 4;
+
+// The cookie deliberately outlives the workspace. Expiry is enforced inside the
+// signed token, so the extra hour grants no access at all; it just keeps the cookie
+// in the jar long enough for the visitor to land on the expired screen instead of a
+// bare sign-in page they have no account for.
+const DEMO_COOKIE_GRACE_SECONDS = 60 * 60;
 
 // Demo profiles use the RFC 2606 reserved .invalid TLD, so a demo email can never
 // collide with a real Clerk signup no matter what a visitor types.
@@ -35,7 +42,7 @@ function demoSessionSecret() {
 }
 
 // The kill switch and the secret are checked together on purpose. A missing secret
-// means signatures can't be trusted, so the demo must be off rather than unsigned —
+// means signatures can't be trusted, so the demo must be off rather than unsigned:
 // fail closed, not open.
 export function isDemoEnabled() {
   if (process.env.DEMO_ENABLED === "false") return false;
@@ -50,31 +57,45 @@ export function isDemoEmail(email: string) {
   return email.trim().toLowerCase().endsWith(`@${DEMO_EMAIL_DOMAIN}`);
 }
 
-function signSessionId(sessionId: string) {
-  return createHmac("sha256", demoSessionSecret()).update(sessionId).digest("hex");
+// The expiry is signed alongside the session id, so neither can be swapped without
+// invalidating the other.
+function signSessionPayload(sessionId: string, expiresAtSeconds: number) {
+  return createHmac("sha256", demoSessionSecret()).update(`${sessionId}.${expiresAtSeconds}`).digest("hex");
 }
 
-export function createDemoSessionToken(sessionId: string) {
-  return `${sessionId}.${signSessionId(sessionId)}`;
+export function createDemoSessionToken(sessionId: string, expiresAtSeconds: number) {
+  return `${sessionId}.${expiresAtSeconds}.${signSessionPayload(sessionId, expiresAtSeconds)}`;
 }
 
-// Returns the session id only when the signature verifies. Anything malformed,
-// tampered with, or signed by a rotated secret resolves to undefined, which every
-// caller treats as "signed out" rather than as an error.
-export function verifyDemoSessionToken(token: string | undefined): string | undefined {
+/**
+ * Returns the session id only when the signature verifies and the token has not
+ * expired. Anything malformed, tampered with, signed by a rotated secret, or past
+ * its expiry resolves to undefined, which every caller treats as "signed out".
+ *
+ * The expiry lives in the token because cookie `maxAge` is a browser courtesy, not a
+ * control: a scripted client keeps sending the cookie forever. Without this, a demo
+ * session lasted until some unrelated visitor happened to trigger the opportunistic
+ * cleanup sweep, which with no demo traffic is never.
+ */
+export function verifyDemoSessionToken(token: string | undefined, now = Date.now()): string | undefined {
   if (!token || !demoSessionSecret()) return undefined;
 
   const parts = token.split(".");
-  if (parts.length !== 2) return undefined;
+  if (parts.length !== 3) return undefined;
 
-  const [sessionId, signature] = parts;
+  const [sessionId, expiresAtRaw, signature] = parts;
   if (!UUID_PATTERN.test(sessionId)) return undefined;
+  if (!/^\d{1,15}$/.test(expiresAtRaw)) return undefined;
 
-  const expected = Buffer.from(signSessionId(sessionId));
+  const expiresAtSeconds = Number(expiresAtRaw);
+  const expected = Buffer.from(signSessionPayload(sessionId, expiresAtSeconds));
   const provided = Buffer.from(signature);
   if (expected.length !== provided.length) return undefined;
+  // Signature first, so an expired-token check can never be used as an oracle
+  // against a forged one.
+  if (!timingSafeEqual(expected, provided)) return undefined;
 
-  return timingSafeEqual(expected, provided) ? sessionId : undefined;
+  return expiresAtSeconds * 1000 > now ? sessionId : undefined;
 }
 
 export async function readDemoSessionId() {
@@ -83,14 +104,31 @@ export async function readDemoSessionId() {
   return verifyDemoSessionToken(cookieStore.get(DEMO_SESSION_COOKIE)?.value);
 }
 
-export async function setDemoSessionCookie(sessionId: string) {
+// Presence, not validity. An expired or tampered cookie still means "this visitor
+// came from a demo", which is what routes them to the expired screen rather than to
+// a sign-in form for an account they never had.
+export async function hasDemoSessionCookie() {
+  if (!isDemoEnabled()) return false;
   const cookieStore = await cookies();
-  cookieStore.set(DEMO_SESSION_COOKIE, createDemoSessionToken(sessionId), {
+  return Boolean(cookieStore.get(DEMO_SESSION_COOKIE)?.value);
+}
+
+export async function setDemoSessionCookie(sessionId: string, expiresAt: string) {
+  const expiresAtMs = new Date(expiresAt).getTime();
+  if (!Number.isFinite(expiresAtMs)) {
+    throw new Error("Create demo workspace failed: the database returned no usable expiry.");
+  }
+
+  const expiresAtSeconds = Math.floor(expiresAtMs / 1000);
+  const secondsRemaining = Math.max(0, Math.ceil((expiresAtMs - Date.now()) / 1000));
+
+  const cookieStore = await cookies();
+  cookieStore.set(DEMO_SESSION_COOKIE, createDemoSessionToken(sessionId, expiresAtSeconds), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: DEMO_COOKIE_MAX_AGE,
+    maxAge: secondsRemaining + DEMO_COOKIE_GRACE_SECONDS,
   });
 }
 
@@ -199,7 +237,7 @@ export type DemoWorkspaceSession = {
 };
 
 // Mints a demo session: rate-limit, clone the template in one transaction, then set
-// the signed cookie. The cookie is written last on purpose — if the clone fails the
+// the signed cookie. The cookie is written last on purpose: if the clone fails the
 // visitor is left with no cookie at all rather than one pointing at nothing.
 export async function startDemoSession(): Promise<DemoWorkspaceSession> {
   if (!isDemoEnabled()) {
@@ -226,52 +264,22 @@ export async function startDemoSession(): Promise<DemoWorkspaceSession> {
   const row = (data as SupabaseRow[] | null)?.[0];
   if (!row) throw new Error("Create demo workspace failed: the database returned no workspace.");
 
-  await setDemoSessionCookie(sessionId);
+  // The expiry in the cookie is the one the database actually stored, which it clamps
+  // to 1-72h. Signing that value rather than recomputing it means the token can never
+  // outlive the workspace row it points at.
+  const expiresAt = asString(row.workspace_expires_at);
+  await setDemoSessionCookie(sessionId, expiresAt);
 
   return {
     sessionId,
     workspaceId: asString(row.workspace_id),
     workspaceSlug: asString(row.workspace_slug),
     userId: asString(row.demo_user_id),
-    expiresAt: asString(row.workspace_expires_at),
+    expiresAt,
   };
 }
 
-// Hands the current demo workspace to a real, Clerk-backed profile so a visitor who
-// signs up keeps the work they just did. Surfaces the workspace cap and the
-// already-expired case as user-facing text; everything else stays generic.
-export async function claimDemoWorkspace(profileId: string) {
-  const sessionId = await readDemoSessionId();
-  if (!sessionId) {
-    throw new PublicError("This demo session has already ended.");
-  }
-
-  const client = requireSupabaseAdminClient();
-  const { data, error } = await client.rpc("claim_demo_workspace", {
-    target_session_id: sessionId,
-    target_profile_id: profileId,
-  });
-
-  if (error) {
-    if (error.message.includes("Workspace limit reached")) {
-      throw new PublicError("You've reached your workspace limit, so this demo can't be kept.");
-    }
-    if (error.message.includes("already expired")) {
-      throw new PublicError("This demo expired before it could be saved.");
-    }
-    if (error.message.includes("not found")) {
-      throw new PublicError("This demo session has already ended.");
-    }
-    captureOperationalError(error, { area: "demo_workspace_claim", demo: true });
-    throw new Error(`Claim demo workspace failed: ${error.message}`);
-  }
-
-  const row = (data as SupabaseRow[] | null)?.[0];
-  if (!row) throw new PublicError("This demo session has already ended.");
-
-  // The demo identity is gone once claimed; drop its cookie so the visitor resolves
-  // as their real signed-in account from here on.
-  await clearDemoSessionCookie();
-
-  return { workspaceId: asString(row.workspace_id), workspaceSlug: asString(row.workspace_slug) };
-}
+// A demo workspace is never handed to a real account. Signing up starts a fresh
+// workspace of its own and the demo is left to expire, so there is no claim path and
+// no ownership transfer anywhere in this module. Every piece of demo copy has to say
+// the same thing, or the product is promising something it does not do.

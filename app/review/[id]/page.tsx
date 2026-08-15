@@ -67,7 +67,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-        {/* LEFT — raw submission + similar */}
+        {/* LEFT: raw submission + similar */}
         <div className="col-span-1 space-y-6">
           <div className="card">
             <div className="panel-head">
@@ -140,7 +140,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
           </div>
         </div>
 
-        {/* RIGHT — triage output + decision */}
+        {/* RIGHT: triage output + decision */}
         <div className="col-span-1 md:col-span-2">
           <ReviewDecisionForm formId={approveFormId} isPreview={isPreview} decided={decided}>
             {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}

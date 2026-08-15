@@ -73,9 +73,12 @@ export default async function WorkspaceLandingPage({
         <h1 className="page-title" style={{ marginTop: 8 }}>
           {workspace.name}
         </h1>
-        <p className="page-sub">
-          Share access, manage invites, and control your membership. <span className="mono">/{workspace.slug}</span>
-        </p>
+        <p className="page-sub">Share access, manage invites, and control your membership.</p>
+        {/* On its own line, not trailing the sentence: a demo slug is 37 characters of
+            hex and wrecked the paragraph it sat in. */}
+        <span className="chip mono" style={{ marginTop: 10, maxWidth: "100%", overflowWrap: "anywhere" }}>
+          /{workspace.slug}
+        </span>
       </div>
 
       {query.error ? (
@@ -217,7 +220,7 @@ export default async function WorkspaceLandingPage({
                 {isPreview
                   ? "Demo Clinic is a read-only preview. Create your own workspace to invite members and use workspace management actions."
                   : isDemo
-                    ? "Demo workspaces are yours alone — inviting people and deleting the workspace need a free account. Sign up and this workspace becomes a real one, with everything you've done so far still in it."
+                    ? "Demo workspaces are yours alone. Inviting people and deleting the workspace need a free account. Signing up starts you a workspace of your own; this one stays a demo and expires on its own."
                     : "Requesters can submit requests and view their own tickets. Workspace invite sharing is available to admins and owners."}
               </p>
               {isDemo ? (

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Home, Timer } from "lucide-react";
 import { endDemoSessionAction } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
+import { TryDemoButton } from "@/components/try-demo-button";
 import { DEMO_SIGNUP_HREF } from "@/lib/demo-ui";
 
 export const dynamic = "force-dynamic";
@@ -45,17 +46,24 @@ export default function DemoExpiredPage() {
         <h1 style={{ fontSize: 21, fontWeight: 650, letterSpacing: "-0.02em", marginTop: 8 }}>This demo has expired</h1>
         <p className="muted" style={{ marginTop: 10, fontSize: 13.5 }}>
           Demo workspaces are temporary and delete themselves automatically, so this one and
-          everything in it is gone. Create a free account to keep your next workspace for good.
+          everything in it is gone. A free account gives you a workspace that does not expire.
         </p>
 
         <div className="stack" style={{ gap: 10, marginTop: 22 }}>
-          <Link href={DEMO_SIGNUP_HREF} className="btn btn--primary btn--block">
+          {/* Starting over replaces the dead cookie with a live one, so this needs no
+              separate cleanup step. */}
+          <TryDemoButton
+            buttonClassName="btn--primary btn--block"
+            label="Start a fresh demo"
+            note="A new workspace, still no account needed."
+          />
+          <Link href={DEMO_SIGNUP_HREF} className="btn btn--neutral btn--block">
             Create a free account <ArrowRight size={15} />
           </Link>
           {/* A form rather than a link: the dead cookie has to be cleared server-side,
               or every guarded page keeps routing back here. */}
           <form action={endDemoSessionAction}>
-            <SubmitButton pendingText="Returning..." className="btn--neutral btn--block">
+            <SubmitButton pendingText="Returning..." className="btn--ghost btn--block">
               <Home size={15} /> Back to TriageDesk
             </SubmitButton>
           </form>

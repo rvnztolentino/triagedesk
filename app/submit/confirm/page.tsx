@@ -94,14 +94,14 @@ export async function SubmitConfirmView({ searchParams, requestId, workspaceSlug
         </div>
 
         {/* The one moment a demo visitor has seen the product actually work on their
-            own words — the highest-intent place in the whole demo to ask. */}
+            own words, the highest-intent place in the whole demo to ask. */}
         {isDemoUser(user) ? (
           <div className="callout callout--accent" style={{ marginTop: 18, textAlign: "left" }}>
             <div className="eyebrow">That was real AI triage</div>
             <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
               A live model read what you wrote and chose the title, priority, and department above.
-              Create a free account to keep this workspace &mdash; otherwise it deletes itself when
-              the demo expires.
+              Create a free account to do this in a workspace that lasts. This one deletes
+              itself when the demo expires, and nothing in it carries over.
             </p>
             <Link href={DEMO_SIGNUP_HREF} className="btn btn--primary btn--sm" style={{ marginTop: 12 }}>
               Create free account <ArrowRight size={14} />

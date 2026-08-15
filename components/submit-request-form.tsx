@@ -24,11 +24,13 @@ const SAMPLES = [
 // triaging screen in its place (no blur over the form).
 function FormBody({
   isPreview,
+  allowAttachments,
   ticketsHref,
   description,
   setDescription,
 }: {
   isPreview: boolean;
+  allowAttachments: boolean;
   ticketsHref: string;
   description: string;
   setDescription: (value: string) => void;
@@ -93,7 +95,14 @@ function FormBody({
         <input id="urgencyNote" name="urgencyNote" type="text" maxLength={400} placeholder="Why is it urgent?" className="input" />
       </div>
 
-      <RequestAttachmentsInput />
+      {/* A demo session is refused storage access server-side, so showing it a file
+          picker would only produce an error after the upload. Everything else on this
+          form works for them, including real triage. */}
+      {allowAttachments ? (
+        <RequestAttachmentsInput />
+      ) : (
+        <p className="field-hint">Attachments need a free account. Everything else here works.</p>
+      )}
 
       <div className="pt-5 border-t border-border flex items-center justify-between">
         <Link href={ticketsHref} className="btn btn--ghost btn--sm">Cancel</Link>
@@ -108,10 +117,12 @@ function FormBody({
 export function SubmitRequestForm({
   workspaceSlug,
   isPreview,
+  allowAttachments,
   ticketsHref,
 }: {
   workspaceSlug?: string;
   isPreview: boolean;
+  allowAttachments: boolean;
   ticketsHref: string;
 }) {
   const [state, formAction] = useActionState(submitRequestAction, initialState);
@@ -132,7 +143,13 @@ export function SubmitRequestForm({
           <p><span className="font-semibold">Couldn&apos;t submit.</span> {state.error}</p>
         </div>
       ) : null}
-      <FormBody isPreview={isPreview} ticketsHref={ticketsHref} description={description} setDescription={setDescription} />
+      <FormBody
+        isPreview={isPreview}
+        allowAttachments={allowAttachments}
+        ticketsHref={ticketsHref}
+        description={description}
+        setDescription={setDescription}
+      />
     </form>
   );
 }

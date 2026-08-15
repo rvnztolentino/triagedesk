@@ -297,7 +297,7 @@ const DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b";
 // tokens before emitting a single character of JSON. On this prompt reasoning
 // alone measures 230-650 tokens, so the previous 500-token ceiling regularly
 // left nothing for the response body and Groq rejected the truncated output
-// with `400 json_validate_failed` — which silently demoted every request to
+// with `400 json_validate_failed`, which silently demoted every request to
 // rules triage. The headroom below is what keeps AI triage working at all.
 const DEFAULT_MAX_COMPLETION_TOKENS = 1500;
 const DEFAULT_REASONING_EFFORT = "low";

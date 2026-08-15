@@ -1,15 +1,18 @@
 import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { SubmitRequestForm } from "@/components/submit-request-form";
-import { requireWorkspaceContext } from "@/lib/auth";
+import { isDemoUser, requireWorkspaceContext } from "@/lib/auth";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { isWorkspacePreview } from "@/lib/workspaces";
 
 export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: string } = {}) {
-  const { workspace } = await requireWorkspaceContext(workspaceSlug);
+  const { user, workspace } = await requireWorkspaceContext(workspaceSlug);
   const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
   const isPreview = isWorkspacePreview(workspace.id);
+  // Storage is closed to demo sessions in both directions, so the picker stays hidden
+  // rather than failing on submit. submitRequestAction is still the boundary.
+  const allowAttachments = !isDemoUser(user);
   const setup = getRuntimeSetupStatus();
   const isSetupRequired = setup.missing.length > 0;
 
@@ -52,7 +55,12 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
       </div>
 
       <div className="card card-pad" style={{ padding: 24 }}>
-        <SubmitRequestForm workspaceSlug={workspaceSlug} isPreview={isPreview} ticketsHref={href("/tickets")} />
+        <SubmitRequestForm
+          workspaceSlug={workspaceSlug}
+          isPreview={isPreview}
+          allowAttachments={allowAttachments}
+          ticketsHref={href("/tickets")}
+        />
       </div>
     </div>
   );

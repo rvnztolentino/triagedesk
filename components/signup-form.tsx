@@ -16,7 +16,7 @@ function signUpErrorMessage(error: unknown) {
     case "form_identifier_exists":
       return "An account with this email already exists. Sign in instead.";
     case "form_password_pwned":
-      return "Choose a stronger password — this one has appeared in a data breach.";
+      return "Choose a stronger password. This one has appeared in a data breach.";
     case "form_password_length_too_short":
       return "Password must be at least 8 characters.";
     case "form_param_format_invalid":

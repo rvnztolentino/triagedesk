@@ -9,7 +9,7 @@ import { AuthLayout } from "@/components/auth-layout";
 // How long to wait for Clerk to finalize the OAuth session before offering a way out.
 // Deliberately generous: the development-instance handshake adds several redirects, and
 // bouncing a slow-but-healthy sign-in would be worse than making the user wait. This
-// only reveals an escape hatch — the callback stays mounted and still completes if it
+// only reveals an escape hatch. The callback stays mounted and still completes if it
 // eventually resolves.
 const STALLED_AFTER_MS = 20_000;
 

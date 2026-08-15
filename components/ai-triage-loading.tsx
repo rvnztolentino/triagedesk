@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 
-// A wink at the way Anthropic's models keep narrating little physical beats —
-// the assistant leans back, adjusts its glasses, taps a pen — while it "thinks".
+// A wink at the way Anthropic's models keep narrating little physical beats:
+// the assistant leans back, adjusts its glasses, taps a pen while it "thinks".
 // Shown as a rotating status line on the dedicated triaging screen.
 const BEATS = [
   "Leaning back in the chair, reading your request…",
@@ -17,7 +17,7 @@ const BEATS = [
 ];
 
 // Full-panel triaging view. Rendered in place of the form while the request is
-// being submitted and triaged — no blur, the form steps aside entirely.
+// being submitted and triaged. No blur, the form steps aside entirely.
 export function AiTriageLoading() {
   const [index, setIndex] = useState(0);
 
