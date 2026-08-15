@@ -33,7 +33,7 @@ export function NotificationBell({
 
   // Adopt fresh server data on navigation. The layout is a server component, so its
   // props only get a new identity when it re-renders (a navigation / server refresh),
-  // not on the bell's own state updates — making this a safe "did navigate" signal.
+  // not on the bell's own state updates, making this a safe "did navigate" signal.
   const [syncedProps, setSyncedProps] = React.useState(initialNotifications);
   if (syncedProps !== initialNotifications) {
     setSyncedProps(initialNotifications);
@@ -49,7 +49,7 @@ export function NotificationBell({
 
   // On mobile the panel renders as a full-width overlay pinned to the bottom of the
   // header (see the `.popover` mobile rules in globals.css). Measure the enclosing
-  // header so it drops from the exact header edge — mirroring the appearance popover.
+  // header so it drops from the exact header edge, mirroring the appearance popover.
   React.useEffect(() => {
     if (!open) return;
 
@@ -72,7 +72,7 @@ export function NotificationBell({
   const handleOpen = React.useCallback(() => {
     const next = !open;
     setOpen(next);
-    // Opening the panel counts as "viewing" — clear the badge and persist the read
+    // Opening the panel counts as "viewing", so clear the badge and persist the read
     // state on the server. Side effects run here in the click handler (not inside a
     // setState updater, which must stay pure). The list keeps its snapshot so unread
     // rows stay highlighted for this viewing.

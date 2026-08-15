@@ -19,7 +19,7 @@ function toDate(value: string | number | Date) {
   return value instanceof Date ? value : new Date(value);
 }
 
-// e.g. "Jul 6, 2026, 0:00" — short month, full year, 24h clock with no seconds.
+// e.g. "Jul 6, 2026, 0:00": short month, full year, 24h clock with no seconds.
 export function formatDateTime(value: string | number | Date) {
   return DATE_TIME_FORMAT.format(toDate(value));
 }

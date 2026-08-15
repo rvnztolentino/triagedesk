@@ -5,7 +5,7 @@ import { switchActiveWorkspaceAction } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 
 // Shared control for every "open this workspace" switch prompt. Posts to the
-// single switch action, which redirects — the navigation is what re-renders the
+// single switch action, which redirects, and the navigation is what re-renders the
 // cookie-driven header/sidebar/preview, so the chrome updates without a manual
 // refresh. The current path rides along as `next`; the action keeps it only when
 // it belongs to the target workspace, otherwise it lands on the workspace itself.

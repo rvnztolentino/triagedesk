@@ -5,8 +5,8 @@ import { WorkspaceSwitchPrompt } from "@/components/workspace-switch-prompt";
 
 // Guards every scoped `/w/[slug]/...` page. The root layout (header, sidebar,
 // preview banner) renders from the active-workspace cookie, while these pages
-// render from the URL slug. When they diverge — opening a link for a workspace
-// other than the open one — show a switch prompt instead of a mismatched screen.
+// render from the URL slug. When they diverge (opening a link for a workspace
+// other than the open one) show a switch prompt instead of a mismatched screen.
 export default async function WorkspaceLayout({
   children,
   params,

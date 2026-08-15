@@ -189,7 +189,7 @@ export async function countWorkspaceMembers(workspaceId: string) {
 }
 
 // Counts invites that are still redeemable (not revoked, not expired, and either
-// reusable or unused) — the same predicate as isWorkspaceInviteActive. Drives the
+// reusable or unused), the same predicate as isWorkspaceInviteActive. Drives the
 // MAX_ACTIVE_WORKSPACE_INVITES cap and the used/limit indicator.
 export async function countActiveWorkspaceInvites(workspaceId: string) {
   const client = requireSupabaseAdminClient();

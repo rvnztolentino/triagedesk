@@ -217,8 +217,8 @@ describe("workspace foundation", () => {
     expect(authSource).toContain('const ACTIVE_WORKSPACE_COOKIE = "triagedesk_active_workspace"');
     expect(authSource).toContain("return { user, ...access };");
     // Switching a workspace runs the switch server action (not a client Link to
-    // the route handler) so the cookie-driven root layout — header, sidebar, and
-    // preview indicator — refreshes; the action busts the layout cache. The
+    // the route handler) so the cookie-driven root layout (header, sidebar, and
+    // preview indicator) refreshes; the action busts the layout cache. The
     // /w/[slug] overview (Manage) is reached from the "Currently open" hub card.
     expect(workspaceOpenLinkSource).toContain("OpenWorkspaceButton");
     expect(openWorkspaceButtonSource).toContain("action={switchActiveWorkspaceAction}");

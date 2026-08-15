@@ -3,7 +3,7 @@
 -- Run this by hand in the Supabase SQL editor (or `supabase db execute`) whenever
 -- you want to tidy up. It is NOT scheduled and NOT required for the free tier:
 -- normal usage takes decades to approach the 500 MB limit. This only removes
--- genuinely dead data — never tickets, requests, or ticket_activity (audit log).
+-- genuinely dead data, never tickets, requests, or ticket_activity (audit log).
 --
 -- Everything here is idempotent and safe to re-run. Adjust the retention windows
 -- (the `interval` values) to taste. Run the PREVIEW section first if you want to
@@ -93,14 +93,14 @@ where p.is_demo
 -- ticket_activity is the fastest-growing table (~6 rows per ticket) and is the
 -- highest-leverage thing to trim IF you ever grow 100x. It is an AUDIT LOG, so
 -- pruning it loses the granular "who did what when" history on tickets that still
--- exist. Both options below are commented out — enable only ONE, deliberately.
+-- exist. Both options below are commented out. Enable only ONE, deliberately.
 -- Neither touches tickets, requests, or notes; only the activity rows themselves.
 --
--- Option A — time-based: drop activity older than 12 months.
+-- Option A, time-based: drop activity older than 12 months.
 -- delete from ticket_activity
 -- where created_at < now() - interval '12 months';
 --
--- Option B — per-ticket cap: keep only the latest 20 activity rows per ticket
+-- Option B, per-ticket cap: keep only the latest 20 activity rows per ticket
 -- (rows not attached to a ticket, e.g. request-only events, are left untouched).
 -- delete from ticket_activity ta
 -- using (

@@ -173,7 +173,7 @@ The workflow uses placeholder Supabase and Groq values because these checks only
 
 - Runtime request submission requires `AI_PROVIDER=groq` and `GROQ_API_KEY`. Keyword rules are an error fallback, not a selectable provider.
 - Groq is called up to 3 times per request, 8 seconds per attempt, within a 20-second overall budget. Failure falls back to deterministic keyword rules.
-- A fallback is a degraded result, so it is always logged — via Sentry when a DSN is set, otherwise as a `[triagedesk] operational error` server warning.
+- A fallback is a degraded result, so it is always logged, via Sentry when a DSN is set, otherwise as a `[triagedesk] operational error` server warning.
 - `GROQ_MAX_COMPLETION_TOKENS` (default `1500`) must cover the model's hidden reasoning tokens *plus* the JSON response. Too low and Groq rejects the truncated generation, which demotes every request to rules triage. `GROQ_REASONING_EFFORT` (default `low`) is dropped automatically for models that reject it.
 - A safety floor runs on both the model and rules paths: hazard language raises priority to `high` and replaces the priority reasoning with a fixed sentence. It is keyword-based, so unusual phrasing can be missed and a harmless match still escalates.
 - The model sees only the request description, location, urgency note, up to three similar-ticket summaries, and the allowed department IDs. Attachments, contact names, and requester identity are never sent.

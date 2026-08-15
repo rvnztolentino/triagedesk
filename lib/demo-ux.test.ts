@@ -5,7 +5,7 @@ import { demoMillisRemaining, formatDemoRemaining, isDemoExpired, DEMO_SIGNUP_HR
 const source = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 // "This file must not X" assertions have to read the code, not the comment that
-// explains why X is forbidden — otherwise documenting the rule breaks the test.
+// explains why X is forbidden. Otherwise documenting the rule breaks the test.
 const codeOnly = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 const actionsSource = source("../app/actions.ts");
@@ -82,8 +82,9 @@ describe("demo banner", () => {
     expect(demoBannerSource).toContain("window.clearInterval(timer)");
   });
 
-  it("states that the workspace is temporary and auto-deleted", () => {
-    expect(demoUiSource).toContain("Temporary workspace — auto-deleted.");
+  it("states that nothing is saved or carried over", () => {
+    expect(demoUiSource).toContain("Nothing here is saved or carried over to an account.");
+    expect(demoUiSource).toContain("Don't put anything private in it.");
     expect(demoBannerSource).toContain("DEMO_PRIVACY_NOTE");
   });
 
@@ -116,8 +117,11 @@ describe("demo banner", () => {
 describe("expired demo session", () => {
   // Without this a visitor whose demo was swept lands on /login and is asked to sign
   // in to an account they never had.
-  it("routes a stale demo cookie to the expired screen instead of sign-in", () => {
-    expect(authSource).toContain('if (await readDemoSessionId()) redirect("/demo/expired");');
+  // Presence, not validity. The common case is a token that passed its signed expiry,
+  // which readDemoSessionId correctly refuses; routing on that would send the visitor
+  // to a sign-in form for an account they never had.
+  it("routes any demo cookie, expired included, to the expired screen instead of sign-in", () => {
+    expect(authSource).toContain('if (await hasDemoSessionCookie()) redirect("/demo/expired");');
     expect(authSource.indexOf('redirect("/demo/expired")')).toBeLessThan(
       authSource.indexOf('redirect("/login")')
     );
@@ -141,32 +145,12 @@ describe("expired demo session", () => {
   });
 });
 
-describe("demo sign-up conversion", () => {
+describe("demo sign-up, with no workspace carry-over", () => {
   // Without this the demo is a dead end: getCurrentUser resolves a demo visitor as a
   // user, so the auth pages would bounce them straight back to their workspace.
   it("lets a demo principal reach the sign-up and sign-in pages", () => {
     const guard = authSource.slice(authSource.indexOf("export async function redirectSignedInAwayFromAuth"));
     expect(guard.slice(0, guard.indexOf("\nexport "))).toContain("if (isDemoUser(user)) return;");
-  });
-
-  it("offers the claim only to a real account holding a demo cookie", () => {
-    expect(onboardingSource).toContain("const canKeepDemoWorkspace = !isDemo && Boolean(demoSessionId);");
-    expect(onboardingSource).toContain("action={keepDemoWorkspaceAction}");
-    expect(onboardingSource).toContain("action={discardDemoWorkspaceAction}");
-  });
-
-  // The session id comes from the visitor's own signed cookie, never from the form.
-  // A claim keyed on a submitted id would let anyone hand themselves somebody else's
-  // demo workspace by guessing or replaying a session id.
-  it("takes the claimed session from the signed cookie, not from the request", () => {
-    const action = actionsSource.slice(actionsSource.indexOf("export async function keepDemoWorkspaceAction"));
-    const body = action.slice(0, action.indexOf("\nexport "));
-    expect(body).not.toContain("formData");
-    expect(body).toContain("claimDemoWorkspace(user.id)");
-
-    const demoSource = source("./demo.ts");
-    const claim = demoSource.slice(demoSource.indexOf("export async function claimDemoWorkspace"));
-    expect(claim).toContain("const sessionId = await readDemoSessionId();");
   });
 
   it("never clears a real user's active workspace from the expired screen", () => {
@@ -175,38 +159,58 @@ describe("demo sign-up conversion", () => {
     expect(body).toContain("if (hadDemoSession) await clearActiveWorkspaceCookie();");
   });
 
-  it("refuses to claim a workspace for a demo principal", () => {
-    const action = actionsSource.slice(actionsSource.indexOf("export async function keepDemoWorkspaceAction"));
-    const body = action.slice(0, action.indexOf("\nexport "));
-    expect(body).toContain("if (isDemoUser(user)) {");
-    expect(body).toContain("await claimDemoWorkspace(user.id);");
+  it("same-origin checks the one demo action a signed-out visitor can reach", () => {
+    const action = actionsSource.slice(actionsSource.indexOf("export async function endDemoSessionAction"));
+    expect(action.slice(0, action.indexOf("\nexport "))).toContain("await requireTrustedActionRequest();");
   });
 
-  // The demo workspace is left to its own expiry. Deleting it here would destroy work
-  // a visitor might still want, and the sweep already collects it.
-  it("discards only the cookie, never the workspace", () => {
-    const action = actionsSource.slice(actionsSource.indexOf("export async function discardDemoWorkspaceAction"));
-    const body = action.slice(0, action.indexOf("\nexport "));
-    expect(body).toContain("await clearDemoSessionCookie();");
-    expect(body).not.toContain("deleteWorkspace");
-  });
-
-  it("same-origin checks every demo conversion entry point", () => {
-    for (const name of ["keepDemoWorkspaceAction", "discardDemoWorkspaceAction", "endDemoSessionAction"]) {
-      const action = actionsSource.slice(actionsSource.indexOf(`export async function ${name}`));
-      const body = action.slice(0, action.indexOf("\nexport "));
-      expect(body).toContain("await requireTrustedActionRequest();");
+  // Signing up starts a fresh workspace. There is no action, helper, or RPC that
+  // moves a demo workspace onto an account, and the absence is the feature.
+  it("exposes no way to hand a demo workspace to an account", () => {
+    for (const forbidden of ["keepDemoWorkspaceAction", "discardDemoWorkspaceAction", "claimDemoWorkspace"]) {
+      expect(codeOnly(actionsSource)).not.toContain(forbidden);
+      expect(codeOnly(onboardingSource)).not.toContain(forbidden);
     }
+    expect(codeOnly(source("./demo.ts"))).not.toContain("claim_demo_workspace");
   });
 
-  // The RPC hardcodes the cap; the hub disables the button using the app-side
-  // constant. If the two drift, the visitor gets a raw database error instead.
-  it("gates the keep button on the same workspace cap the RPC enforces", () => {
-    const schemaSql = source("../supabase/schema.sql");
-    const claim = schemaSql.slice(schemaSql.indexOf("create or replace function claim_demo_workspace"));
-    expect(claim.slice(0, claim.indexOf("$$;"))).toContain(">= 3 then");
-    expect(workspacesSource).toContain("export const MAX_WORKSPACES_PER_USER = 3;");
-    expect(onboardingSource).toContain('disabled={atWorkspaceLimit}');
+  // The workspace hub used to lead with a keep-or-discard card for a signed-in user
+  // still holding a demo cookie. It is gone, along with the cookie read behind it.
+  it("drops the keep-or-discard card from the workspace hub", () => {
+    expect(codeOnly(onboardingSource)).not.toContain("canKeepDemoWorkspace");
+    expect(codeOnly(onboardingSource)).not.toContain("readDemoSessionId");
+  });
+
+  // The failure this guards is not a crash, it is a lie: copy that promises the
+  // workspace survives sign-up when nothing in the code can deliver that.
+  it("promises nowhere that the demo workspace survives sign-up", () => {
+    const claims = [
+      "comes with you",
+      "keep this workspace",
+      "Keep your demo workspace",
+      "as you left it",
+      "becomes a real one",
+      "still in it",
+      "Sign up to keep it",
+      "Make it permanent",
+    ];
+    const surfaces: Array<[string, string]> = [
+      ["lib/demo-ui.ts", demoUiSource],
+      ["components/demo-banner.tsx", demoBannerSource],
+      ["components/app-layout.tsx", appLayoutSource],
+      ["app/onboarding/page.tsx", onboardingSource],
+      ["app/w/[workspaceSlug]/page.tsx", manageWorkspaceSource],
+      ["app/submit/confirm/page.tsx", confirmSource],
+      ["app/demo/expired/page.tsx", expiredPageSource],
+    ];
+
+    const offenders: string[] = [];
+    for (const [name, src] of surfaces) {
+      for (const claim of claims) {
+        if (src.includes(claim)) offenders.push(`${name}: ${claim}`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });
 

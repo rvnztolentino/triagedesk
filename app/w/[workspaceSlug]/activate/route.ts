@@ -24,7 +24,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ work
       isWorkspacePreview(access.workspace.id) || access.membership.role !== "requester"
         ? scopedWorkspaceHref(parsedSlug.data, "/")
         : scopedWorkspaceHref(parsedSlug.data, "/tickets");
-    // Write the cookie onto the redirect response itself — a `next/headers`
+    // Write the cookie onto the redirect response itself, because a `next/headers`
     // mutation would be dropped from this hand-built response, leaving the
     // header/sidebar pinned to the previously active workspace.
     return applyActiveWorkspaceCookie(NextResponse.redirect(new URL(destination, url)), parsedSlug.data);

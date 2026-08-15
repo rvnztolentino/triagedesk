@@ -33,13 +33,15 @@ export function DemoBanner({ expiresAt, initialLabel }: { expiresAt?: string; in
       role="status"
       aria-live="off"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-2 text-sm">
+      {/* items-center on the row, items-start on the text: the button centres against
+          the two-line block, while the timer icon stays level with the first line. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-2 text-sm">
           <Timer size={15} className="mt-0.5 shrink-0 text-accent" />
-          <div>
+          <div className="min-w-0">
             <p className="text-fg">
               <span className="font-semibold">Demo workspace</span>
-              {remaining ? <> &mdash; resets in {remaining}. Sign up to keep it.</> : <> &mdash; sign up to keep it.</>}
+              {remaining ? <>, resets in {remaining}.</> : <>, resets automatically.</>}
             </p>
             <p className="mt-1 text-xs text-muted">{DEMO_PRIVACY_NOTE}</p>
           </div>

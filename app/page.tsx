@@ -17,7 +17,9 @@ import {
 import { BrandIcon } from "@/components/brand-icon";
 import { DashboardView } from "@/components/dashboard-view";
 import { HomeHeader } from "@/components/home-header";
+import { TryDemoButton } from "@/components/try-demo-button";
 import { getCurrentUser } from "@/lib/auth";
+import { isDemoEnabled } from "@/lib/demo";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -80,12 +82,21 @@ function StartNowLink({ className = "" }: { className?: string }) {
   );
 }
 
-function SecondaryLink({ href, children, className = "" }: { href: string; children: React.ReactNode; className?: string }) {
+function SignInLink({ className = "" }: { className?: string }) {
   return (
-    <Link href={href} className={cn("btn btn--neutral btn--lg", className)}>
-      {children}
+    <Link href="/login" className={cn("btn btn--neutral btn--lg", className)}>
+      Sign in
     </Link>
   );
+}
+
+// The hero's secondary action. Its audience is entirely logged out, so the demo
+// earns the slot there. With the demo switched off it falls back to the sign-in
+// link rather than showing a button that can only fail.
+function HeroDemoCta({ demoEnabled }: { demoEnabled: boolean }) {
+  if (!demoEnabled) return <SignInLink className="w-full sm:w-auto" />;
+
+  return <TryDemoButton className="w-full sm:w-auto" buttonClassName="btn--neutral btn--lg btn--block" />;
 }
 
 function SectionHead({ eyebrow, title, sub, center = false }: { eyebrow: string; title: string; sub?: string; center?: boolean }) {
@@ -255,10 +266,10 @@ function StepWindow({ step }: { step: string }) {
   );
 }
 
-function SignedOutLandingPage() {
+function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
   return (
     <div className="min-h-screen bg-bg text-fg">
-      <HomeHeader />
+      <HomeHeader demoEnabled={demoEnabled} />
 
       <main>
         <section className="atmos border-b border-border">
@@ -286,10 +297,7 @@ function SignedOutLandingPage() {
 
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <StartNowLink className="w-full sm:w-auto" />
-                  <SecondaryLink href="/login" className="w-full sm:w-auto">
-                    Sign in
-                    <ArrowRight className="h-4 w-4" />
-                  </SecondaryLink>
+                  <HeroDemoCta demoEnabled={demoEnabled} />
                 </div>
 
                 <div className="mt-10 flex flex-wrap gap-x-10 gap-y-6">
@@ -370,7 +378,7 @@ function SignedOutLandingPage() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <StartNowLink className="w-full sm:w-auto" />
-              <SecondaryLink href="/login" className="w-full sm:w-auto">Sign in</SecondaryLink>
+              <SignInLink className="w-full sm:w-auto" />
             </div>
           </div>
         </section>
@@ -391,6 +399,7 @@ function SignedOutLandingPage() {
 
 export default async function Dashboard() {
   const currentUser = await getCurrentUser();
-  if (!currentUser) return <SignedOutLandingPage />;
+  // Env read only. The boolean is all that reaches the client, never the secret.
+  if (!currentUser) return <SignedOutLandingPage demoEnabled={isDemoEnabled()} />;
   return <DashboardView />;
 }

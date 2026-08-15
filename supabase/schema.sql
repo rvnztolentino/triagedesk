@@ -683,7 +683,7 @@ end;
 $$;
 
 -- Supabase auto-grants EXECUTE to `anon` and `authenticated` on every function in the
--- `public` schema, and those are explicit grants — `revoke ... from public` does NOT
+-- `public` schema, and those are explicit grants, and `revoke ... from public` does NOT
 -- clear them. Revoke from the roles by name so these SECURITY DEFINER functions aren't
 -- callable via the public REST API. Post-Clerk, only the service_role client calls them.
 revoke all on function create_workspace_with_owner(text, text, uuid) from public, anon, authenticated;
@@ -825,8 +825,8 @@ grant execute on function check_rate_limit(text, text, integer, integer, bigint)
 -- taking the highest id in JS, and adding one. That was a full-table scan on every
 -- insert (shared by every workspace) and a read-modify-write race: two concurrent
 -- inserts computed the same id and one failed on the primary key. Sequences make
--- allocation O(1) and atomic. Gaps are expected and harmless — a rolled-back
--- transaction burns a value — which is normal for ticket numbering.
+-- allocation O(1) and atomic. Gaps are expected and harmless: a rolled-back
+-- transaction burns a value, which is normal for ticket numbering.
 create sequence if not exists entity_id_requests_seq;
 create sequence if not exists entity_id_tickets_seq;
 create sequence if not exists entity_id_triage_seq;
@@ -907,7 +907,7 @@ begin
   -- A whitelist, not interpolation: the prefix selects a known sequence by name, so
   -- a caller can never steer nextval() at an arbitrary sequence in the database.
   -- The DEMO_ keys pick the demo sequence while still rendering the normal prefix,
-  -- so a demo ticket reads TRG-900123 — same shape, visibly separate number space.
+  -- so a demo ticket reads TRG-900123: same shape, visibly separate number space.
   target_sequence := case target_prefix
     when 'REQ' then 'entity_id_requests_seq'
     when 'TRG' then 'entity_id_tickets_seq'
@@ -1010,7 +1010,7 @@ $$;
 -- Creates one visitor's throwaway demo workspace in a single transaction: the demo
 -- profile, the workspace, the owner membership, and a full clone of the Demo Clinic
 -- template's departments, requests, tickets, triage results, activity, and notes.
--- Single transaction is the point — a partial failure must never leave a visitor in a
+-- Single transaction is the point: a partial failure must never leave a visitor in a
 -- half-built workspace, so every insert either lands together or not at all.
 create or replace function create_demo_workspace(target_session_id text, target_lifetime_hours integer default 24)
 returns table (workspace_id uuid, workspace_slug text, demo_user_id uuid, workspace_expires_at timestamptz)
@@ -1035,7 +1035,7 @@ begin
     raise exception 'Demo session id is invalid.';
   end if;
 
-  lifetime_hours := least(greatest(coalesce(target_lifetime_hours, 24), 1), 72);
+  lifetime_hours := least(greatest(coalesce(target_lifetime_hours, 4), 1), 72);
 
   -- Pay for cleanup on the create path rather than adding a cron. Bounded, and it
   -- runs before the inserts so an expired slug can be reclaimed in the same call.
@@ -1159,89 +1159,17 @@ begin
 end;
 $$;
 
--- Converts a demo workspace into a real one owned by a Clerk-backed profile. Keeps
--- the visitor's work instead of making them rebuild it after signing up. Raises
--- rather than half-converting, so a failure leaves the demo intact and retryable.
-create or replace function claim_demo_workspace(target_session_id text, target_profile_id uuid)
-returns table (workspace_id uuid, workspace_slug text)
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  demo_profile_id uuid;
-  claimed_workspace workspaces%rowtype;
-begin
-  select p.id into demo_profile_id
-  from user_profiles p
-  where p.email = 'demo-' || target_session_id || '@demo.invalid'
-    and p.is_demo;
-
-  if demo_profile_id is null then
-    raise exception 'Demo session not found.';
-  end if;
-
-  if not exists (select 1 from user_profiles p where p.id = target_profile_id and not p.is_demo) then
-    raise exception 'A real account is required to keep a demo workspace.';
-  end if;
-
-  -- Lock the workspace so a concurrent expiry sweep cannot delete it mid-claim.
-  select w.* into claimed_workspace
-  from workspaces w
-  where w.created_by = demo_profile_id
-    and w.is_demo
-  limit 1
-  for update;
-
-  if not found then
-    raise exception 'Demo workspace not found.';
-  end if;
-
-  if claimed_workspace.expires_at is not null and claimed_workspace.expires_at <= now() then
-    raise exception 'This demo has already expired.';
-  end if;
-
-  -- Same cap real workspace creation enforces; keep in sync with
-  -- MAX_WORKSPACES_PER_USER in lib/workspaces.ts.
-  if (select count(*) from workspaces w where w.created_by = target_profile_id) >= 3 then
-    raise exception 'Workspace limit reached.';
-  end if;
-
-  if exists (
-    select 1 from workspace_members m
-    where m.workspace_id = claimed_workspace.id and m.user_id = target_profile_id
-  ) then
-    raise exception 'You are already a member of this workspace.';
-  end if;
-
-  update workspaces
-  set is_demo = false, expires_at = null, created_by = target_profile_id
-  where id = claimed_workspace.id;
-
-  update workspace_members
-  set user_id = target_profile_id
-  where workspace_id = claimed_workspace.id and user_id = demo_profile_id;
-
-  update requests set requester_user_id = target_profile_id
-  where workspace_id = claimed_workspace.id and requester_user_id = demo_profile_id;
-
-  update tickets set requester_user_id = target_profile_id
-  where workspace_id = claimed_workspace.id and requester_user_id = demo_profile_id;
-
-  -- The demo identity is single-use: once claimed, its cookie must resolve to
-  -- signed-out rather than back into the now-real workspace.
-  delete from user_profiles where id = demo_profile_id;
-
-  return query select claimed_workspace.id, claimed_workspace.slug;
-end;
-$$;
+-- Demo workspaces are never handed to a real account. claim_demo_workspace used to
+-- do exactly that, and it was the only function in this schema that could reassign
+-- workspace ownership, so it is dropped rather than left dormant: a security definer
+-- function with no caller is an attack surface with no benefit. Signing up now starts
+-- a fresh workspace and the demo is left to expire.
+drop function if exists claim_demo_workspace(text, uuid);
 
 revoke all on function delete_expired_demo_workspaces(integer) from public, anon, authenticated;
 revoke all on function create_demo_workspace(text, integer) from public, anon, authenticated;
-revoke all on function claim_demo_workspace(text, uuid) from public, anon, authenticated;
 grant execute on function delete_expired_demo_workspaces(integer) to service_role;
 grant execute on function create_demo_workspace(text, integer) to service_role;
-grant execute on function claim_demo_workspace(text, uuid) to service_role;
 
 alter table departments enable row level security;
 alter table user_profiles enable row level security;

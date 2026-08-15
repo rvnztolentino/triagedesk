@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   TriageDesk design system — operations-console aesthetic.
+   TriageDesk design system: operations-console aesthetic.
    Dark is the default theme; light has full parity. A single `--accent`
    custom property drives the highlight color system-wide; it is monochrome and
    derived from the theme (white on dark, black on light).
@@ -159,7 +159,7 @@ select,
 textarea {
   /* Inherit only the font family so the design-system classes (.btn, .input,
      .select, .textarea) keep control of font-size/weight. Using the `font`
-     shorthand here forced font-size:inherit, which — being unlayered — beat
+     shorthand here forced font-size:inherit, which, being unlayered, beat
      those component classes and blew the control text up to the parent size. */
   font-family: inherit;
   letter-spacing: inherit;
@@ -518,7 +518,7 @@ select {
     border-color: color-mix(in srgb, var(--danger) 45%, transparent);
     box-shadow: none;
   }
-  /* Explicit neutral reset — lets a caller opt out of a primary base
+  /* Explicit neutral reset, so a caller can opt out of a primary base
      (e.g. the shared SubmitButton) back to the plain surface button. */
   .btn--neutral {
     background: var(--surface-2);
@@ -586,7 +586,7 @@ select {
   .data-row { display: grid; align-items: center; gap: 14px; }
 
   /* Ticket / request tables keep every column on small screens instead of
-     dropping or squeezing them — the row holds its full width and the card
+     dropping or squeezing them. The row holds its full width and the card
      scrolls sideways. On desktop the min-width is never reached, so no
      scrollbar appears. */
   .table-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
@@ -740,8 +740,8 @@ select {
   }
   /* On small screens anchoring under the trigger overflows or gets clipped by
      the header/adjacent stacking contexts. Drop it as a full-width overlay
-     pinned to the bottom of the header — mirroring the landing-page mobile
-     menu — so it slides down from the header edge across the whole viewport.
+     pinned to the bottom of the header, mirroring the landing-page mobile
+     menu, so it slides down from the header edge across the whole viewport.
      `--popover-top` is set from JS to the measured header bottom. */
   @media (max-width: 640px) {
     .popover {
@@ -1016,8 +1016,8 @@ select {
 
 /* Responsive collapse for the design-system grids. */
 @layer components {
-  /* Drop the live-triage preview and stand the form up on its own — as a plain
-     scrollable column — whenever the frame can't fit: either too narrow (zoomed
+  /* Drop the live-triage preview and stand the form up on its own, as a plain
+     scrollable column, whenever the frame can't fit: either too narrow (zoomed
      up / small screen) or too short (viewport can't show the full two-up frame).
      The shell already scrolls, so the form is never clipped or blocked. */
   @media (max-width: 820px), (max-height: 720px) {
