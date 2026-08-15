@@ -168,6 +168,51 @@ describe("entity id sequences (schema)", () => {
     }
   });
 
+  // Both seeds took max(id) over the whole table, demo rows included, so seeding a
+  // database that had live demo rows put the REAL sequences in the 900000 space. The
+  // sequence is shared by every real workspace, so every one of them then drew a
+  // 900000+ id: a primary key collision where a demo row held that id, and a real row
+  // wearing a demo-shaped id where the demo rows had a gap.
+  it("never seeds a real sequence from a demo id", () => {
+    for (const { prefix } of idPrefixes) {
+      const exclusion = `and (regexp_replace(id, '^${prefix}-', ''))::bigint < 900000`;
+      expect(schemaSql).toContain(exclusion);
+      expect(resetSql).toContain(exclusion);
+    }
+  });
+
+  // greatest() carries the sequence's own last_value forward so a live sequence is not
+  // pulled backwards. Counting a contaminated last_value would preserve the damage
+  // through every future reset, so that term stops below the demo floor too.
+  it("lets a reset repair a contaminated sequence instead of preserving it", () => {
+    for (const { sequence } of idPrefixes) {
+      expect(resetSql).toContain(`and sequencename = '${sequence}' and last_value < 900000`);
+    }
+  });
+
+  // A database that already hit this has used its sequences, which makes the one-time
+  // backfill's `is null` guard a permanent no-op. The repair has to run every time or
+  // an affected database can never heal itself.
+  it("repairs a real sequence that is already sitting in the demo range", () => {
+    expect(schemaSql).toContain("demo_floor constant bigint := 900000;");
+    expect(schemaSql).toContain("if last_used is not null and last_used >= demo_floor then");
+    expect(schemaSql).toContain("perform setval(format('public.%I', entry.real_seq)::regclass, greatest(999, highest_real));");
+    for (const { sequence, table } of idPrefixes) {
+      expect(schemaSql).toContain(`('${sequence}',`);
+      expect(schemaSql).toContain(`'${table}',`);
+    }
+  });
+
+  // The mirror image: a demo sequence behind the demo rows that exist would fail the
+  // same way, so the repair covers both directions rather than trading one for the other.
+  it("keeps each demo sequence at or above the demo rows that exist", () => {
+    expect(schemaSql).toContain("if last_used is not null and last_used < highest_demo then");
+    expect(schemaSql).toContain("perform setval(format('public.%I', entry.demo_seq)::regclass, highest_demo);");
+    for (const { sequence } of demoIdPrefixes) {
+      expect(schemaSql).toContain(`'${sequence}',`);
+    }
+  });
+
   // The DEMO_ key selects the demo sequence but the id a user sees keeps the normal
   // prefix, so a demo ticket reads TRG-900123 rather than DEMO_TRG-900123.
   it("routes demo prefixes to demo sequences while keeping the visible prefix", () => {

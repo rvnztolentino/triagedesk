@@ -838,6 +838,11 @@ create sequence if not exists entity_id_notes_seq;
 -- nextval() returns max + 1, and the 999 floor preserves the original "first generated
 -- id is 1000" behaviour.
 --
+-- The max() ignores ids at or above the demo floor of 900000. Those belong to the demo
+-- sequences below, and a real workspace must never be seeded from one: doing so hands
+-- real inserts a 900000+ id that a demo row already holds, which fails on the primary
+-- key. The repair block after the demo sequences fixes a database this already hit.
+--
 -- The `is null` guard means every later run of this file is a no-op for sequences.
 -- That matters because this file is re-run to pick up other schema changes while the
 -- app is live: re-seeding from max(id) at that point would move a sequence BACKWARDS
@@ -852,35 +857,40 @@ begin
       where schemaname = 'public' and sequencename = 'entity_id_requests_seq') is null then
     perform setval('entity_id_requests_seq', greatest(999,
       coalesce((select max((regexp_replace(id, '^REQ-', ''))::bigint)
-                from requests where id ~ '^REQ-[0-9]+$'), 0)));
+                from requests where id ~ '^REQ-[0-9]+$'
+                  and (regexp_replace(id, '^REQ-', ''))::bigint < 900000), 0)));
   end if;
 
   if (select last_value from pg_sequences
       where schemaname = 'public' and sequencename = 'entity_id_tickets_seq') is null then
     perform setval('entity_id_tickets_seq', greatest(999,
       coalesce((select max((regexp_replace(id, '^TRG-', ''))::bigint)
-                from tickets where id ~ '^TRG-[0-9]+$'), 0)));
+                from tickets where id ~ '^TRG-[0-9]+$'
+                  and (regexp_replace(id, '^TRG-', ''))::bigint < 900000), 0)));
   end if;
 
   if (select last_value from pg_sequences
       where schemaname = 'public' and sequencename = 'entity_id_triage_seq') is null then
     perform setval('entity_id_triage_seq', greatest(999,
       coalesce((select max((regexp_replace(id, '^TRI-', ''))::bigint)
-                from ai_triage_results where id ~ '^TRI-[0-9]+$'), 0)));
+                from ai_triage_results where id ~ '^TRI-[0-9]+$'
+                  and (regexp_replace(id, '^TRI-', ''))::bigint < 900000), 0)));
   end if;
 
   if (select last_value from pg_sequences
       where schemaname = 'public' and sequencename = 'entity_id_activity_seq') is null then
     perform setval('entity_id_activity_seq', greatest(999,
       coalesce((select max((regexp_replace(id, '^ACT-', ''))::bigint)
-                from ticket_activity where id ~ '^ACT-[0-9]+$'), 0)));
+                from ticket_activity where id ~ '^ACT-[0-9]+$'
+                  and (regexp_replace(id, '^ACT-', ''))::bigint < 900000), 0)));
   end if;
 
   if (select last_value from pg_sequences
       where schemaname = 'public' and sequencename = 'entity_id_notes_seq') is null then
     perform setval('entity_id_notes_seq', greatest(999,
       coalesce((select max((regexp_replace(id, '^NOTE-', ''))::bigint)
-                from ticket_notes where id ~ '^NOTE-[0-9]+$'), 0)));
+                from ticket_notes where id ~ '^NOTE-[0-9]+$'
+                  and (regexp_replace(id, '^NOTE-', ''))::bigint < 900000), 0)));
   end if;
 end $$;
 
@@ -893,6 +903,74 @@ create sequence if not exists entity_id_demo_tickets_seq start with 900000;
 create sequence if not exists entity_id_demo_triage_seq start with 900000;
 create sequence if not exists entity_id_demo_activity_seq start with 900000;
 create sequence if not exists entity_id_demo_notes_seq start with 900000;
+
+-- ── Repair: a real sequence must never sit inside the demo number space ─────
+-- Both seeds (the block above and reset_workspace_seed.sql) used to take max(id) over
+-- the whole table, demo rows included. A database that already had demo rows when
+-- either one ran therefore seeded its REAL sequences from a demo id in the 900000
+-- space. Every later insert into a real workspace was then handed a 900000+ id, and
+-- since the sequence is shared by every real workspace this hits all of them, not one:
+-- it dies on the primary key ("duplicate key value violates unique constraint
+-- requests_pkey") wherever a demo row already holds that id, and where the demo rows
+-- have a gap it silently writes a real row with a demo-shaped id, which is worse. Demo
+-- workspaces keep working throughout because they draw from their own sequences. Both
+-- seeds now exclude the demo range, but that only protects databases seeded from here
+-- on.
+--
+-- So this repair runs on EVERY execution, unlike the one-time backfill above: an
+-- affected database has already used its sequences, which makes that block's `is null`
+-- guard a permanent no-op and leaves it unable to heal itself.
+--
+-- Pulling a sequence backwards is safe in this one case, and only this one. A real
+-- insert that took one of the values being given up either collided with the demo row
+-- holding it and rolled back, or landed in a gap between demo rows and kept that
+-- 900000+ id. Neither can be re-issued: the repaired sequence resumes below the demo
+-- floor and would need ~899000 further rows to reach them again. The second half is
+-- the mirror image, keeping each demo sequence at or above every 900000+ id that
+-- exists, those stray real rows included, so the repair cannot cause the opposite
+-- outage.
+do $$
+declare
+  demo_floor constant bigint := 900000;
+  entry record;
+  last_used bigint;
+  highest_real bigint;
+  highest_demo bigint;
+begin
+  for entry in
+    select * from (values
+      ('entity_id_requests_seq', 'entity_id_demo_requests_seq', 'requests',          'REQ'),
+      ('entity_id_tickets_seq',  'entity_id_demo_tickets_seq',  'tickets',           'TRG'),
+      ('entity_id_triage_seq',   'entity_id_demo_triage_seq',   'ai_triage_results', 'TRI'),
+      ('entity_id_activity_seq', 'entity_id_demo_activity_seq', 'ticket_activity',   'ACT'),
+      ('entity_id_notes_seq',    'entity_id_demo_notes_seq',    'ticket_notes',      'NOTE')
+    ) as t(real_seq, demo_seq, source_table, prefix)
+  loop
+    -- One pass per table for both halves. format() with %I/%L quotes the identifier
+    -- and the literals; every value here is fixed in this file, never user input.
+    execute format(
+      'select coalesce(max(n) filter (where n < $1), 0), coalesce(max(n) filter (where n >= $1), 0)
+         from (select (regexp_replace(id, %L, ''''))::bigint as n from %I where id ~ %L) numbered',
+      '^' || entry.prefix || '-', entry.source_table, '^' || entry.prefix || '-[0-9]+$'
+    ) into highest_real, highest_demo using demo_floor;
+
+    -- last_value is null on a sequence that has never been read, which the backfill
+    -- above already handles. Only an advanced one can be sitting in the demo range.
+    select last_value into last_used from pg_sequences
+      where schemaname = 'public' and sequencename = entry.real_seq;
+    if last_used is not null and last_used >= demo_floor then
+      perform setval(format('public.%I', entry.real_seq)::regclass, greatest(999, highest_real));
+      raise notice 'Repaired % out of the demo range: % -> %', entry.real_seq, last_used, greatest(999, highest_real);
+    end if;
+
+    select last_value into last_used from pg_sequences
+      where schemaname = 'public' and sequencename = entry.demo_seq;
+    if last_used is not null and last_used < highest_demo then
+      perform setval(format('public.%I', entry.demo_seq)::regclass, highest_demo);
+      raise notice 'Advanced % past existing demo rows: % -> %', entry.demo_seq, last_used, highest_demo;
+    end if;
+  end loop;
+end $$;
 
 create or replace function next_entity_id(target_prefix text)
 returns text

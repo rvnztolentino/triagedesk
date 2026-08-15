@@ -189,8 +189,17 @@ alter table workspace_metadata alter column workspace_id drop default;
 
 -- The seed rows above insert explicit ids (REQ-1001, TRG-1043, …), which bypass the
 -- entity id sequences and leave them behind. Re-point each sequence at the highest
--- id now present (across every workspace, not just the demo) or the next insert
+-- id now present (across every real workspace, not just the demo) or the next insert
 -- after a reset collides on the primary key.
+--
+-- Both terms stop below 900000, the floor of the live demo number space. This used to
+-- take the highest id in the table outright, so running it while any live demo
+-- workspace existed pushed these REAL sequences up into the demo range, and every
+-- following insert into a real workspace was handed a 900000+ id a demo row already
+-- held: "duplicate key value violates unique constraint requests_pkey" on submit.
+-- Live demo rows keep their own sequences (entity_id_demo_*) and are not this script's
+-- business. Excluding a contaminated last_value is what lets this script repair such a
+-- sequence rather than preserve the damage through greatest().
 --
 -- Requires supabase/schema.sql to have been applied first; without the sequences
 -- these statements error and the whole transaction rolls back.
@@ -202,28 +211,38 @@ alter table workspace_metadata alter column workspace_id drop default;
 -- is quiet rather than mid-traffic.
 select setval('entity_id_requests_seq', greatest(
   999,
-  coalesce((select max((regexp_replace(id, '^REQ-', ''))::bigint) from requests where id ~ '^REQ-[0-9]+$'), 0),
-  coalesce((select last_value from pg_sequences where schemaname = 'public' and sequencename = 'entity_id_requests_seq'), 0)
+  coalesce((select max((regexp_replace(id, '^REQ-', ''))::bigint) from requests
+            where id ~ '^REQ-[0-9]+$' and (regexp_replace(id, '^REQ-', ''))::bigint < 900000), 0),
+  coalesce((select last_value from pg_sequences where schemaname = 'public'
+            and sequencename = 'entity_id_requests_seq' and last_value < 900000), 0)
 ));
 select setval('entity_id_tickets_seq', greatest(
   999,
-  coalesce((select max((regexp_replace(id, '^TRG-', ''))::bigint) from tickets where id ~ '^TRG-[0-9]+$'), 0),
-  coalesce((select last_value from pg_sequences where schemaname = 'public' and sequencename = 'entity_id_tickets_seq'), 0)
+  coalesce((select max((regexp_replace(id, '^TRG-', ''))::bigint) from tickets
+            where id ~ '^TRG-[0-9]+$' and (regexp_replace(id, '^TRG-', ''))::bigint < 900000), 0),
+  coalesce((select last_value from pg_sequences where schemaname = 'public'
+            and sequencename = 'entity_id_tickets_seq' and last_value < 900000), 0)
 ));
 select setval('entity_id_triage_seq', greatest(
   999,
-  coalesce((select max((regexp_replace(id, '^TRI-', ''))::bigint) from ai_triage_results where id ~ '^TRI-[0-9]+$'), 0),
-  coalesce((select last_value from pg_sequences where schemaname = 'public' and sequencename = 'entity_id_triage_seq'), 0)
+  coalesce((select max((regexp_replace(id, '^TRI-', ''))::bigint) from ai_triage_results
+            where id ~ '^TRI-[0-9]+$' and (regexp_replace(id, '^TRI-', ''))::bigint < 900000), 0),
+  coalesce((select last_value from pg_sequences where schemaname = 'public'
+            and sequencename = 'entity_id_triage_seq' and last_value < 900000), 0)
 ));
 select setval('entity_id_activity_seq', greatest(
   999,
-  coalesce((select max((regexp_replace(id, '^ACT-', ''))::bigint) from ticket_activity where id ~ '^ACT-[0-9]+$'), 0),
-  coalesce((select last_value from pg_sequences where schemaname = 'public' and sequencename = 'entity_id_activity_seq'), 0)
+  coalesce((select max((regexp_replace(id, '^ACT-', ''))::bigint) from ticket_activity
+            where id ~ '^ACT-[0-9]+$' and (regexp_replace(id, '^ACT-', ''))::bigint < 900000), 0),
+  coalesce((select last_value from pg_sequences where schemaname = 'public'
+            and sequencename = 'entity_id_activity_seq' and last_value < 900000), 0)
 ));
 select setval('entity_id_notes_seq', greatest(
   999,
-  coalesce((select max((regexp_replace(id, '^NOTE-', ''))::bigint) from ticket_notes where id ~ '^NOTE-[0-9]+$'), 0),
-  coalesce((select last_value from pg_sequences where schemaname = 'public' and sequencename = 'entity_id_notes_seq'), 0)
+  coalesce((select max((regexp_replace(id, '^NOTE-', ''))::bigint) from ticket_notes
+            where id ~ '^NOTE-[0-9]+$' and (regexp_replace(id, '^NOTE-', ''))::bigint < 900000), 0),
+  coalesce((select last_value from pg_sequences where schemaname = 'public'
+            and sequencename = 'entity_id_notes_seq' and last_value < 900000), 0)
 ));
 
 commit;
