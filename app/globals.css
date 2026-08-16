@@ -1007,6 +1007,7 @@ select {
       var(--bg);
   }
   .auth-frame {
+    position: relative;
     width: 100%;
     max-width: 880px;
     display: grid;
@@ -1014,6 +1015,25 @@ select {
     overflow: hidden;
     box-shadow: var(--shadow-lg);
   }
+  /* Escape hatch out of the auth frame. Anchored to the frame rather than the
+     form column, so it sits at the top-right of the whole card: over the
+     preview aside on desktop, over the lone form once the aside collapses. */
+  .auth-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    width: 32px;
+    border-radius: var(--r-ctrl);
+    color: var(--muted);
+    transition: background 0.15s, color 0.15s;
+  }
+  .auth-close:hover { background: var(--surface-hover); color: var(--fg); }
+  .auth-close:focus-visible { outline: none; box-shadow: var(--ring); }
   .auth-form-col {
     display: flex;
     flex-direction: column;

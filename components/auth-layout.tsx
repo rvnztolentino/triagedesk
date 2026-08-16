@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Building2, LockKeyhole, Sparkles } from "lucide-react";
+import { Building2, LockKeyhole, Sparkles, X } from "lucide-react";
 import { BrandIcon } from "@/components/brand-icon";
 
 // Single centered frame holding the auth form (left) beside a live "console"
@@ -19,6 +19,12 @@ export function AuthLayout({
   return (
     <main className="auth-shell">
       <div className="auth-frame card">
+        {/* Same destination as the wordmark below: leaving the form means going
+            back to the landing page. */}
+        <Link href="/" className="auth-close" aria-label="Close and return to TriageDesk home">
+          <X size={17} />
+        </Link>
+
         <div className="auth-form-col">
           <Link href="/" className="cluster" style={{ gap: 10, alignSelf: "flex-start" }} aria-label="TriageDesk home">
             <BrandIcon size={28} className="rounded-md" />
