@@ -19,6 +19,28 @@ describe("security hardening", () => {
     expect(first).toMatch(/^[a-f0-9]{64}$/);
   });
 
+  it("falls back to the service-role key before the development salt", () => {
+    vi.stubEnv("RATE_LIMIT_SALT", "");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role-key");
+    const withServiceKey = hashRateLimitKey(["127.0.0.1"]);
+
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    const withDevSalt = hashRateLimitKey(["127.0.0.1"]);
+
+    expect(withServiceKey).not.toBe(withDevSalt);
+  });
+
+  it("refuses the published development salt in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("RATE_LIMIT_SALT", "");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+
+    expect(() => hashRateLimitKey(["127.0.0.1"])).toThrow(/RATE_LIMIT_SALT is required in production/);
+
+    vi.stubEnv("RATE_LIMIT_SALT", "production-salt");
+    expect(hashRateLimitKey(["127.0.0.1"])).toMatch(/^[a-f0-9]{64}$/);
+  });
+
   it("defines service-role-only Supabase rate-limit storage", () => {
     expect(schemaSql).toContain("create table if not exists security_rate_limits");
     expect(schemaSql).toContain("alter table security_rate_limits enable row level security");

@@ -8,8 +8,13 @@ import { ThemeToggle } from "@/components/theme-controls";
 import { TryDemoButton } from "@/components/try-demo-button";
 import { cn } from "@/lib/utils";
 
-const CONTACT_EMAIL = "rvnztolentino@gmail.com";
-const REPO_URL = "https://github.com/rvnztolentino/triagedesk";
+// Public support address, intentionally unset in the repo so a personal inbox is
+// not committed to source and rendered on the marketing page, where it gets
+// scraped. Deployments that want to receive mail set it; when it is blank the
+// contact panel says so rather than offering a dead button. The value is inlined
+// into the client bundle at build time, so only ever set an address meant to be
+// public.
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || "";
 
 const navItems = [
   { label: "How it Works", href: "#workflow" },
@@ -18,15 +23,6 @@ const navItems = [
 
 // Fixed-header height to offset scroll targets so section headings aren't hidden.
 const HEADER_OFFSET = 80;
-
-// lucide-react dropped its brand icons in v1, so the GitHub mark is inlined here.
-function GithubIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
-      <path d="M12 .5C5.73.5.75 5.48.75 11.75c0 4.96 3.22 9.16 7.69 10.65.56.1.77-.24.77-.54 0-.27-.01-1.15-.02-2.09-3.13.68-3.79-1.34-3.79-1.34-.51-1.3-1.25-1.65-1.25-1.65-1.02-.7.08-.68.08-.68 1.13.08 1.72 1.16 1.72 1.16 1 1.72 2.63 1.22 3.27.94.1-.73.39-1.22.71-1.5-2.5-.28-5.13-1.25-5.13-5.57 0-1.23.44-2.24 1.16-3.03-.12-.28-.5-1.42.11-2.97 0 0 .94-.3 3.09 1.16a10.7 10.7 0 0 1 5.62 0c2.14-1.46 3.08-1.16 3.08-1.16.61 1.55.23 2.69.11 2.97.72.79 1.16 1.8 1.16 3.03 0 4.33-2.64 5.29-5.15 5.56.4.35.76 1.04.76 2.1 0 1.52-.01 2.74-.01 3.11 0 .3.2.65.78.54a11.26 11.26 0 0 0 7.68-10.65C23.25 5.48 18.27.5 12 .5z" />
-    </svg>
-  );
-}
 
 // Resolved on the server from DEMO_SESSION_SECRET and the DEMO_ENABLED kill switch.
 // Only the boolean crosses to the client, never the secret. With the demo off the
@@ -98,13 +94,19 @@ export function HomeHeader({ demoEnabled }: { demoEnabled: boolean }) {
     <div className="p-4">
       <p className="text-sm font-semibold text-fg">Need help?</p>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
-        Reach out and we&apos;ll get back to you as soon as we can.
+        {CONTACT_EMAIL
+          ? "Reach out and we'll get back to you as soon as we can."
+          : "No contact address is configured for this deployment."}
       </p>
-      <a href={`mailto:${CONTACT_EMAIL}`} className="btn btn--primary btn--sm btn--block mt-4">
-        <Mail className="h-4 w-4" />
-        Send an email
-      </a>
-      <p className="mt-2.5 text-center text-xs text-muted">{CONTACT_EMAIL}</p>
+      {CONTACT_EMAIL ? (
+        <>
+          <a href={`mailto:${CONTACT_EMAIL}`} className="btn btn--primary btn--sm btn--block mt-4">
+            <Mail className="h-4 w-4" />
+            Send an email
+          </a>
+          <p className="mt-2.5 text-center text-xs text-muted">{CONTACT_EMAIL}</p>
+        </>
+      ) : null}
     </div>
   );
 
@@ -163,16 +165,6 @@ export function HomeHeader({ demoEnabled }: { demoEnabled: boolean }) {
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 lg:flex">
-          <a
-            href={REPO_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-muted transition-colors hover:bg-surface-hover hover:text-fg"
-            aria-label="TriageDesk on GitHub"
-            title="TriageDesk on GitHub"
-          >
-            <GithubIcon className="h-[18px] w-[18px]" />
-          </a>
           <ThemeToggle />
           {/* The demo takes the slot `Sign in` used to hold. Everyone reading this
               page is logged out, and "Sign in" is a dead end to a visitor with no
@@ -185,15 +177,6 @@ export function HomeHeader({ demoEnabled }: { demoEnabled: boolean }) {
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
-          <a
-            href={REPO_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-muted transition-colors hover:bg-surface-hover hover:text-fg"
-            aria-label="TriageDesk on GitHub"
-          >
-            <GithubIcon className="h-[18px] w-[18px]" />
-          </a>
           <ThemeToggle />
           <button
             type="button"

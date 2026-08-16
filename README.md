@@ -84,9 +84,13 @@ GROQ_MAX_COMPLETION_TOKENS=1500
 GROQ_REASONING_EFFORT=low
 
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_CONTACT_EMAIL=
 SUPABASE_REQUEST_ATTACHMENTS_BUCKET=request-attachments
 RATE_LIMIT_SALT=
 HEALTHCHECK_TOKEN=
+
+DEMO_SESSION_SECRET=
+DEMO_ENABLED=
 
 NEXT_PUBLIC_SENTRY_DSN=
 SENTRY_DSN=
@@ -105,9 +109,13 @@ SENTRY_PROJECT=
 
 `SUPABASE_REQUEST_ATTACHMENTS_BUCKET` names the private attachment bucket. The code also accepts the older `SUPABASE_REQUEST_IMAGES_BUCKET` name as a fallback.
 
-`RATE_LIMIT_SALT` salts stored rate-limit identity hashes and is recommended in production. `HEALTHCHECK_TOKEN` unlocks detailed `/api/health` diagnostics in production.
+`RATE_LIMIT_SALT` salts stored rate-limit identity hashes and is required in production. Generate one with `openssl rand -hex 32`. Rate-limit keys are hashed before storage so the table never holds raw IPs or emails, and the salt is what keeps those hashes irreversible against a low-entropy input space. Unset, the app falls back to the service-role key; in production it refuses the published development salt outright rather than storing guessable hashes. `HEALTHCHECK_TOKEN` unlocks detailed `/api/health` diagnostics in production.
 
-`SUPABASE_ACCESS_TOKEN` is needed only by the Supabase MCP server in `.mcp.json`; it is a per-collaborator tooling token, not a runtime value.
+`NEXT_PUBLIC_CONTACT_EMAIL` is the support address in the landing page contact panel. Left blank, the panel reports that no address is configured. It is inlined into the client bundle at build time, so treat anything you set as public.
+
+`DEMO_SESSION_SECRET` signs the live demo session cookie and must stay server-only. Generate it with `openssl rand -hex 32`. Leaving it blank disables the demo, which is deliberate: unsigned demo cookies would be forgeable, so the feature fails closed. Rotating it ends every active demo session and nothing else. `DEMO_ENABLED=false` is a kill switch that turns the demo off without a deploy.
+
+`SUPABASE_ACCESS_TOKEN` is needed only by the Supabase MCP server. Copy `.mcp.json.example` to `.mcp.json`, which is gitignored, and set your own project ref. It is a per-collaborator tooling token, not a runtime value.
 
 ## How to Run
 
@@ -167,7 +175,7 @@ pnpm test
 pnpm build
 ```
 
-The workflow uses placeholder Supabase and Groq values because these checks only compile and test the app. It currently sets no Clerk keys and still passes an unused Supabase anon key placeholder. Never put real service keys in the workflow file; add them under `Settings` -> `Secrets and variables` -> `Actions` if deployment or integration tests need them later.
+The workflow uses placeholder Supabase and Groq values because these checks only compile and test the app. It sets no Clerk keys and still passes. Never put real service keys in the workflow file; add them under `Settings` -> `Secrets and variables` -> `Actions` if deployment or integration tests need them later.
 
 ## AI Triage Behavior
 
@@ -184,10 +192,16 @@ The workflow uses placeholder Supabase and Groq values because these checks only
 
 - Authentication is Clerk: email/password with emailed verification codes, device verification on untrusted sign-ins, and Google SSO. Clerk owns the session cookie; the only app-owned cookie is `triagedesk_active_workspace`.
 - Sign-in and sign-up error copy discloses whether an email is already registered. This is a deliberate usability trade, not an oversight.
-- Supabase row-level security policies are defined but dormant. They target `auth.uid()`, which no longer resolves under Clerk, and every query runs through the service-role client. Server-side guards in `lib/auth.ts` and `lib/workspaces.ts` are the sole authorization boundary, so a missed guard has no database backstop.
+- Supabase row-level security is enabled on every table, but the policies are dormant. They target `auth.uid()`, which no longer resolves under Clerk, and every query runs through the service-role client, which bypasses RLS entirely. Server-side guards in `lib/auth.ts` and `lib/workspaces.ts` are the sole authorization boundary, so a missed guard has no database backstop. The public REST surface is still closed: the anon key is unused, and RLS with non-resolving policies denies by default rather than allowing.
 - Request attachments support JPG, PNG, WebP, PDF, DOCX, TXT, CSV, and JSON, up to 3 files per request and 10 MiB each. The bucket is private and downloads are served through workspace access checks.
 - Resource caps: 3 workspaces per user, 20 members per workspace, 5 active invites per workspace, 10 custom departments per workspace, and 2 display-name changes per rolling 3-month window.
 - Submissions, uploads, invite joins, and admin mutations are rate-limited with persistent, salted, database-backed counters.
 - In-app notifications cover request, ticket, and membership events. The bell polls every 30 seconds and delivery failures never break the triggering mutation.
 - The `demo-clinic` workspace is a read-only preview. Create a workspace to submit requests or mutate tickets.
 - `supabase/reset_workspace_seed.sql` reseeds the demo workspace; `supabase/prune.sql` is an optional manual cleanup script for orphaned data.
+
+## License
+
+Copyright (c) 2026 Renz Tolentino. All rights reserved.
+
+This is a private repository. Access does not grant permission to copy, redistribute, or reuse the source.

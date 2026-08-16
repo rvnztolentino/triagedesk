@@ -16,16 +16,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Placeholders only. These checks compile and test the app; they never reach a
+    # real Supabase, Clerk, or Groq project. Never put a real key here, in a
+    # repository variable, or in a fork-visible context. If integration tests are
+    # added later, put real values in Settings -> Secrets and variables -> Actions.
     env:
       AI_PROVIDER: groq
       GROQ_API_KEY: ci-placeholder
       GROQ_MODEL: openai/gpt-oss-20b
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
       SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
       SEED_ADMIN_EMAIL: admin@example.com
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       SUPABASE_REQUEST_ATTACHMENTS_BUCKET: request-attachments
+      RATE_LIMIT_SALT: ci-placeholder-salt
 
     steps:
       - name: Check out repository

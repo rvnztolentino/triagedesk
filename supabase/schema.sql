@@ -369,6 +369,33 @@ create index if not exists request_attachments_workspace_request_created_at_idx 
 create index if not exists notifications_user_workspace_created_at_idx on notifications (user_id, workspace_id, created_at desc);
 create index if not exists notifications_user_workspace_unread_idx on notifications (user_id, workspace_id) where read_at is null;
 
+-- Foreign-key covering indexes.
+--
+-- Postgres does not index the referencing side of a foreign key automatically. It
+-- only uses an index whose *leading* columns match the constraint, so the query
+-- indexes above do not cover these: they lead with workspace_id or ticket_id while
+-- these constraints lead with request_id, created_by, or department.
+--
+-- Without them every delete on a parent row seq-scans each child table to enforce
+-- the constraint. That is invisible at demo scale and turns into a full table scan
+-- per child on a real workspace. It matters most for the cascade-heavy paths this
+-- app actually runs: deleting a workspace, deleting an account, and the demo
+-- cleanup sweep that drops expired demo workspaces on a timer.
+create index if not exists ai_triage_results_request_id_idx on ai_triage_results (request_id);
+create index if not exists ai_triage_results_workspace_department_idx on ai_triage_results (workspace_id, department);
+create index if not exists notifications_workspace_id_idx on notifications (workspace_id);
+create index if not exists request_attachments_request_id_idx on request_attachments (request_id);
+create index if not exists ticket_activity_request_id_idx on ticket_activity (request_id);
+create index if not exists ticket_activity_workspace_request_idx on ticket_activity (workspace_id, request_id);
+create index if not exists ticket_activity_workspace_ticket_idx on ticket_activity (workspace_id, ticket_id);
+create index if not exists tickets_request_id_idx on tickets (request_id);
+create index if not exists tickets_workspace_department_idx on tickets (workspace_id, department);
+create index if not exists workspace_invites_created_by_idx on workspace_invites (created_by);
+create index if not exists workspaces_created_by_idx on workspaces (created_by);
+-- Duplicate links are sparse, so this stays partial: it only has to answer the
+-- cascade check for tickets that actually point at another ticket.
+create index if not exists tickets_duplicate_of_ticket_id_idx on tickets (duplicate_of_ticket_id) where duplicate_of_ticket_id is not null;
+
 do $$
 begin
   if not exists (select 1 from pg_constraint where conname = 'ai_triage_results_workspace_request_fkey') then

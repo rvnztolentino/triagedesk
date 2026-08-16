@@ -1,0 +1,28 @@
+{
+  "_comment": [
+    "Copy to .mcp.json (gitignored) and replace project-ref with your own Supabase project ref,",
+    "found at Dashboard -> Project Settings -> General -> Reference ID.",
+    "SUPABASE_ACCESS_TOKEN is a per-collaborator personal access token generated at",
+    "https://supabase.com/dashboard/account/tokens. Export it in your shell; do not paste it here.",
+    "The --read-only flag is deliberate: it keeps the MCP server from issuing DDL or DML."
+  ],
+  "mcpServers": {
+    "supabase": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--read-only",
+        "--project-ref=your-project-ref"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
+    },
+    "vercel": {
+      "type": "http",
+      "url": "https://mcp.vercel.com"
+    }
+  }
+}

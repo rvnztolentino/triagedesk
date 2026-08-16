@@ -224,6 +224,36 @@ describe("entity id sequences (schema)", () => {
   });
 });
 
+// Postgres indexes the referenced side of a foreign key but never the referencing
+// side, so every one of these has to be declared by hand. A missing entry here is a
+// seq scan per child table on any cascading delete, which is exactly what the
+// workspace-delete, account-delete, and demo-cleanup paths do.
+describe("foreign-key covering indexes", () => {
+  const fkIndexes = [
+    "create index if not exists ai_triage_results_request_id_idx on ai_triage_results (request_id);",
+    "create index if not exists ai_triage_results_workspace_department_idx on ai_triage_results (workspace_id, department);",
+    "create index if not exists notifications_workspace_id_idx on notifications (workspace_id);",
+    "create index if not exists request_attachments_request_id_idx on request_attachments (request_id);",
+    "create index if not exists ticket_activity_request_id_idx on ticket_activity (request_id);",
+    "create index if not exists ticket_activity_workspace_request_idx on ticket_activity (workspace_id, request_id);",
+    "create index if not exists ticket_activity_workspace_ticket_idx on ticket_activity (workspace_id, ticket_id);",
+    "create index if not exists tickets_request_id_idx on tickets (request_id);",
+    "create index if not exists tickets_workspace_department_idx on tickets (workspace_id, department);",
+    "create index if not exists workspace_invites_created_by_idx on workspace_invites (created_by);",
+    "create index if not exists workspaces_created_by_idx on workspaces (created_by);",
+  ];
+
+  it.each(fkIndexes)("declares %s", (statement) => {
+    expect(schemaSql).toContain(statement);
+  });
+
+  it("keeps the sparse duplicate-link index partial", () => {
+    expect(schemaSql).toContain(
+      "create index if not exists tickets_duplicate_of_ticket_id_idx on tickets (duplicate_of_ticket_id) where duplicate_of_ticket_id is not null;"
+    );
+  });
+});
+
 describe("live demo schema", () => {
   it("marks demo workspaces and demo profiles with their own columns", () => {
     expect(schemaSql).toContain("alter table workspaces add column if not exists is_demo boolean not null default false;");

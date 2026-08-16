@@ -22,10 +22,30 @@ type RateLimitInput = {
   message?: string;
 };
 
+// Development-only salt. Publishing this repo publishes this constant, so it must
+// never be reachable in production, where a known salt is equivalent to no salt.
+const DEV_RATE_LIMIT_SALT = "triagedesk-dev-rate-limit";
+
+// Rate-limit keys are hashed before storage so the table never holds raw IPs or
+// emails. The salt is the only thing making that hash irreversible: the inputs are
+// low-entropy (the whole IPv4 space is 2^32, and emails are guessable), so a known
+// salt would let anyone who reads the table recover the identities it exists to
+// protect. A dedicated RATE_LIMIT_SALT is preferred; the service-role key is an
+// acceptable fallback because a deployment without it cannot serve traffic at all.
+function rateLimitSalt() {
+  const configured = process.env.RATE_LIMIT_SALT || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (configured) return configured;
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("RATE_LIMIT_SALT is required in production so stored rate-limit hashes stay unguessable.");
+  }
+
+  return DEV_RATE_LIMIT_SALT;
+}
+
 export function hashRateLimitKey(parts: string[]) {
-  const salt = process.env.RATE_LIMIT_SALT || process.env.SUPABASE_SERVICE_ROLE_KEY || "triagedesk-dev-rate-limit";
   return createHash("sha256")
-    .update(salt)
+    .update(rateLimitSalt())
     .update("\0")
     .update(parts.map((part) => part.trim().toLowerCase()).join("\0"))
     .digest("hex");
