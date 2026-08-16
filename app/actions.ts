@@ -572,10 +572,10 @@ export async function signOutAction() {
 
 // A visitor who already has somewhere to be must never mint a second workspace. A
 // demo double-submit would strand the first one until its expiry and burn another
-// slot of the 3/hour IP budget; a signed-in user would get a workspace their Clerk
-// identity can never open, because getCurrentUser() always prefers Clerk over the
-// demo cookie. Costs nothing on the path that matters: with no session at all this is
-// a cookie read and no query.
+// slot of the small per-IP create budget; a signed-in user would get a workspace
+// their Clerk identity can never open, because getCurrentUser() always prefers Clerk
+// over the demo cookie. Costs nothing on the path that matters: with no session at
+// all this is a cookie read and no query.
 async function existingSessionDestination() {
   const user = await getCurrentUser();
   if (!user) return undefined;

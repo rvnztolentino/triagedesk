@@ -17,6 +17,13 @@ export const DEMO_SESSION_COOKIE = "td_demo_session";
 // The RPC clamps this to 1-72h, so changing it needs no migration.
 export const DEMO_LIFETIME_HOURS = 4;
 
+// How many demo workspaces one network may mint, and over what window. Exported so the
+// relationship with DEMO_LIFETIME_HOURS above is checkable rather than a coincidence
+// two constants apart: the window must stay longer than the lifetime, or a start/end
+// spam loop can hold more live workspaces than the limit suggests.
+export const DEMO_IP_CREATE_LIMIT = 2;
+export const DEMO_IP_CREATE_WINDOW_HOURS = 5;
+
 // The cookie deliberately outlives the workspace. Expiry is enforced inside the
 // signed token, so the extra hour grants no access at all; it just keeps the cookie
 // in the jar long enough for the visitor to land on the expired screen instead of a
@@ -172,13 +179,21 @@ export async function getDemoUser(): Promise<AppUser | null> {
 // Four layers because each one alone is defeatable. The IP caps are the real ceiling
 // (a cookie is trivially reset); the global cap is the budget guard that stops a
 // runaway AI bill no matter how the other keys are spread.
+//
+// The IP window is deliberately longer than DEMO_LIFETIME_HOURS. Ending a demo only
+// clears the cookie, so a visitor who loops start/end/start leaves the earlier
+// workspaces alive until they expire. With the window outliving the workspace, the
+// first one is always swept before the budget resets, which caps an IP at
+// DEMO_IP_CREATE_LIMIT live demo workspaces instead of letting the loop stack them up.
+// Order matters too: the IP check runs first so a blocked network cannot spend the
+// global budget it was just refused.
 async function enforceDemoCreateLimits() {
   const identity = await requestIdentity();
   await enforceRateLimit({
     scope: "demo_workspace_create_ip",
     keyParts: [identity.ip],
-    limit: 3,
-    windowSeconds: 60 * 60,
+    limit: DEMO_IP_CREATE_LIMIT,
+    windowSeconds: DEMO_IP_CREATE_WINDOW_HOURS * 60 * 60,
     message: "Too many demo workspaces from this network. Try again later.",
   });
   await enforceRateLimit({

@@ -74,7 +74,7 @@ describe("demo entry point", () => {
   });
 
   // A double submit, a stale tab, or a back-button replay must not leave a stranded
-  // workspace behind and eat another of the three creations this IP gets per hour.
+  // workspace behind and eat another of the few creations this IP gets per window.
   it("reuses a live session instead of minting a second workspace", () => {
     const reused = startDemoActionSource.indexOf("existingSessionDestination()");
     const minted = startDemoActionSource.indexOf("startDemoSession()");

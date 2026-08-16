@@ -255,6 +255,34 @@ describe("demo rate limits", () => {
     expect(demoSource).toContain('scope: "demo_workspace_create_global"');
   });
 
+  it("caps a single network at two demo workspaces per five hours", async () => {
+    const { DEMO_IP_CREATE_LIMIT, DEMO_IP_CREATE_WINDOW_HOURS } = await importDemo();
+    expect(DEMO_IP_CREATE_LIMIT).toBe(2);
+    expect(DEMO_IP_CREATE_WINDOW_HOURS).toBe(5);
+  });
+
+  // The reason the window is five hours and not one. Ending a demo only clears the
+  // cookie, so a visitor looping start/end/start leaves the earlier workspaces alive
+  // until they expire. A window longer than the lifetime means the first is always
+  // swept before the budget resets, so the limit is also the ceiling on live
+  // workspaces per network. Shorten the window below the lifetime and the loop stacks
+  // them up again.
+  it("keeps the create window longer than a workspace lives", async () => {
+    const { DEMO_IP_CREATE_WINDOW_HOURS, DEMO_LIFETIME_HOURS } = await importDemo();
+    expect(DEMO_IP_CREATE_WINDOW_HOURS).toBeGreaterThan(DEMO_LIFETIME_HOURS);
+  });
+
+  // Sequential, IP first, on purpose. Checking the global budget first (or both at
+  // once) would let a network that is already refused keep draining the shared daily
+  // allowance it was just denied.
+  it("spends the global budget only after the IP check passes", () => {
+    const ip = demoSource.indexOf('scope: "demo_workspace_create_ip"');
+    const global = demoSource.indexOf('scope: "demo_workspace_create_global"');
+    expect(ip).toBeGreaterThan(-1);
+    expect(ip).toBeLessThan(global);
+    expect(demoSource).not.toContain("Promise.all([enforceRateLimit");
+  });
+
   it("meters demo triage by session, by IP, and against a global daily budget", () => {
     expect(demoSource).toContain('scope: "demo_triage_session"');
     expect(demoSource).toContain('scope: "demo_triage_ip"');
