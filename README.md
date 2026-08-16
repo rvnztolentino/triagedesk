@@ -2,7 +2,7 @@
 
 TriageDesk is an AI operations triage system for schools, clinics, offices, and facilities teams. It turns messy internal requests into structured triage drafts, keeps an admin in the review loop, and converts approved requests into tracked tickets inside workspace-scoped queues.
 
-The app includes Clerk authentication, workspace creation and invites, requester/admin/owner roles, requester-scoped data visibility, private request attachments, AI triage review with a deterministic safety floor, ticket and activity history, in-app notifications, self-service account management, and a read-only demo clinic workspace.
+The app includes Clerk authentication, workspace creation and invites, requester/admin/owner roles, requester-scoped data visibility, private request attachments, AI triage review with a deterministic safety floor, ticket and activity history, in-app notifications, self-service account management, a read-only demo clinic workspace, and a no-account live demo that clones a throwaway workspace per visitor.
 
 ![Dashboard](public/docs/dashboard.png)
 
@@ -39,19 +39,27 @@ cp .env.example .env.local
 
 5. Run the SQL in `supabase/schema.sql` in the Supabase SQL editor. It is idempotent and also migrates pre-Clerk databases.
 
-6. Confirm the `request-attachments` Supabase Storage bucket exists. The schema attempts to create it automatically, and it must stay private.
+6. Run `supabase/reset_workspace_seed.sql` to populate the Demo Clinic workspace. `schema.sql` creates the workspace row and its invite code, but this file is what fills it with departments, requests, and tickets. The live demo clones this workspace, so an unseeded template produces empty demo workspaces.
 
-7. Set `SEED_ADMIN_EMAIL` to the Clerk account email that should become the protected owner on first sign-in.
+7. Confirm the `request-attachments` Supabase Storage bucket exists. The schema attempts to create it automatically, and it must stay private.
 
-8. Create a Groq API key and add it to `.env.local`.
+8. Set `SEED_ADMIN_EMAIL` to the Clerk account email that should become the protected owner on first sign-in.
 
-9. Start the app:
+9. Create a Groq API key and add it to `.env.local`.
+
+10. Generate `DEMO_SESSION_SECRET` if you want the live demo. Without it the demo stays off.
+
+```sh
+openssl rand -hex 32
+```
+
+11. Start the app:
 
 ```sh
 pnpm dev
 ```
 
-10. Verify setup:
+12. Verify setup:
 
 ```txt
 http://localhost:3000/api/health
@@ -107,7 +115,7 @@ SENTRY_PROJECT=
 
 `NEXT_PUBLIC_SITE_URL` builds absolute post-auth redirect URLs, same-origin checks, and metadata routes. It falls back to `VERCEL_URL`, then `http://localhost:3000`.
 
-`SUPABASE_REQUEST_ATTACHMENTS_BUCKET` names the private attachment bucket. The code also accepts the older `SUPABASE_REQUEST_IMAGES_BUCKET` name as a fallback.
+`SUPABASE_REQUEST_ATTACHMENTS_BUCKET` names the private attachment bucket. The code also accepts the older `SUPABASE_REQUEST_IMAGES_BUCKET` name as a fallback. Both resolve through `requestAttachmentBucket()` in `lib/supabase.ts`, so upload, download, and workspace deletion always agree on the bucket name.
 
 `RATE_LIMIT_SALT` salts stored rate-limit identity hashes and is required in production. Generate one with `openssl rand -hex 32`. Rate-limit keys are hashed before storage so the table never holds raw IPs or emails, and the salt is what keeps those hashes irreversible against a low-entropy input space. Unset, the app falls back to the service-role key; in production it refuses the published development salt outright rather than storing guessable hashes. `HEALTHCHECK_TOKEN` unlocks detailed `/api/health` diagnostics in production.
 
@@ -142,7 +150,7 @@ pnpm test
 
 ## Routes
 
-- `/` - marketing page for signed-out users, dashboard for an active workspace
+- `/` - marketing page for signed-out visitors, dashboard for an active workspace
 - `/login`, `/signup` - Clerk-driven sign in and sign up
 - `/signup/check-email` - email code verification with a 120-second resend cooldown
 - `/auth/callback` - finalizes Google SSO
@@ -150,6 +158,7 @@ pnpm test
 - `/join/[workspaceSlug]` - join a workspace with an invite code
 - `/account` - display name changes and account deletion
 - `/notifications` - notification history
+- `/demo/expired` - landing screen for a visitor whose live demo has ended
 - `/w/[workspaceSlug]` - workspace dashboard
 - `/w/[workspaceSlug]/requests/new` - submit an operations request
 - `/w/[workspaceSlug]/review` - admin triage review queue
@@ -188,16 +197,29 @@ The workflow uses placeholder Supabase and Groq values because these checks only
 - The "Triage confidence" bar is a deterministic presentation value derived from the record ID, not a model-produced confidence.
 - Approval is always human. A submitted request stays `needs-review` until an admin approves, rejects, or marks it a duplicate.
 
+## Live Demo
+
+The landing page can hand an anonymous visitor a working workspace with no sign-up.
+
+- Starting a demo is a server action, not a link, so it is same-origin checked and rate-limited before any row is written. `create_demo_workspace` clones the Demo Clinic template (departments, requests, tickets, triage results, activity, notes) into a fresh workspace in one transaction.
+- The visitor is identified by `td_demo_session`, an HttpOnly cookie holding a session ID and its expiry under an HMAC signature. The expiry is signed, so it cannot be extended client-side.
+- Demo workspaces live 4 hours. Expired ones are removed by a bounded sweep that runs opportunistically whenever a new demo starts. There is no cron job.
+- Demo rows draw human-readable IDs from separate Postgres sequences starting at 900000, so demo traffic never consumes ticket numbers a real workspace would use.
+- A demo session cannot upload attachments, accept invites, create or join another workspace, invite members, delete a workspace, reset seed data, or touch account settings. Those actions are blocked server-side and explained in the UI rather than failing silently.
+- A demo workspace is never handed to a real account. Signing up starts a fresh workspace, and the demo is left to expire.
+- Demo budgets are separate from signed-in limits: 2 workspaces per IP per 5 hours, 200 workspace creations per day globally, 5 triage runs per session and 15 per IP per hour, 500 triage runs per day globally, and 60 writes per session per hour.
+
 ## Notes
 
-- Authentication is Clerk: email/password with emailed verification codes, device verification on untrusted sign-ins, and Google SSO. Clerk owns the session cookie; the only app-owned cookie is `triagedesk_active_workspace`.
+- Authentication is Clerk: email/password with emailed verification codes, device verification on untrusted sign-ins, and Google SSO. Clerk owns the session cookie; the app owns `triagedesk_active_workspace` and, for demo visitors, `td_demo_session`.
 - Sign-in and sign-up error copy discloses whether an email is already registered. This is a deliberate usability trade, not an oversight.
 - Supabase row-level security is enabled on every table, but the policies are dormant. They target `auth.uid()`, which no longer resolves under Clerk, and every query runs through the service-role client, which bypasses RLS entirely. Server-side guards in `lib/auth.ts` and `lib/workspaces.ts` are the sole authorization boundary, so a missed guard has no database backstop. The public REST surface is still closed: the anon key is unused, and RLS with non-resolving policies denies by default rather than allowing.
 - Request attachments support JPG, PNG, WebP, PDF, DOCX, TXT, CSV, and JSON, up to 3 files per request and 10 MiB each. The bucket is private and downloads are served through workspace access checks.
 - Resource caps: 3 workspaces per user, 20 members per workspace, 5 active invites per workspace, 10 custom departments per workspace, and 2 display-name changes per rolling 3-month window.
 - Submissions, uploads, invite joins, and admin mutations are rate-limited with persistent, salted, database-backed counters.
 - In-app notifications cover request, ticket, and membership events. The bell polls every 30 seconds and delivery failures never break the triggering mutation.
-- The `demo-clinic` workspace is a read-only preview. Create a workspace to submit requests or mutate tickets.
+- IDs (`REQ-1042`, `TRG-1043`) come from Postgres sequences through the `next_entity_id` function, which is atomic and avoids the primary-key collisions a client-side max-plus-one scan produced.
+- `demo-clinic` serves two purposes: it is the read-only preview workspace a signed-in user can open, and it is the template the live demo clones. It is write-locked in both roles.
 - `supabase/reset_workspace_seed.sql` reseeds the demo workspace; `supabase/prune.sql` is an optional manual cleanup script for orphaned data.
 
 ## License
