@@ -43,35 +43,35 @@ const workflowSteps = [
     icon: Inbox,
     step: "01",
     title: "Submit request",
-    desc: "A requester describes the issue, location, contact, urgency, and optional attachments.",
+    desc: "Staff describe the issue, where it is, and how urgent it is. Attachments are optional.",
   },
   {
     icon: Sparkles,
     step: "02",
     title: "AI triages",
-    desc: "AI drafts category, priority, department, summary, and reasoning for admin review.",
+    desc: "AI drafts a category, priority, department, and summary, and explains why it chose them.",
   },
   {
     icon: ShieldCheck,
     step: "03",
     title: "Admin reviews",
-    desc: "An admin edits title, priority, department, and summary, then approves, rejects, or marks duplicate.",
+    desc: "An admin fixes anything the AI got wrong, then approves, rejects, or marks it a duplicate.",
   },
   {
     icon: Ticket,
     step: "04",
     title: "Track resolution",
-    desc: "Approval creates a TRG ticket with status new; later updates add notes and activity.",
+    desc: "Approval opens a ticket. Every note, status change, and assignment is recorded.",
   },
 ];
 
 const highlights = [
   { icon: Sparkles, title: "AI-assisted triage", desc: "Suggested category, priority, and action notes on every request." },
-  { icon: Building2, title: "Workspace-scoped data", desc: "Strict isolation per workspace so staff only see what they should." },
-  { icon: Users, title: "Requester & admin roles", desc: "Requester, admin, and owner roles with clean permission boundaries." },
-  { icon: ListChecks, title: "Review queue", desc: "A focused queue for admins to approve, edit, or reject AI suggestions." },
-  { icon: Ticket, title: "Ticket lifecycle", desc: "Open, in-progress, blocked, resolved, with assignees and timestamps." },
-  { icon: History, title: "Activity history", desc: "An audit-friendly trail of who did what, when, and why." },
+  { icon: Building2, title: "Workspace-scoped data", desc: "Each workspace is isolated, so staff only see their own requests." },
+  { icon: Users, title: "Roles and permissions", desc: "Requester, admin, and owner, each with clear boundaries." },
+  { icon: ListChecks, title: "Review queue", desc: "One place for admins to approve, edit, or reject AI suggestions." },
+  { icon: Ticket, title: "Ticket lifecycle", desc: "New, in progress, blocked, or resolved, with owners and timestamps." },
+  { icon: History, title: "Activity history", desc: "A clear trail of who did what, when, and why." },
 ];
 
 function StartNowLink({ className = "" }: { className?: string }) {
@@ -155,7 +155,7 @@ function HeroTriageFlow() {
           </span>
         </div>
         <p className="mt-2 text-sm text-fg">
-          Summary: inspect Recovery Room 304 because the AC leak is recurring and creating a wet floor hazard.
+          Summary: recurring AC leak in Recovery Room 304. The wet floor is a slip hazard.
         </p>
       </div>
 
@@ -172,12 +172,12 @@ function HeroTriageFlow() {
             <CheckCircle2 className="h-3 w-3" /> Admin controlled
           </span>
         </div>
-        <p className="mt-2 text-sm text-fg">Approve into a new TRG ticket, reject, or mark duplicate of TRG-1038.</p>
+        <p className="mt-2 text-sm text-fg">Approve into a new ticket, reject, or mark it a duplicate of TRG-1038.</p>
         <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" /> Activity history
           </span>
-          <span>Ticket updates add notes and status changes</span>
+          <span>Notes and status changes are logged</span>
         </div>
       </div>
     </div>
@@ -298,8 +298,8 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
                   Turn messy internal requests into <span className="text-accent">review-ready tickets</span>
                 </h1>
                 <p className="mt-5 max-w-xl text-base leading-7 text-muted sm:text-lg">
-                  TriageDesk uses AI to read internal requests from staff, suggest a category, priority, and next action, then keeps
-                  an admin in the loop before anything becomes a tracked ticket.
+                  AI reads every staff request and suggests a category, priority, and next action. An admin reviews it before
+                  anything becomes a tracked ticket.
                 </p>
 
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -311,7 +311,7 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
                   {[
                     ["4", "priority levels"],
                     ["6", "default departments"],
-                    ["0", "setup, all in-browser"],
+                    ["0", "setup required"],
                   ].map(([n, l]) => (
                     <div key={l}>
                       <div className="mono" style={{ fontSize: 26, fontWeight: 700, color: "var(--accent-text)" }}>{n}</div>
@@ -332,7 +332,7 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
               center
               eyebrow="How it works"
               title="From inbox chaos to tracked resolution"
-              sub="Every request follows the same four steps. A plain text message becomes a triaged, tracked, and resolved ticket."
+              sub="Four steps take a plain text message to a tracked, resolved ticket."
             />
 
             <div className="mt-14 space-y-12">
@@ -389,7 +389,7 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
             <Layers className="mx-auto h-6 w-6 text-accent" />
             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-fg sm:text-4xl">Bring order to your internal requests</h2>
             <p className="mx-auto mt-3 max-w-xl text-muted">
-              Start triaging in minutes. Keep your team in control with human review on every AI suggestion.
+              Start in minutes. Every AI suggestion waits for a human to approve it.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <StartNowLink className="w-full sm:w-auto" />
