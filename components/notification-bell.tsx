@@ -163,7 +163,7 @@ export function NotificationBell({
         <div
           id="app-notif-menu"
           role="menu"
-          className="popover"
+          className="popover popover--header"
           style={{ padding: 0, ...(panelTop !== null ? { ["--popover-top"]: `${panelTop}px` } : {}) } as React.CSSProperties}
         >
           <div className="between" style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>

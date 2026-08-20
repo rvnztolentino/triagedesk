@@ -7,9 +7,16 @@ import { createWorkspaceDepartmentAction } from "@/app/actions";
 export function AddDepartmentPopover({ workspaceSlug, disabled = false }: { workspaceSlug?: string; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
+
+    // The trigger sits low on a phone screen often enough that the panel would open
+    // past the fold. `nearest` scrolls the smallest amount that brings it fully into
+    // view, and does nothing at all when it already fits.
+    panelRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+
     function onPointerDown(event: MouseEvent) {
       if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
     }
@@ -38,7 +45,9 @@ export function AddDepartmentPopover({ workspaceSlug, disabled = false }: { work
       </button>
 
       {open && !disabled ? (
-        <div className="popover">
+        // scroll-margin keeps the panel clear of the overlaid app header when it has
+        // to scroll up into view.
+        <div ref={panelRef} className="popover" style={{ scrollMarginTop: 80, scrollMarginBottom: 16 }}>
           <div className="between" style={{ marginBottom: 14 }}>
             <div className="section-title" style={{ fontSize: 14 }}>
               Add department
