@@ -225,11 +225,13 @@ describe("blocked-action affordances", () => {
     expect(onboardingSource).toContain("{isDemo ? (");
   });
 
-  // A real account keeps its account settings; the demo entry is gone entirely, so
-  // there is no blocked affordance left to explain either.
-  it("drops account settings for a demo session and keeps them for a real account", () => {
-    expect(appLayoutSource).toMatch(/isDemoSession \? null : \([\s\S]{0,240}href="\/account"/);
-    expect(appLayoutSource).not.toContain("DemoLockButton");
+  // A real account keeps its account settings; a demo session gets the sign-up call
+  // to action in that slot, so there is no blocked affordance left to explain either.
+  it("swaps account settings for the sign-up call to action in a demo session", () => {
+    const menu = appLayoutSource.slice(appLayoutSource.indexOf('id="app-profile-menu"'));
+    const body = menu.slice(0, menu.indexOf("handleSignOut"));
+    expect(body).toMatch(/isDemoSession \? \([\s\S]*?DEMO_SIGNUP_HREF[\s\S]*?\) : \([\s\S]*?href="\/account"/);
+    expect(body).not.toContain("DemoLockButton");
   });
 
   it("labels sign-out as ending the demo and skips the Clerk session teardown", () => {

@@ -557,31 +557,21 @@ export function AppLayout({
                         </span>
                       </div>
                     </div>
+                    {/* Account settings belong to a real account. A demo visitor has none,
+                        so that slot carries the sign-up call to action instead. Workspace
+                        settings are reached from the sidebar, not from here. */}
                     {isDemoSession ? (
                       <Link href={DEMO_SIGNUP_HREF} role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
                         <Sparkles size={15} className="text-accent" /> Create free account
                       </Link>
-                    ) : null}
-                    <Link href="/onboarding" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
-                      <Building2 size={15} className="text-muted" /> Workspaces
-                    </Link>
-                    {/* Account settings belong to a real account. A demo visitor has none, so
-                        the entry is dropped rather than shown and redirected back out. */}
-                    {isDemoSession ? null : (
+                    ) : (
                       <Link href="/account" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
                         <UserRound size={15} className="text-muted" /> Account
                       </Link>
                     )}
-                    {activeWorkspace ? (
-                      <Link
-                        href={scopedWorkspaceHref(activeWorkspace.slug, "/settings")}
-                        role="menuitem"
-                        className="menu-item"
-                        onClick={() => setProfileOpen(false)}
-                      >
-                        <Settings size={15} className="text-muted" /> Workspace settings
-                      </Link>
-                    ) : null}
+                    <Link href="/onboarding" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
+                      <Building2 size={15} className="text-muted" /> Workspaces
+                    </Link>
                     <div className="divider" style={{ margin: "6px 4px" }} />
                     <button type="button" role="menuitem" className="menu-item danger" onClick={handleSignOut}>
                       <LogOut size={15} /> {isDemoSession ? "End demo" : "Sign out"}
