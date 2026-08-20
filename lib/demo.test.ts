@@ -255,9 +255,9 @@ describe("demo rate limits", () => {
     expect(demoSource).toContain('scope: "demo_workspace_create_global"');
   });
 
-  it("caps a single network at two demo workspaces per five hours", async () => {
+  it("caps a single network at four demo workspaces per five hours", async () => {
     const { DEMO_IP_CREATE_LIMIT, DEMO_IP_CREATE_WINDOW_HOURS } = await importDemo();
-    expect(DEMO_IP_CREATE_LIMIT).toBe(2);
+    expect(DEMO_IP_CREATE_LIMIT).toBe(4);
     expect(DEMO_IP_CREATE_WINDOW_HOURS).toBe(5);
   });
 

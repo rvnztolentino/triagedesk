@@ -21,7 +21,15 @@ export const DEMO_LIFETIME_HOURS = 4;
 // relationship with DEMO_LIFETIME_HOURS above is checkable rather than a coincidence
 // two constants apart: the window must stay longer than the lifetime, or a start/end
 // spam loop can hold more live workspaces than the limit suggests.
-export const DEMO_IP_CREATE_LIMIT = 2;
+//
+// Four, not two, because the window is fixed rather than sliding: it is anchored at a
+// network's first create, so on a shared NAT (an office, a campus, mobile CGNAT) the
+// third visitor of the morning was refused for the rest of the window through no fault
+// of their own. On a demo whose job is to convert, that false positive costs more than
+// an extra ephemeral workspace does. Raising it does not double the AI exposure either,
+// because demo_triage_ip caps a network at 15 triage runs an hour whatever its
+// workspace count; it only lets a network reach that ceiling it could already approach.
+export const DEMO_IP_CREATE_LIMIT = 4;
 export const DEMO_IP_CREATE_WINDOW_HOURS = 5;
 
 // The cookie deliberately outlives the workspace. Expiry is enforced inside the

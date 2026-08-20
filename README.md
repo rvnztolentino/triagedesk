@@ -207,7 +207,7 @@ The landing page can hand an anonymous visitor a working workspace with no sign-
 - Demo rows draw human-readable IDs from separate Postgres sequences starting at 900000, so demo traffic never consumes ticket numbers a real workspace would use.
 - A demo session cannot upload attachments, accept invites, create or join another workspace, invite members, delete a workspace, reset seed data, or touch account settings. Those actions are blocked server-side and explained in the UI rather than failing silently.
 - A demo workspace is never handed to a real account. Signing up starts a fresh workspace, and the demo is left to expire.
-- Demo budgets are separate from signed-in limits: 2 workspaces per IP per 5 hours, 200 workspace creations per day globally, 5 triage runs per session and 15 per IP per hour, 500 triage runs per day globally, and 60 writes per session per hour.
+- Demo budgets are separate from signed-in limits: 4 workspaces per IP per 5 hours, 200 workspace creations per day globally, 5 triage runs per session and 15 per IP per hour, 500 triage runs per day globally, and 60 writes per session per hour.
 
 ## Notes
 
