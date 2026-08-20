@@ -41,7 +41,9 @@ export function WorkspaceOpenLink({
                 </span>
               ) : null}
             </div>
-            <div className="muted mono" style={{ fontSize: 12.5, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {/* A demo slug is a 32-character hex id with nothing to break on, so it
+                wraps to the next line rather than pushing the card off a phone. */}
+            <div className="muted mono" style={{ fontSize: 12.5, marginTop: 2, overflowWrap: "anywhere" }}>
               {isPreview ? slug : `${slug} · ${role}`}
             </div>
           </div>

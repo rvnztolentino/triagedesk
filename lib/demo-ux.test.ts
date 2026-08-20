@@ -12,7 +12,6 @@ const actionsSource = source("../app/actions.ts");
 const appLayoutSource = source("../components/app-layout.tsx");
 const authSource = source("./auth.ts");
 const demoBannerSource = source("../components/demo-banner.tsx");
-const demoLockSource = source("../components/demo-lock.tsx");
 const demoUiSource = source("./demo-ui.ts");
 const expiredPageSource = source("../app/demo/expired/page.tsx");
 const onboardingSource = source("../app/onboarding/page.tsx");
@@ -108,7 +107,6 @@ describe("demo banner", () => {
   // never render it.
   it("code-splits the demo chrome out of the shell everyone downloads", () => {
     expect(appLayoutSource).toContain('const DemoBanner = dynamic(() => import("@/components/demo-banner")');
-    expect(appLayoutSource).toContain('const DemoLockButton = dynamic(() => import("@/components/demo-lock")');
     // ssr:false would defer the banner past hydration and pop the countdown in late.
     expect(appLayoutSource).not.toContain("ssr: false");
   });
@@ -227,11 +225,11 @@ describe("blocked-action affordances", () => {
     expect(onboardingSource).toContain("{isDemo ? (");
   });
 
-  it("explains account settings in a dialog rather than redirecting silently", () => {
-    expect(appLayoutSource).toContain("<DemoLockButton className=\"menu-item\"");
-    expect(demoLockSource).toContain('role="dialog"');
-    expect(demoLockSource).toContain('aria-modal="true"');
-    expect(demoLockSource).toContain('if (event.key === "Escape") setOpen(false);');
+  // A real account keeps its account settings; the demo entry is gone entirely, so
+  // there is no blocked affordance left to explain either.
+  it("drops account settings for a demo session and keeps them for a real account", () => {
+    expect(appLayoutSource).toMatch(/isDemoSession \? null : \([\s\S]{0,240}href="\/account"/);
+    expect(appLayoutSource).not.toContain("DemoLockButton");
   });
 
   it("labels sign-out as ending the demo and skips the Clerk session teardown", () => {
@@ -248,7 +246,7 @@ describe("blocked-action affordances", () => {
   // the expired screen cannot drift to different destinations.
   it("sends every demo call to action to the same sign-up destination", () => {
     expect(DEMO_SIGNUP_HREF).toBe("/signup?next=/onboarding");
-    for (const file of [appLayoutSource, demoBannerSource, demoLockSource, expiredPageSource, onboardingSource, confirmSource, manageWorkspaceSource]) {
+    for (const file of [appLayoutSource, demoBannerSource, expiredPageSource, onboardingSource, confirmSource, manageWorkspaceSource]) {
       expect(file).toContain("DEMO_SIGNUP_HREF");
     }
   });

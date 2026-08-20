@@ -94,12 +94,11 @@ function isPublicPath(path: string) {
 }
 
 // This shell is the client bundle for every route, landing page included. The demo
-// chrome only ever renders for a demo principal, so it is code-split rather than
+// banner only ever renders for a demo principal, so it is code-split rather than
 // shipped to the logged-out visitors who make up the landing page's entire audience.
-// Both keep SSR: the banner's first frame has to be server-rendered or the countdown
+// It keeps SSR: the banner's first frame has to be server-rendered or the countdown
 // pops in after hydration.
 const DemoBanner = dynamic(() => import("@/components/demo-banner").then((m) => m.DemoBanner));
-const DemoLockButton = dynamic(() => import("@/components/demo-lock").then((m) => m.DemoLockButton));
 
 const SIDEBAR_COLLAPSED_KEY = "triagedesk-sidebar-collapsed";
 
@@ -566,13 +565,9 @@ export function AppLayout({
                     <Link href="/onboarding" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
                       <Building2 size={15} className="text-muted" /> Workspaces
                     </Link>
-                    {/* Account settings are account-only. A demo visitor clicking through
-                        would just be redirected back out, so explain it here instead. */}
-                    {isDemoSession ? (
-                      <DemoLockButton className="menu-item" body="Your display name, email, and account settings live on a real account. Create a free one to get a workspace that keeps what you put in it.">
-                        <UserRound size={15} className="text-muted" /> Account
-                      </DemoLockButton>
-                    ) : (
+                    {/* Account settings belong to a real account. A demo visitor has none, so
+                        the entry is dropped rather than shown and redirected back out. */}
+                    {isDemoSession ? null : (
                       <Link href="/account" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
                         <UserRound size={15} className="text-muted" /> Account
                       </Link>

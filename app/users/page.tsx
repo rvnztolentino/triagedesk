@@ -148,7 +148,9 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
                             </span>
                           ) : null}
                         </div>
-                        <div className="muted" style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {/* A demo address carries a full uuid, so it wraps onto the
+                            next line instead of widening the row on a phone. */}
+                        <div className="muted" style={{ fontSize: 13, overflowWrap: "anywhere" }}>
                           {user.email} · joined {formatDate(user.createdAt)}
                         </div>
                       </div>

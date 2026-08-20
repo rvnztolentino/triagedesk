@@ -364,6 +364,15 @@ select {
   .split-even { grid-template-columns: 1fr 1fr; align-items: stretch; }
   .split-hub { grid-template-columns: 1.4fr 1fr; }
 
+  /* A grid item's automatic minimum size is its min-content width, so one
+     unbreakable string inside it (a workspace slug, a demo email) widens the
+     track past the viewport and hands the whole page a sideways scrollbar on a
+     phone. Let the items shrink; the content inside decides how to wrap. */
+  .cols-2 > *,
+  .cols-3 > *,
+  .cols-4 > *,
+  .split > * { min-width: 0; }
+
   /* Lets the departments card stretch to the height of the column beside it
      while its own list scrolls. Collapses to natural height once stacked. */
   .stretch-frame { position: relative; min-height: 340px; }

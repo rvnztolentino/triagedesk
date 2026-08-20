@@ -82,7 +82,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
                   </div>
                 </div>
               </div>
-              <div className="cluster" style={{ gap: 10 }}>
+              <div className="cluster wrap" style={{ gap: 10 }}>
                 <Link href={`/w/${activeWorkspace.workspace.slug}/activate`} className="btn btn--neutral">
                   <LayoutGrid size={15} /> Open dashboard
                 </Link>
