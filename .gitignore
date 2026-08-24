@@ -8,7 +8,10 @@ public/uploads/
 coverage/
 dist/
 *.tsbuildinfo
-.claude/
+# claude code: ignore everything except the shared project config
+.claude/*
+!.claude/CLAUDE.md
+!.claude/launch.json
 .mcp.json
 # clerk configuration (can include secrets)
 /.clerk/
