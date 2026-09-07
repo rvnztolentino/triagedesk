@@ -5,7 +5,6 @@ import { ArrowRight, Mail, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BrandIcon } from "@/components/brand-icon";
 import { ThemeToggle } from "@/components/theme-controls";
-import { TryDemoButton } from "@/components/try-demo-button";
 import { cn } from "@/lib/utils";
 
 // Public support address, intentionally unset in the repo so a personal inbox is
@@ -24,11 +23,10 @@ const navItems = [
 // Fixed-header height to offset scroll targets so section headings aren't hidden.
 const HEADER_OFFSET = 80;
 
-// Resolved on the server from DEMO_SESSION_SECRET and the DEMO_ENABLED kill switch.
-// Only the boolean crosses to the client, never the secret. With the demo off the
-// header simply drops the button rather than advertising one that can only fail;
-// the closing CTA on the landing page stays the way to /login.
-export function HomeHeader({ demoEnabled }: { demoEnabled: boolean }) {
+// The header keeps a plain Sign in link next to Start now. It is text, not a
+// button, so the primary call to action stays the only button in the slot. The
+// demo lives in the hero and the closing CTA on the landing page instead.
+export function HomeHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -166,10 +164,12 @@ export function HomeHeader({ demoEnabled }: { demoEnabled: boolean }) {
 
         <div className="hidden shrink-0 items-center gap-2 lg:flex">
           <ThemeToggle />
-          {/* The demo takes the slot `Sign in` used to hold. Everyone reading this
-              page is logged out, and "Sign in" is a dead end to a visitor with no
-              account. Returning users still have the link in the closing CTA. */}
-          {demoEnabled ? <TryDemoButton buttonClassName="btn--neutral btn--sm" /> : null}
+          <Link
+            href="/login"
+            className="rounded-[var(--radius-control)] px-3 py-2 text-sm text-muted no-underline transition-colors hover:text-fg hover:no-underline"
+          >
+            Sign in
+          </Link>
           <Link href="/signup?next=/onboarding" className="btn btn--primary btn--sm">
             Start now
             <ArrowRight className="h-4 w-4" />
@@ -209,7 +209,13 @@ export function HomeHeader({ demoEnabled }: { demoEnabled: boolean }) {
             </a>
           ))}
 
-          {demoEnabled ? <TryDemoButton className="mt-2" buttonClassName="btn--primary btn--block" /> : null}
+          <Link
+            href="/login"
+            className="rounded-[var(--radius-control)] px-3 py-3 text-base text-muted no-underline transition-colors hover:bg-surface-hover hover:text-fg hover:no-underline"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Sign in
+          </Link>
 
           <div className="mt-3 rounded-[var(--radius-card)] border border-border bg-surface">
             {contactPanel}

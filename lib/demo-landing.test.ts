@@ -127,16 +127,17 @@ describe("demo entry point", () => {
 });
 
 describe("landing page and header", () => {
-  // The demo took the slot Sign in used to hold, so the header links to /login
-  // nowhere. The closing CTA is where a returning visitor finds it.
-  it("carries no Sign in link in the header", () => {
-    expect(occurrences(codeOnly(headerSource), "/login")).toBe(0);
-    expect(headerSource).toContain('<TryDemoButton buttonClassName="btn--neutral btn--sm" />');
+  // Sign in sits in the header as plain text, not a button, so Start now stays the
+  // only button in that slot. The closing CTA still carries the link too.
+  it("carries a plain Sign in link in the header", () => {
+    expect(occurrences(codeOnly(headerSource), '"/login"')).toBe(2);
+    expect(occurrences(codeOnly(headerSource), "Sign in")).toBe(2);
+    expect(codeOnly(headerSource)).not.toContain("btn btn--neutral");
     expect(codeOnly(landingSource)).toContain('href="/login"');
   });
 
-  it("puts the demo in both the desktop header and the mobile menu", () => {
-    expect(occurrences(headerSource, "<TryDemoButton")).toBe(2);
+  it("keeps the demo out of the header", () => {
+    expect(codeOnly(headerSource)).not.toContain("TryDemoButton");
   });
 
   // The hero is the one place on the page that leads with the demo. The closing CTA
@@ -156,14 +157,13 @@ describe("landing page and header", () => {
 
   // Without a signing secret the cookies could not be trusted, so the demo fails
   // closed. The page must not keep advertising a button that can only error.
-  // The hero falls back to Sign in; the header simply drops the button, leaving the
-  // closing CTA as the way to /login. Either way nothing renders that can only error.
+  // The hero falls back to Sign in; the header never carries the demo at all, so its
+  // Sign in link stays the way to /login. Either way nothing renders that can only error.
   it("hides the demo everywhere when it is switched off", () => {
     expect(landingSource).toContain("isDemoEnabled()");
     expect(landingSource).toContain("function HeroDemoCta({ demoEnabled }");
     expect(landingSource).toContain("if (!demoEnabled) return <SignInLink");
-    expect(headerSource).toContain("{ demoEnabled }: { demoEnabled: boolean }");
-    expect(headerSource).toContain("{demoEnabled ? <TryDemoButton");
+    expect(codeOnly(headerSource)).not.toContain("demoEnabled");
   });
 
   // The flag is a boolean derived on the server. Passing the secret itself over the
