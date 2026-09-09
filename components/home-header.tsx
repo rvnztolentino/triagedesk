@@ -97,13 +97,10 @@ export function HomeHeader() {
           : "No contact address is configured for this deployment."}
       </p>
       {CONTACT_EMAIL ? (
-        <>
-          <a href={`mailto:${CONTACT_EMAIL}`} className="btn btn--primary btn--sm btn--block mt-4">
-            <Mail className="h-4 w-4" />
-            Send an email
-          </a>
-          <p className="mt-2.5 text-center text-xs text-muted">{CONTACT_EMAIL}</p>
-        </>
+        <a href={`mailto:${CONTACT_EMAIL}`} className="btn btn--primary btn--sm btn--block mt-4">
+          <Mail className="h-4 w-4" />
+          Send an email
+        </a>
       ) : null}
     </div>
   );
