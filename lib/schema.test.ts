@@ -13,6 +13,13 @@ describe("schemas", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts a request with only a description", () => {
+    const result = requestSubmissionSchema.safeParse({ description: "The hallway light is flickering." });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject({ location: "", contactName: "", urgencyNote: "" });
+  });
+
   it("caps request text fields to protect storage and AI context", () => {
     expect(
       requestSubmissionSchema.safeParse({

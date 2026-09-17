@@ -74,7 +74,7 @@ export function RequestAttachmentsInput() {
 
   return (
     <div className="pt-2">
-      <div className="text-sm font-medium text-fg block mb-2">Attach files (Optional)</div>
+      <div className="text-sm font-medium text-fg block mb-2">Attach files</div>
       <label htmlFor="attachments" className="relative w-full border border-dashed border-border-strong bg-bg rounded-[var(--radius-card)] p-8 flex flex-col items-center justify-center text-muted hover:border-accent-border transition-colors cursor-pointer">
         <div className="w-11 h-11 bg-surface rounded-[var(--radius-control)] flex items-center justify-center mb-3 border border-border">
           <Paperclip size={18} className="text-muted" />

@@ -42,7 +42,9 @@ function FormBody({
   return (
     <fieldset disabled={isPreview} className="space-y-6 disabled:opacity-60">
       <div className="field">
-        <label htmlFor="description" className="label">Description</label>
+        <label htmlFor="description" className="label">
+          Description <span style={{ color: "var(--danger)" }} aria-hidden="true">*</span>
+        </label>
         <textarea
           id="description"
           name="description"
@@ -77,12 +79,12 @@ function FormBody({
           <label htmlFor="location" className="label" style={{ display: "flex", alignItems: "center", gap: 7 }}>
             <MapPin size={13} className="text-muted" /> Location
           </label>
-          <input id="location" name="location" required type="text" maxLength={160} placeholder="Building A, Room 304" className="input" />
+          <input id="location" name="location" type="text" maxLength={160} placeholder="Building A, Room 304" className="input" />
         </div>
 
         <div className="field">
           <label htmlFor="contactName" className="label" style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <User size={13} className="text-muted" /> Contact name (optional)
+            <User size={13} className="text-muted" /> Contact name
           </label>
           <input id="contactName" name="contactName" type="text" maxLength={80} placeholder="Who to reach" className="input" />
         </div>
@@ -90,7 +92,7 @@ function FormBody({
 
       <div className="field">
         <label htmlFor="urgencyNote" className="label" style={{ display: "flex", alignItems: "center", gap: 7 }}>
-          <AlertTriangle size={13} className="text-muted" /> Urgency note (optional)
+          <AlertTriangle size={13} className="text-muted" /> Urgency note
         </label>
         <input id="urgencyNote" name="urgencyNote" type="text" maxLength={400} placeholder="Why is it urgent?" className="input" />
       </div>

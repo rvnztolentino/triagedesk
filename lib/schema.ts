@@ -31,7 +31,7 @@ export const assignableUserRoleSchema = z.enum(assignableUserRoles);
 
 export const requestSubmissionSchema = z.object({
   description: z.string().trim().min(10, "Describe the issue in at least 10 characters.").max(1200, "Keep the description under 1,200 characters."),
-  location: z.string().trim().min(2, "Location is required.").max(160, "Keep the location under 160 characters.").transform(toTitleCase),
+  location: z.string().trim().max(160, "Keep the location under 160 characters.").default("").transform(toTitleCase),
   contactName: z.string().trim().max(80, "Keep the contact name under 80 characters.").default("").transform(toTitleCase),
   urgencyNote: z.string().trim().max(400, "Keep the urgency note under 400 characters.").default(""),
 });

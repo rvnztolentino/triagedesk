@@ -217,32 +217,33 @@ function pickPriority(text: string): { priority: TriageDraft["priority"]; reason
 
 function createTitle(issue: string, location: string, text: string) {
   const normalizedLocation = location.trim();
+  const at = normalizedLocation ? ` at ${normalizedLocation}` : "";
 
   if (includesAny(text, UNAUTHORIZED_PRESENCE_KEYWORDS)) {
-    return `Possible unauthorized presence at ${normalizedLocation}`;
+    return `Possible unauthorized presence${at}`;
   }
 
   if (includesAny(text, ["aircon", "air con", "ac", "hvac"])) {
-    return `HVAC issue at ${normalizedLocation}`;
+    return `HVAC issue${at}`;
   }
 
   if (includesAny(text, ["leak", "water", "wet floor", "flood"])) {
-    return `Water leak at ${normalizedLocation}`;
+    return `Water leak${at}`;
   }
 
   if (includesAny(text, ["spill", "puddle", "liquid", "substance"])) {
-    return `Spill at ${normalizedLocation}`;
+    return `Spill${at}`;
   }
 
   if (includesAny(text, ["projector"])) {
-    return `Projector issue at ${normalizedLocation}`;
+    return `Projector issue${at}`;
   }
 
   if (includesAny(text, ["badge", "keycard", "gate", "turnstile"])) {
-    return `Access issue at ${normalizedLocation}`;
+    return `Access issue${at}`;
   }
 
-  return `${issue} request at ${normalizedLocation}`;
+  return `${issue} request${at}`;
 }
 
 function clipText(value: string, maxLength: number) {
@@ -284,7 +285,7 @@ export function rulesTriage(input: TriageInput): TriageDraft {
     category: classification.category,
     priority: safeguarded.priority,
     department,
-    summary: `${label} should review ${input.location}. ${input.description.trim()}`,
+    summary: `${label} should review ${input.location.trim() || "this request"}. ${input.description.trim()}`,
     priorityReasoning: safeguarded.reasoning,
     similarTicketIds,
   });
