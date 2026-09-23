@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { requestSubmissionSchema, triageDraftSchema, userRoleSchema, userRoleUpdateSchema, workspaceInviteCodeSchema, workspaceNameSchema, workspaceSlugSchema } from "./schema";
+import { globalSearchQuerySchema, requestSubmissionSchema, triageDraftSchema, userRoleSchema, userRoleUpdateSchema, workspaceInviteCodeSchema, workspaceNameSchema, workspaceSlugSchema } from "./schema";
 
 describe("schemas", () => {
   it("rejects empty request details", () => {
@@ -81,5 +81,19 @@ describe("schemas", () => {
     expect(workspaceInviteCodeSchema.safeParse("DEMO-CLINIC-2026").success).toBe(true);
     expect(workspaceInviteCodeSchema.safeParse("demo school").success).toBe(false);
     expect(workspaceInviteCodeSchema.safeParse("demo--school").success).toBe(false);
+  });
+
+  it("strips PostgREST filter syntax and wildcards from global search terms", () => {
+    expect(globalSearchQuerySchema.parse("  TRG-1038  ")).toBe("TRG-1038");
+    expect(globalSearchQuerySchema.parse("leak),workspace_id.neq.x")).toBe("leak workspace id neq x");
+    expect(globalSearchQuerySchema.parse('%_*"aircon"')).toBe("aircon");
+    expect(globalSearchQuerySchema.parse("Café  ñ")).toBe("Café ñ");
+    expect(globalSearchQuerySchema.parse("x".repeat(150))).toHaveLength(80);
+  });
+
+  it("rejects global search terms with fewer than two usable characters", () => {
+    expect(globalSearchQuerySchema.safeParse("a").success).toBe(false);
+    expect(globalSearchQuerySchema.safeParse("%%%").success).toBe(false);
+    expect(globalSearchQuerySchema.safeParse("x".repeat(201)).success).toBe(false);
   });
 });

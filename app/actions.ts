@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requestSubmissionSchema, reviewApprovalSchema, ticketUpdateSchema, userRoleUpdateSchema, workspaceDepartmentCreateSchema, workspaceDepartmentDeleteSchema, workspaceSlugSchema, type NotificationView } from "@/lib/schema";
+import { requestSubmissionSchema, reviewApprovalSchema, ticketUpdateSchema, userRoleUpdateSchema, workspaceDepartmentCreateSchema, workspaceDepartmentDeleteSchema, workspaceSlugSchema, globalSearchQuerySchema, type GlobalSearchTicket, type NotificationView } from "@/lib/schema";
 import {
   assertRealUser,
   clearSessionCookies,
@@ -39,6 +39,7 @@ import {
   rejectRequest,
   resetWorkspaceData,
   saveTriageResult,
+  searchTickets,
   updateTicket,
 } from "@/lib/store";
 import { clearNotifications, countUnreadNotifications, listNotifications, markAllNotificationsRead } from "@/lib/notifications";
@@ -556,6 +557,35 @@ export async function markNotificationsReadAction() {
     await markAllNotificationsRead(user.id, workspace.id);
   } catch (error) {
     captureOperationalError(error, { area: "mark_notifications_read" });
+  }
+}
+
+// Backs the global search palette. Read-only, so there is no demo budget, but each
+// keystroke (debounced client-side) is a query, so it is still rate limited. Scoped
+// to the active workspace, and to the caller's own tickets unless they administer it
+// or are in the read-only preview, matching what the tickets page shows them.
+export async function searchWorkspaceAction(input: string): Promise<{ tickets: GlobalSearchTicket[]; error?: string }> {
+  try {
+    await requireTrustedActionRequest();
+    const user = await getCurrentUser();
+    if (!user) return { tickets: [] };
+    const access = await getActiveWorkspaceAccess(user.id);
+    if (!access) return { tickets: [] };
+    await enforceRateLimit({
+      scope: "global_search_user_minute",
+      keyParts: [user.id, access.workspace.id],
+      limit: 60,
+      windowSeconds: 60,
+      message: "Searching too quickly. Wait a moment and try again.",
+    });
+    const term = globalSearchQuerySchema.parse(input);
+    const seesAll = isWorkspaceAdmin(access.membership.role) || isWorkspacePreview(access.workspace.id);
+    return { tickets: await searchTickets(term, seesAll ? undefined : user.id, access.workspace.id) };
+  } catch (error) {
+    if (!(error instanceof ZodError) && !(error instanceof RateLimitError)) {
+      captureOperationalError(error, { area: "global_search" });
+    }
+    return { tickets: [], error: actionErrorMessage(error) };
   }
 }
 

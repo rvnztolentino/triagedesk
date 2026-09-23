@@ -158,6 +158,15 @@ export const workspaceDepartmentDeleteSchema = z.object({
   id: departmentIdSchema,
 });
 
+// Global search term. Everything but letters, digits, spaces, and hyphens becomes a
+// space, because the term is interpolated into a PostgREST `or()` filter where
+// commas, dots, parentheses, and quotes are syntax and `%`, `_`, `*` are wildcards.
+export const globalSearchQuerySchema = z
+  .string()
+  .max(200)
+  .transform((value) => value.replace(/[^\p{L}\p{N}\s-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 80))
+  .pipe(z.string().min(2, "Type at least 2 characters."));
+
 export type Priority = z.infer<typeof prioritySchema>;
 export type Department = z.infer<typeof departmentSchema>;
 export type RequestStatus = z.infer<typeof requestStatusSchema>;
@@ -246,6 +255,8 @@ export interface SimilarTicket {
   department: Department;
   reason: string;
 }
+
+export type GlobalSearchTicket = Pick<TicketRecord, "id" | "title" | "status" | "priority">;
 
 export interface UserProfileRecord {
   id: string;

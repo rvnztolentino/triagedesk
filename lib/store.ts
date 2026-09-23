@@ -12,6 +12,7 @@ import {
   type Department,
   type DepartmentRecord,
   type AppUser,
+  type GlobalSearchTicket,
   type Priority,
   type RequestAttachmentRecord,
   type RequestRecord,
@@ -1090,6 +1091,33 @@ export async function getSimilarTickets(text: string, department?: Department, w
   const client = getSupabaseAdminClient();
   if (!client) return [];
   return getSimilarTicketsFromClient(client, text, undefined, department, workspaceId);
+}
+
+// Backs the global search palette. `term` must already be sanitized by
+// globalSearchQuerySchema: it is interpolated into a PostgREST `or()` filter. Pass
+// `requesterUserId` for requesters so they only find their own tickets.
+export async function searchTickets(term: string, requesterUserId: string | undefined, workspaceId: string, limit = 8): Promise<GlobalSearchTicket[]> {
+  const client = getSupabaseAdminClient();
+  if (!client) return [];
+
+  const pattern = `"%${term}%"`;
+  let query = client
+    .from("tickets")
+    .select("id, title, status, priority")
+    .eq("workspace_id", workspaceId)
+    .or(["id", "title", "description", "location"].map((column) => `${column}.ilike.${pattern}`).join(","));
+  if (requesterUserId) {
+    query = query.eq("requester_user_id", requesterUserId);
+  }
+  const { data, error } = await query.order("updated_at", { ascending: false }).limit(limit);
+  requireNoError(error, "Search tickets");
+
+  return ((data ?? []) as SupabaseRow[]).map((row) => ({
+    id: asString(row.id),
+    title: asString(row.title),
+    status: asTicketStatus(row.status),
+    priority: asPriority(row.priority),
+  }));
 }
 
 export async function findReusableTriageDraft(input: RequestSubmission, workspaceId = DEMO_WORKSPACE_ID): Promise<TriageDraft | undefined> {

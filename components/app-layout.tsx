@@ -28,6 +28,7 @@ import { signOutAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
 import { ThemeToggle } from "@/components/theme-controls";
 import { NotificationBell } from "@/components/notification-bell";
+import { GlobalSearch } from "@/components/global-search";
 import { DEMO_SIGNUP_HREF } from "@/lib/demo-ui";
 import type { AppUser, NotificationView, UserRole } from "@/lib/schema";
 import { cn } from "@/lib/utils";
@@ -191,6 +192,11 @@ export function AppLayout({
         ? adminNavItems
         : requesterNavItems;
   const navItems = activeWorkspace ? [...operationalNavItems, workspaceNavItem] : [workspaceNavItem];
+  const activeSlug = activeWorkspace?.slug;
+  const searchPages = React.useMemo(
+    () => operationalNavItems.map((item) => ({ ...item, href: scopedWorkspaceHref(activeSlug, item.href) })),
+    [operationalNavItems, activeSlug]
+  );
 
   React.useEffect(() => {
     React.startTransition(() => {
@@ -258,6 +264,14 @@ export function AppLayout({
       setPendingPath(nextPath);
     }
   }
+
+  const handleSearchNavigate = React.useCallback(
+    (href: string) => {
+      const nextPath = new URL(href, window.location.origin).pathname;
+      if (nextPath !== pathname) setPendingPath(nextPath);
+    },
+    [pathname]
+  );
 
   function handlePublicNavigate(event: React.MouseEvent<HTMLDivElement>) {
     if (event.defaultPrevented || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
@@ -370,6 +384,17 @@ export function AppLayout({
               </div>
               <ChevronDown size={14} className={cn("text-faint shrink-0", collapsed && "md:hidden")} />
             </Link>
+          </div>
+        ) : null}
+
+        {currentUser && activeWorkspace ? (
+          <div className={cn("px-4 pb-3", collapsed && "md:px-2")}>
+            <GlobalSearch
+              pages={searchPages}
+              workspaceSlug={activeWorkspace.slug}
+              collapsed={collapsed}
+              onNavigate={handleSearchNavigate}
+            />
           </div>
         ) : null}
 
