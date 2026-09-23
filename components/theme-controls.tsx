@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { Moon, Sun } from "lucide-react";
+import { Moon, SunDim } from "lucide-react";
 
 const THEME_KEY = "triagedesk-theme";
 const THEME_EVENT = "triagedesk-theme-change";
@@ -59,8 +59,9 @@ function useTheme() {
   return useSyncExternalStore(subscribeTheme, themeSnapshot, () => DEFAULT_THEME);
 }
 
-// A two-state switch: the thumb slides between a sun (light) and a moon (dark)
-// slot, and carries the accent color so the active mode reads at a glance.
+// A two-state monochrome switch: the thumb covers one slot and the icon in the
+// other slot names the active mode (sun on the left for light, moon on the
+// right for dark).
 export function ThemeToggle() {
   const theme = useTheme();
   const isDark = theme === "dark";
@@ -78,10 +79,10 @@ export function ThemeToggle() {
     >
       <span className="theme-switch-thumb" aria-hidden />
       <span className="theme-switch-icon theme-switch-icon--sun" aria-hidden>
-        <Sun size={14} />
+        <SunDim size={14} />
       </span>
       <span className="theme-switch-icon theme-switch-icon--moon" aria-hidden>
-        <Moon size={14} />
+        <Moon size={12} />
       </span>
     </button>
   );
