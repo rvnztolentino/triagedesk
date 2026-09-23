@@ -329,6 +329,15 @@ select {
     text-transform: uppercase;
     color: var(--faint);
   }
+  /* A bright band sweeps left to right across the text, for in-progress labels.
+     The gradient is 2.5x the text width so the band starts and ends off-glyph. */
+  .shimmer {
+    color: transparent;
+    background: linear-gradient(90deg, var(--faint) 40%, var(--fg) 50%, var(--faint) 60%) 0 0 / 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: shimmer 2s linear infinite;
+  }
   .mono {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
@@ -1188,6 +1197,10 @@ select {
   from { opacity: 0; transform: translateY(9px); }
   to { opacity: 1; transform: none; }
 }
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: 0% 0; }
+}
 @keyframes ds-spin {
   to { transform: rotate(360deg); }
 }
@@ -1200,6 +1213,7 @@ select {
   .app-dropdown-enter,
   .reveal,
   .search-dialog[open],
+  .shimmer,
   .spin {
     animation: none;
   }

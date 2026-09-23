@@ -34,24 +34,10 @@ export function AiTriageLoading() {
         <Sparkles size={22} className="animate-pulse" />
       </span>
       <div>
-        <div className="eyebrow" style={{ marginBottom: 8 }}>Triaging your request</div>
+        <div className="eyebrow shimmer" style={{ marginBottom: 8 }}>Triaging your request</div>
         <p key={index} className="reveal muted" style={{ fontSize: 14, maxWidth: "36ch" }}>
           {BEATS[index]}
         </p>
-      </div>
-      <div className="flex items-center gap-1.5" aria-hidden="true">
-        {BEATS.map((_, dot) => (
-          <span
-            key={dot}
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 999,
-              background: dot === index ? "var(--accent)" : "var(--border-strong)",
-              transition: "background 0.3s",
-            }}
-          />
-        ))}
       </div>
     </div>
   );
