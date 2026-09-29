@@ -10,7 +10,6 @@ import { getTicketDetail, listDepartments } from "@/lib/store";
 import { ticketStatusBadgeClass } from "@/lib/ticket-status";
 import { cn } from "@/lib/utils";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
-import { isWorkspacePreview } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +35,7 @@ function Meta({ label, value, icon: Icon }: { label: string; value: string; icon
 export async function TicketDetailView({ params, workspaceSlug }: { params: Promise<{ id: string }>; workspaceSlug?: string }) {
   const { user, workspace, membership } = await requireWorkspaceContext(workspaceSlug);
   const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
-  const isPreview = isWorkspacePreview(workspace.id);
-  const isAdmin = isPreview || membership.role === "admin" || membership.role === "owner";
+  const isAdmin = membership.role === "admin" || membership.role === "owner";
   const { id } = await params;
   const detail = await getTicketDetail(id, isAdmin ? undefined : user.id, workspace.id);
   const departments = await listDepartments(workspace.id);
@@ -167,7 +165,7 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
               <TicketUpdateForm
                 workspaceSlug={workspaceSlug}
                 ticketId={ticket.id}
-                isPreview={isPreview}
+               
                 status={ticket.status}
                 department={ticket.department}
                 resolutionNotes={ticket.resolutionNotes}

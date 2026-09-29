@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { applyActiveWorkspaceCookie, getCurrentUser } from "@/lib/auth";
 import { workspaceSlugSchema } from "@/lib/schema";
-import { isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
+import { requireWorkspaceMembership } from "@/lib/workspaces";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 
 export async function GET(request: Request, { params }: { params: Promise<{ workspaceSlug: string }> }) {
@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ work
   try {
     const access = await requireWorkspaceMembership(parsedSlug.data, user.id);
     const destination =
-      isWorkspacePreview(access.workspace.id) || access.membership.role !== "requester"
+      access.membership.role !== "requester"
         ? scopedWorkspaceHref(parsedSlug.data, "/")
         : scopedWorkspaceHref(parsedSlug.data, "/tickets");
     // Write the cookie onto the redirect response itself, because a `next/headers`

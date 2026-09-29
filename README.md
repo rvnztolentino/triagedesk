@@ -109,7 +109,7 @@ pnpm test
 - **The AI sees only the request text.** Groq receives the description, location, and urgency note. It never sees attachments, contact names, or who sent the request.
 - **Submitting a request:** only the description is required. Attachments can be JPG, PNG, WebP, PDF, DOCX, TXT, CSV, or JSON, with up to 3 files per request at 10 MiB each.
 - **Limits:** each user can have 3 workspaces. Each workspace allows 20 members, 5 active invites, and 10 custom departments. Submissions, uploads, and admin actions are rate-limited.
-- **Live demo:** demo workspaces expire after 4 hours. Demo visitors cannot upload files, invite members, or change account settings. The `demo-clinic` workspace is read-only.
+- **Live demo:** demo workspaces expire after 4 hours. Demo visitors cannot upload files, invite members, or change account settings. The `demo-clinic` workspace is only the seed template for the live demo: nobody can join or open it.
 
 ## Tech Stack
 

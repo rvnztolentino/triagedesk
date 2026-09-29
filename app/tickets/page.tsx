@@ -6,7 +6,6 @@ import { formatDate } from "@/lib/format";
 import { listDepartments, listTickets } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
-import { isWorkspacePreview } from "@/lib/workspaces";
 import { ticketsHref } from "@/lib/ticket-links";
 import { TicketsTableShell, TicketsTableSkeleton } from "./tickets-table-shell";
 
@@ -192,7 +191,7 @@ export async function TicketListView({ searchParams, workspaceSlug }: { searchPa
   const requestedPage = pageNumber(params.page);
   const priority = params.priority || "all";
   const dept = params.dept || "all";
-  const isAdmin = isWorkspacePreview(workspace.id) || membership.role === "admin" || membership.role === "owner";
+  const isAdmin = membership.role === "admin" || membership.role === "owner";
   const departments = await listDepartments(workspace.id);
   const deptOptions = departments.map((d) => ({ id: d.id, name: d.name }));
   const deptNames = Object.fromEntries(deptOptions.map((d) => [d.id, d.name]));

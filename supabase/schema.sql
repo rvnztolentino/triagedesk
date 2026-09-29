@@ -261,39 +261,16 @@ alter table ai_triage_results drop constraint if exists ai_triage_results_source
 alter table ai_triage_results
   add constraint ai_triage_results_source_check check (source in ('rules', 'groq'));
 
+-- Demo Clinic is only the seed template that create_demo_workspace clones for each
+-- live-demo visitor. It used to double as a joinable read-only preview through the
+-- reusable DEMO-CLINIC-2026 invite. Drop that invite and every membership it created
+-- so nobody can reach the template again. Idempotent.
 delete from workspace_invites
-where id = '00000000-0000-4000-8000-000000000002'
-  or code = 'DEMO-SCHOOL-2026';
+where workspace_id = '00000000-0000-4000-8000-000000000001'
+  or code in ('DEMO-CLINIC-2026', 'DEMO-SCHOOL-2026');
 
-insert into workspace_invites (
-  id,
-  workspace_id,
-  code,
-  role,
-  created_by,
-  expires_at,
-  used_at,
-  revoked_at,
-  is_reusable
-) values (
-  '00000000-0000-4000-8000-000000000002',
-  '00000000-0000-4000-8000-000000000001',
-  'DEMO-CLINIC-2026',
-  'requester',
-  null,
-  null,
-  null,
-  null,
-  true
-)
-on conflict (code) do update set
-  workspace_id = excluded.workspace_id,
-  role = excluded.role,
-  created_by = excluded.created_by,
-  expires_at = excluded.expires_at,
-  used_at = excluded.used_at,
-  revoked_at = excluded.revoked_at,
-  is_reusable = excluded.is_reusable;
+delete from notifications where workspace_id = '00000000-0000-4000-8000-000000000001';
+delete from workspace_members where workspace_id = '00000000-0000-4000-8000-000000000001';
 
 update requests set workspace_id = '00000000-0000-4000-8000-000000000001' where workspace_id is null;
 update ai_triage_results set workspace_id = '00000000-0000-4000-8000-000000000001' where workspace_id is null;
@@ -633,6 +610,9 @@ begin
   from workspaces w
   join workspace_invites i on i.workspace_id = w.id
   where w.slug = target_workspace_slug
+    -- The Demo Clinic template is never joinable, even if an invite row for it
+    -- reappears.
+    and w.id <> '00000000-0000-4000-8000-000000000001'
     and i.code = upper(trim(target_invite_code))
     and i.revoked_at is null
     and (i.expires_at is null or i.expires_at > now())

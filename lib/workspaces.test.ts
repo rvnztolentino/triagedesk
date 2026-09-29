@@ -6,14 +6,11 @@ import {
   canManageWorkspaceInvite,
   canRemoveWorkspaceMember,
   assertWorkspaceMutable,
-  DEMO_PREVIEW_LOCK_MESSAGE,
   DEMO_WORKSPACE_ID,
-  DEMO_WORKSPACE_INVITE_CODE,
   DEMO_WORKSPACE_SLUG,
   getPostAuthWorkspacePath,
   isWorkspaceAdmin,
   isWorkspaceInviteActive,
-  isWorkspacePreview,
   listWorkspaceAttachmentPaths,
   MAX_ACTIVE_WORKSPACE_INVITES,
   MAX_WORKSPACE_MEMBERS,
@@ -47,13 +44,11 @@ const loginSource = readFileSync(new URL("../app/login/page.tsx", import.meta.ur
 const signupSource = readFileSync(new URL("../app/signup/page.tsx", import.meta.url), "utf8");
 
 describe("workspace foundation", () => {
-  it("defines a stable demo workspace for transitional routes and seed data", () => {
+  it("keeps Demo Clinic only as the live-demo seed template", () => {
     expect(DEMO_WORKSPACE_ID).toBe("00000000-0000-4000-8000-000000000001");
     expect(DEMO_WORKSPACE_SLUG).toBe("demo-clinic");
-    expect(DEMO_WORKSPACE_INVITE_CODE).toBe("DEMO-CLINIC-2026");
     expect(schemaSql).toContain("'Demo Clinic', 'demo-clinic'");
-    expect(schemaSql).toContain("'DEMO-CLINIC-2026'");
-    expect(resetSql).toContain("'DEMO-CLINIC-2026'");
+    expect(schemaSql).toContain("template_id constant uuid := '00000000-0000-4000-8000-000000000001';");
   });
 
   it("treats only workspace owners and admins as privileged", () => {
@@ -62,15 +57,27 @@ describe("workspace foundation", () => {
     expect(isWorkspaceAdmin("requester")).toBe(false);
   });
 
-  it("treats Demo Clinic as a locked preview workspace", () => {
-    expect(isWorkspacePreview(DEMO_WORKSPACE_ID)).toBe(true);
-    expect(isWorkspacePreview("00000000-0000-4000-8000-000000000099")).toBe(false);
-    expect(() => assertWorkspaceMutable(DEMO_WORKSPACE_ID)).toThrow(DEMO_PREVIEW_LOCK_MESSAGE);
+  it("makes the Demo Clinic template unjoinable and unwritable", () => {
+    expect(() => assertWorkspaceMutable(DEMO_WORKSPACE_ID)).toThrow();
     expect(() => assertWorkspaceMutable("00000000-0000-4000-8000-000000000099")).not.toThrow();
     expect(actionsSource).toContain("assertWorkspaceMutable(workspace.id)");
     expect(storeSource).toContain("assertWorkspaceMutable(workspaceId)");
-    expect(authSource).toContain('access.membership.role !== "owner" || isWorkspacePreview(access.workspace.id)');
-    expect(appLayoutSource).toContain("Preview locked.");
+    expect(authSource).toContain('access.membership.role !== "owner"');
+    expect(authSource).not.toContain("isWorkspacePreview");
+    expect(appLayoutSource).not.toContain("Preview locked.");
+    // The reusable DEMO-CLINIC-2026 invite and its memberships are dropped, and the
+    // join RPC refuses the template even if an invite row for it comes back.
+    expect(schemaSql).not.toMatch(/insert into workspace_invites[\s\S]*?'DEMO-CLINIC-2026'/);
+    expect(schemaSql).toContain("or code in ('DEMO-CLINIC-2026', 'DEMO-SCHOOL-2026');");
+    expect(schemaSql).toContain("delete from workspace_members where workspace_id = '00000000-0000-4000-8000-000000000001';");
+    expect(schemaSql).toContain("and w.id <> '00000000-0000-4000-8000-000000000001'");
+    expect(resetSql).not.toMatch(/insert into workspace_invites/);
+    expect(workspacesSource).toContain("if (workspaceSlug === DEMO_WORKSPACE_SLUG) return undefined;");
+    expect(workspacesSource).toContain("if (input.workspaceSlug === DEMO_WORKSPACE_SLUG) {");
+    expect(workspacesSource).toContain('.neq("workspace_id", DEMO_WORKSPACE_ID)');
+    expect(workspacesSource).toContain('if (workspaceSlug === DEMO_WORKSPACE_SLUG) throw new Error("Workspace access is required.");');
+    // The join form still shows the old code as its placeholder hint.
+    expect(workspaceDashboardSource).toContain('placeholder="DEMO-CLINIC-2026"');
   });
 
   it("adds workspace ownership and RLS to every workspace-owned table", () => {
@@ -142,15 +149,15 @@ describe("workspace foundation", () => {
   it("normalizes invite codes and rejects inactive invites", () => {
     const activeInvite: WorkspaceInviteRecord = {
       id: "invite-1",
-      workspaceId: DEMO_WORKSPACE_ID,
-      code: DEMO_WORKSPACE_INVITE_CODE,
+      workspaceId: "00000000-0000-4000-8000-000000000099",
+      code: "ACME-CLINIC-2026",
       role: "requester",
       isReusable: false,
       createdAt: "2026-06-01T00:00:00.000Z",
     };
 
-    expect(normalizeWorkspaceInviteCode(" demo-clinic-2026 ")).toBe(DEMO_WORKSPACE_INVITE_CODE);
-    expect(normalizeWorkspaceInviteCode(`http://localhost:3000/join/demo-clinic?code=${DEMO_WORKSPACE_INVITE_CODE}`)).toBe(DEMO_WORKSPACE_INVITE_CODE);
+    expect(normalizeWorkspaceInviteCode(" acme-clinic-2026 ")).toBe("ACME-CLINIC-2026");
+    expect(normalizeWorkspaceInviteCode("http://localhost:3000/join/acme-clinic?code=ACME-CLINIC-2026")).toBe("ACME-CLINIC-2026");
     expect(() => normalizeWorkspaceInviteCode("http://localhost:3000/join/demo-clinic")).toThrow("Enter a valid invite code or invite link.");
     expect(isWorkspaceInviteActive(activeInvite, new Date("2026-06-01T00:00:00.000Z"))).toBe(true);
     expect(isWorkspaceInviteActive({ ...activeInvite, usedAt: "2026-06-01T00:01:00.000Z" })).toBe(false);
@@ -162,7 +169,7 @@ describe("workspace foundation", () => {
   it("generates workspace slugs and centralized invite links", () => {
     expect(workspaceSlugFromName("Acme Clinic")).toBe("acme-clinic");
     expect(workspaceSlugFromName("IT")).toBe("it-workspace");
-    expect(workspaceInviteLink("demo-clinic", DEMO_WORKSPACE_INVITE_CODE)).toBe("/join/demo-clinic?code=DEMO-CLINIC-2026");
+    expect(workspaceInviteLink("acme-clinic", "ACME-CLINIC-2026")).toBe("/join/acme-clinic?code=ACME-CLINIC-2026");
     expect(getPostAuthWorkspacePath()).toBe("/onboarding");
   });
 
@@ -225,7 +232,7 @@ describe("workspace foundation", () => {
     expect(authSource).toContain("return { user, ...access };");
     // Switching a workspace runs the switch server action (not a client Link to
     // the route handler) so the cookie-driven root layout (header, sidebar, and
-    // preview indicator) refreshes; the action busts the layout cache. The
+    // demo banner) refreshes; the action busts the layout cache. The
     // /w/[slug] overview (Manage) is reached from the "Currently open" hub card.
     expect(workspaceOpenLinkSource).toContain("OpenWorkspaceButton");
     expect(openWorkspaceButtonSource).toContain("action={switchActiveWorkspaceAction}");
@@ -239,7 +246,7 @@ describe("workspace foundation", () => {
   });
 
   it("keeps the active workspace visible in the shell and workspace dashboard", () => {
-    expect(appLayoutSource).toContain("Current ${activeWorkspace.isPreview ? \"preview \" : \"\"}workspace: ${activeWorkspace.name}");
+    expect(appLayoutSource).toContain("Current workspace: ${activeWorkspace.name}");
     expect(appLayoutSource).toContain('{activeWorkspace?.name ?? "Choose workspace"}');
     expect(appLayoutSource).toContain('href="/onboarding"');
     expect(workspaceDashboardSource).toContain("Currently open");
@@ -251,7 +258,7 @@ describe("workspace foundation", () => {
   it("shows workspace access policy without exposing seed configuration and keeps amber light-mode states readable", () => {
     expect(settingsSource).toContain("Invite only");
     expect(settingsSource).toContain("From invite");
-    expect(settingsSource).toContain('isPreview ? "Locked in preview" : membership.role === "owner" ? "Requester or admin" : "Requester only"');
+    expect(settingsSource).toContain('membership.role === "owner" ? "Requester or admin" : "Requester only"');
     expect(settingsSource).not.toContain("Signup default role");
     expect(settingsSource).not.toContain("Seed owner email");
     expect(settingsSource).not.toContain("getSeedAdminEmail");

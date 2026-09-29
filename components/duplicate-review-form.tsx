@@ -12,12 +12,11 @@ const initialState: ActionState = {};
 type DuplicateReviewFormProps = {
   requestId: string;
   tickets: TicketRecord[];
-  isPreview: boolean;
   approveFormId: string;
   workspaceSlug?: string;
 };
 
-export function DuplicateReviewForm({ requestId, tickets, isPreview, approveFormId, workspaceSlug }: DuplicateReviewFormProps) {
+export function DuplicateReviewForm({ requestId, tickets, approveFormId, workspaceSlug }: DuplicateReviewFormProps) {
   const [dupState, markDuplicate] = useActionState(markDuplicateAction, initialState);
   const [query, setQuery] = useState("");
   const [createPending, setCreatePending] = useState(false);
@@ -49,7 +48,7 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search tickets by ID, title, location, or department"
-              disabled={isPreview || tickets.length === 0}
+              disabled={tickets.length === 0}
               className="input pl-9 disabled:cursor-not-allowed"
             />
           </div>
@@ -62,9 +61,8 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
                 <button
                   key={ticket.id}
                   type="button"
-                  disabled={isPreview}
                   onClick={() => setSelectedTicketId(ticket.id)}
-                  className={`w-full p-4 text-left hover:bg-surface-hover transition-colors disabled:cursor-not-allowed ${selectedTicketId === ticket.id ? "bg-accent-soft" : ""}`}
+                  className={`w-full p-4 text-left hover:bg-surface-hover transition-colors ${selectedTicketId === ticket.id ? "bg-accent-soft" : ""}`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm font-medium text-fg truncate">{ticket.title}</span>
@@ -109,7 +107,7 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
           <input type="hidden" name="duplicateOfTicketId" value={selectedTicketId} />
           <SubmitButton
             pendingText="Marking duplicate..."
-            disabled={isPreview || !selectedTicketId}
+            disabled={!selectedTicketId}
             className="btn--neutral btn--block"
           >
             <Copy size={16} /> Mark as duplicate
@@ -118,7 +116,7 @@ export function DuplicateReviewForm({ requestId, tickets, isPreview, approveForm
         <button
           type="submit"
           form={approveFormId}
-          disabled={isPreview || createPending}
+          disabled={createPending}
           onClick={() => setCreatePending(true)}
           className="btn btn--primary sm:flex-1"
         >

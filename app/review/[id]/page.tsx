@@ -10,7 +10,6 @@ import { formatDateTime, relativeTime } from "@/lib/format";
 import type { RequestStatus } from "@/lib/schema";
 import { getRequestBundle, listDepartments } from "@/lib/store";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
-import { isWorkspacePreview } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +38,6 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
   const { id } = await params;
   const bundle = await getRequestBundle(id, undefined, workspace.id);
   const departments = await listDepartments(workspace.id);
-  const isPreview = isWorkspacePreview(workspace.id);
 
   if (!bundle) {
     notFound();
@@ -142,7 +140,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
 
         {/* RIGHT: triage output + decision */}
         <div className="col-span-1 md:col-span-2">
-          <ReviewDecisionForm formId={approveFormId} isPreview={isPreview} decided={decided}>
+          <ReviewDecisionForm formId={approveFormId} decided={decided}>
             {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
             <input type="hidden" name="requestId" value={request.id} />
 

@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { Check, Link2, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
+import { Check, ShieldCheck, UserMinus, UserPlus } from "lucide-react";
 import { removeWorkspaceMemberAction, updateUserRoleAction } from "@/app/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { SubmitButton } from "@/components/submit-button";
 import { isDemoUser, requireWorkspaceAdminContext } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import type { AppUser, WorkspaceMemberSummary } from "@/lib/schema";
-import { listWorkspaceMembers, canRemoveWorkspaceMember, isWorkspaceAdmin, isWorkspacePreview, MAX_WORKSPACE_MEMBERS } from "@/lib/workspaces";
+import { listWorkspaceMembers, canRemoveWorkspaceMember, isWorkspaceAdmin, MAX_WORKSPACE_MEMBERS } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -55,36 +54,13 @@ function Policy({ role, points }: { role: string; points: string[] }) {
   );
 }
 
-// The demo workspace is a shared read-only preview, so it must never expose the
-// real people who happen to be poking at it. Show the visitor as the owner and
-// pad the roster with a fixed, obviously-sample cast. All actions stay disabled.
-function previewMembers(workspaceId: string, currentUser: AppUser): WorkspaceMemberSummary[] {
-  const base = { workspaceId, createdAt: "2026-01-06T09:00:00.000Z" };
-  return [
-    {
-      ...base,
-      id: "preview-owner",
-      userId: currentUser.id,
-      role: "owner",
-      email: currentUser.email,
-      displayName: currentUser.displayName || currentUser.email.split("@")[0],
-    },
-    { ...base, id: "preview-admin", userId: "preview-admin", role: "admin", email: "avery.stone@demo-clinic.example", displayName: "Avery Stone", createdAt: "2026-01-07T09:00:00.000Z" },
-    { ...base, id: "preview-req-1", userId: "preview-req-1", role: "requester", email: "jordan.lee@demo-clinic.example", displayName: "Jordan Lee", createdAt: "2026-01-08T09:00:00.000Z" },
-    { ...base, id: "preview-req-2", userId: "preview-req-2", role: "requester", email: "morgan.diaz@demo-clinic.example", displayName: "Morgan Diaz", createdAt: "2026-01-09T09:00:00.000Z" },
-    { ...base, id: "preview-req-3", userId: "preview-req-3", role: "requester", email: "sam.rivera@demo-clinic.example", displayName: "Sam Rivera", createdAt: "2026-01-10T09:00:00.000Z" },
-  ];
-}
-
 export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string } = {}) {
   const { user: currentUser, workspace, membership } = await requireWorkspaceAdminContext(workspaceSlug);
-  const isPreview = isWorkspacePreview(workspace.id);
-  const users = isPreview ? previewMembers(workspace.id, currentUser) : await listWorkspaceMembers(workspace.id, currentUser.id);
-  const canEditRoles = !isPreview && membership.role === "owner";
+  const users = await listWorkspaceMembers(workspace.id, currentUser.id);
+  const canEditRoles = membership.role === "owner";
   // Same gate the workspace page puts on invite management, so the button never
-  // sends anyone to a page where the invite controls are hidden. A preview
-  // workspace lets requesters in here, so the role check is not redundant.
-  const canManageInvites = !isPreview && !isDemoUser(currentUser) && isWorkspaceAdmin(membership.role);
+  // sends anyone to a page where the invite controls are hidden.
+  const canManageInvites = !isDemoUser(currentUser) && isWorkspaceAdmin(membership.role);
 
   return (
     <div className="mx-auto w-full max-w-[1120px] space-y-5">
@@ -95,9 +71,7 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
             People in {workspace.name}
           </h1>
           <p className="page-sub">
-            {isPreview
-              ? `${users.length} member${users.length === 1 ? "" : "s"}. Owners manage roles; admins can remove requesters.`
-              : `${users.length} / ${MAX_WORKSPACE_MEMBERS} members. Owners manage roles; admins can remove requesters.`}
+            {`${users.length} / ${MAX_WORKSPACE_MEMBERS} members. Owners manage roles; admins can remove requesters.`}
           </p>
         </div>
         {canManageInvites ? (
@@ -106,12 +80,6 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
           </Link>
         ) : null}
       </div>
-
-      {isPreview ? (
-        <div className="banner">
-          <Link2 size={16} /> This is a read-only preview. Sample members are shown and management actions are disabled.
-        </div>
-      ) : null}
 
       <div className="split">
         <div className="card list">
@@ -128,7 +96,7 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
               const isSelf = user.userId === currentUser.id;
               const isOwner = user.role === "owner";
               const roleLocked = !canEditRoles || isSelf || isOwner;
-              const canRemove = !isPreview && !isSelf && canRemoveWorkspaceMember(membership.role, user.role);
+              const canRemove = !isSelf && canRemoveWorkspaceMember(membership.role, user.role);
               return (
                 <div key={user.id} className="row-link" style={{ cursor: "default" }}>
                   <div className="between wrap" style={{ gap: 12 }}>

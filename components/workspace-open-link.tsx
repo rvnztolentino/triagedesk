@@ -12,13 +12,11 @@ export function WorkspaceOpenLink({
   slug,
   role,
   isActive,
-  isPreview,
 }: {
   name: string;
   slug: string;
   role: string;
   isActive: boolean;
-  isPreview: boolean;
 }) {
   return (
     <div className="card card-pad card-hover">
@@ -30,11 +28,6 @@ export function WorkspaceOpenLink({
           <div style={{ minWidth: 0 }}>
             <div className="cluster wrap" style={{ gap: 8 }}>
               <span style={{ fontWeight: 650 }}>{name}</span>
-              {isPreview ? (
-                <span className="badge" data-hue="warn">
-                  Preview
-                </span>
-              ) : null}
               {isActive ? (
                 <span className="badge" data-hue="accent">
                   Active
@@ -44,7 +37,7 @@ export function WorkspaceOpenLink({
             {/* A demo slug is a 32-character hex id with nothing to break on, so it
                 wraps to the next line rather than pushing the card off a phone. */}
             <div className="muted mono" style={{ fontSize: 12.5, marginTop: 2, overflowWrap: "anywhere" }}>
-              {isPreview ? slug : `${slug} · ${role}`}
+              {`${slug} · ${role}`}
             </div>
           </div>
         </div>

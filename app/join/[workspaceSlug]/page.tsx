@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { ArrowUpRight, Link2, LockKeyhole, LogIn } from "lucide-react";
+import { ArrowUpRight, Link2, LogIn } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { joinWorkspaceAction } from "@/app/actions";
 import { OpenWorkspaceButton } from "@/components/open-workspace-button";
 import { SubmitButton } from "@/components/submit-button";
 import { getCurrentUser, isDemoUser } from "@/lib/auth";
 import { workspaceSlugSchema } from "@/lib/schema";
-import { getWorkspaceBySlug, getWorkspaceInviteByCode, getWorkspaceMembership, isWorkspaceInviteActive, isWorkspacePreview } from "@/lib/workspaces";
+import { getWorkspaceBySlug, getWorkspaceInviteByCode, getWorkspaceMembership, isWorkspaceInviteActive } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +54,6 @@ export default async function JoinWorkspacePage({
 
   const invite = workspace && code ? await getWorkspaceInviteByCode(workspace.id, code).catch(() => undefined) : undefined;
   const inviteActive = Boolean(invite && isWorkspaceInviteActive(invite));
-  const isPreview = workspace ? isWorkspacePreview(workspace.id) : false;
   const error = query.error || (!workspace || !code || !inviteActive ? "This workspace invite is invalid or expired." : "");
 
   return (
@@ -65,13 +64,6 @@ export default async function JoinWorkspacePage({
         </div>
         <h1 className="text-2xl font-semibold text-fg">Join {workspace?.name || "workspace"}</h1>
         <p className="text-sm text-muted mt-2">Membership requires an active invite code that matches this workspace.</p>
-
-        {isPreview ? (
-          <div className="st-warn mt-6 rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
-            <LockKeyhole size={15} className="mt-0.5 shrink-0" />
-            <p><span className="font-semibold">Read-only preview.</span> Join to explore Demo Clinic&apos;s sample workflow. Creating, reviewing, and updating records stays locked.</p>
-          </div>
-        ) : null}
 
         {error ? (
           <div className="st-danger mt-6 rounded-[var(--radius-control)] border px-4 py-3 text-sm">{error}</div>

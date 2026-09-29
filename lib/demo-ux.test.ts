@@ -216,8 +216,8 @@ describe("blocked-action affordances", () => {
   // Every one of these is already refused server-side and again in the database. The
   // UI change is about not rendering controls that are guaranteed to fail.
   it("hides invite management and the danger zone from a demo owner", () => {
-    expect(manageWorkspaceSource).toContain("const canManageInvites = !isPreview && !isDemo && isWorkspaceAdmin(membership.role);");
-    expect(manageWorkspaceSource).toContain('membership.role === "owner" && !isPreview && !isDemo ?');
+    expect(manageWorkspaceSource).toContain("const canManageInvites = !isDemo && isWorkspaceAdmin(membership.role);");
+    expect(manageWorkspaceSource).toContain('membership.role === "owner" && !isDemo ?');
   });
 
   it("replaces the create and join forms on the workspace hub for demo visitors", () => {

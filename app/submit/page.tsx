@@ -4,19 +4,17 @@ import { SubmitRequestForm } from "@/components/submit-request-form";
 import { isDemoUser, requireWorkspaceContext } from "@/lib/auth";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
-import { isWorkspacePreview } from "@/lib/workspaces";
 
 export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: string } = {}) {
-  const { user, workspace } = await requireWorkspaceContext(workspaceSlug);
+  const { user } = await requireWorkspaceContext(workspaceSlug);
   const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
-  const isPreview = isWorkspacePreview(workspace.id);
   // Storage is closed to demo sessions in both directions, so the picker stays hidden
   // rather than failing on submit. submitRequestAction is still the boundary.
   const allowAttachments = !isDemoUser(user);
   const setup = getRuntimeSetupStatus();
   const isSetupRequired = setup.missing.length > 0;
 
-  if (isSetupRequired && !isPreview) {
+  if (isSetupRequired) {
     return (
       <div className="max-w-2xl mx-auto w-full">
         <div className="bg-surface rounded-[var(--radius-card)] p-8 md:p-10 border border-[var(--st-warn)]/40">
@@ -57,7 +55,6 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
       <div className="card card-pad" style={{ padding: 24 }}>
         <SubmitRequestForm
           workspaceSlug={workspaceSlug}
-          isPreview={isPreview}
           allowAttachments={allowAttachments}
           ticketsHref={href("/tickets")}
         />

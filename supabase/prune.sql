@@ -15,7 +15,7 @@
 -- select 'orphaned_workspaces' as target, count(*) as rows
 --   from workspaces w
 --   where not exists (select 1 from workspace_members m where m.workspace_id = w.id)
---     and w.id <> '00000000-0000-4000-8000-000000000001'  -- keep the Demo workspace
+--     and w.id <> '00000000-0000-4000-8000-000000000001'  -- keep the Demo Clinic template
 -- union all
 -- select 'stale_read_notifications', count(*)
 --   from notifications
@@ -26,7 +26,6 @@
 --   where (used_at is not null or revoked_at is not null
 --          or (expires_at is not null and expires_at < now()))
 --     and created_at < now() - interval '30 days'
---     and code <> 'DEMO-CLINIC-2026'  -- keep the seeded demo invite
 -- union all
 -- select 'stale_rate_limits', count(*)
 --   from security_rate_limits
@@ -42,7 +41,7 @@
 -- clears storage. Verify request_attachments = 0 before relying on this in bulk.
 delete from workspaces w
 where not exists (select 1 from workspace_members m where m.workspace_id = w.id)
-  and w.id <> '00000000-0000-4000-8000-000000000001'  -- keep the Demo workspace
+  and w.id <> '00000000-0000-4000-8000-000000000001'  -- keep the Demo Clinic template
   and not exists (select 1 from request_attachments a where a.workspace_id = w.id);
 
 -- ── 2. Stale read notifications (older than 90 days, already read) ───────────
@@ -60,8 +59,7 @@ where (
     or revoked_at is not null
     or (expires_at is not null and expires_at < now())
   )
-  and created_at < now() - interval '30 days'
-  and code <> 'DEMO-CLINIC-2026';  -- keep the seeded demo invite
+  and created_at < now() - interval '30 days';
 
 -- ── 4. Stale rate-limit rows (older than 7 days) ────────────────────────────
 -- The check_rate_limit RPC already GC's these on every call; this is only a

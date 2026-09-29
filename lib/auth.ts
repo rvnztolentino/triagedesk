@@ -10,7 +10,7 @@ import { PublicError } from "@/lib/errors";
 import { assertCleanDisplayName, addMonths, nameChangeStatus, NAME_CHANGE_WINDOW_MONTHS } from "@/lib/display-name";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { getDemoUser, hasDemoSessionCookie } from "@/lib/demo";
-import { countOwnedWorkspaces, getPostAuthWorkspacePath, isWorkspaceAdmin, isWorkspacePreview, requireWorkspaceMembership } from "@/lib/workspaces";
+import { countOwnedWorkspaces, getPostAuthWorkspacePath, isWorkspaceAdmin, requireWorkspaceMembership } from "@/lib/workspaces";
 
 // Keep app-owned cookies (active workspace) for a week. Clerk manages the auth
 // session cookie itself; this app no longer hand-rolls access/refresh tokens.
@@ -483,13 +483,13 @@ export async function requireOperationalWorkspaceUser() {
 
 export async function requireAdmin() {
   const access = await requireOperationalWorkspace();
-  if (!isWorkspaceAdmin(access.membership.role) && !isWorkspacePreview(access.workspace.id)) redirect("/tickets");
+  if (!isWorkspaceAdmin(access.membership.role)) redirect("/tickets");
   return access;
 }
 
 export async function requireWorkspaceAdminContext(workspaceSlug?: string) {
   const access = await requireWorkspaceContext(workspaceSlug);
-  if (!isWorkspaceAdmin(access.membership.role) && !isWorkspacePreview(access.workspace.id)) {
+  if (!isWorkspaceAdmin(access.membership.role)) {
     redirect(scopedWorkspaceHref(workspaceSlug, "/tickets"));
   }
   return access;
@@ -497,13 +497,13 @@ export async function requireWorkspaceAdminContext(workspaceSlug?: string) {
 
 export async function requireOwner() {
   const access = await requireOperationalWorkspace();
-  if (access.membership.role !== "owner" || isWorkspacePreview(access.workspace.id)) redirect("/tickets");
+  if (access.membership.role !== "owner") redirect("/tickets");
   return access;
 }
 
 export async function requireWorkspaceOwnerContext(workspaceSlug?: string) {
   const access = await requireWorkspaceContext(workspaceSlug);
-  if (access.membership.role !== "owner" || isWorkspacePreview(access.workspace.id)) {
+  if (access.membership.role !== "owner") {
     redirect(scopedWorkspaceHref(workspaceSlug, "/tickets"));
   }
   return access;

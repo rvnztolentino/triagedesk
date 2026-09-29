@@ -46,21 +46,18 @@ export const MAX_ACTIVE_WORKSPACE_INVITES = 5;
 // departments on top of them. Bounds department-row growth per workspace.
 export const MAX_CUSTOM_WORKSPACE_DEPARTMENTS = 10;
 
+// Demo Clinic is not a real workspace. It is the seed template that the
+// create_demo_workspace RPC clones for every live-demo visitor, so nobody can join
+// it or open it, and writes to it are refused so the seed never drifts.
 export const DEMO_WORKSPACE_ID = "00000000-0000-4000-8000-000000000001";
 export const DEMO_WORKSPACE_SLUG = "demo-clinic";
-export const DEMO_WORKSPACE_INVITE_CODE = "DEMO-CLINIC-2026";
-export const DEMO_PREVIEW_LOCK_MESSAGE = "Demo Clinic is a read-only preview workspace. Create your own workspace to use actions.";
 
 type SupabaseRow = Record<string, unknown>;
 type WorkspaceAccess = { workspace: WorkspaceRecord; membership: WorkspaceMemberRecord };
 
-export function isWorkspacePreview(workspaceId: string) {
-  return workspaceId === DEMO_WORKSPACE_ID;
-}
-
 export function assertWorkspaceMutable(workspaceId: string) {
-  if (isWorkspacePreview(workspaceId)) {
-    throw new Error(DEMO_PREVIEW_LOCK_MESSAGE);
+  if (workspaceId === DEMO_WORKSPACE_ID) {
+    throw new Error("The Demo Clinic template workspace cannot be changed.");
   }
 }
 
@@ -141,6 +138,7 @@ export async function getWorkspaceById(workspaceId: string) {
 }
 
 export async function getWorkspaceBySlug(workspaceSlug: string) {
+  if (workspaceSlug === DEMO_WORKSPACE_SLUG) return undefined;
   const client = requireSupabaseAdminClient();
   const { data, error } = await client.from("workspaces").select("*").eq("slug", workspaceSlug).maybeSingle();
   if (error) throw new Error(`Get workspace failed: ${error.message}`);
@@ -153,6 +151,7 @@ export async function listUserWorkspaces(userId: string) {
     .from("workspace_members")
     .select("*, workspaces(*)")
     .eq("user_id", userId)
+    .neq("workspace_id", DEMO_WORKSPACE_ID)
     .order("created_at", { ascending: true });
   if (error) throw new Error(`List user workspaces failed: ${error.message}`);
 
@@ -206,6 +205,7 @@ export async function countActiveWorkspaceInvites(workspaceId: string) {
 }
 
 export async function getWorkspaceMembership(workspaceId: string, userId: string) {
+  if (workspaceId === DEMO_WORKSPACE_ID) return undefined;
   const client = requireSupabaseAdminClient();
   const { data, error } = await client
     .from("workspace_members")
@@ -363,6 +363,9 @@ export async function joinWorkspaceWithInvite(workspaceSlug: string, code: strin
   const client = requireSupabaseAdminClient();
   const input = workspaceJoinSchema.parse({ workspaceSlug, code });
   const normalizedCode = normalizeWorkspaceInviteCode(input.code);
+  if (input.workspaceSlug === DEMO_WORKSPACE_SLUG) {
+    throw new PublicError("That invite code doesn't exist or has expired.");
+  }
   const { data, error } = await client.rpc("join_workspace_by_invite", {
     target_workspace_slug: input.workspaceSlug,
     target_invite_code: normalizedCode,
@@ -675,6 +678,7 @@ export function workspaceInviteLink(workspaceSlug: string, code: string) {
 // isn't a member of that slug, so a missing row means "no access". Cached per
 // request so the layout and the page share one resolution for the same args.
 export const requireWorkspaceMembership = cache(async (workspaceSlug: string, userId: string): Promise<WorkspaceAccess> => {
+  if (workspaceSlug === DEMO_WORKSPACE_SLUG) throw new Error("Workspace access is required.");
   const client = requireSupabaseAdminClient();
   const { data, error } = await client
     .from("workspace_members")

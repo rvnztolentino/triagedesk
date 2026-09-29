@@ -9,7 +9,7 @@ import { isDemoUser, requireUser } from "@/lib/auth";
 import { DEMO_SIGNUP_HREF } from "@/lib/demo-ui";
 import { formatDate } from "@/lib/format";
 import { workspaceSlugSchema } from "@/lib/schema";
-import { canManageWorkspaceInvite, countWorkspaceMembers, getWorkspaceBySlug, getWorkspaceMembership, isWorkspaceAdmin, isWorkspaceInviteActive, isWorkspacePreview, listWorkspaceInvites, MAX_ACTIVE_WORKSPACE_INVITES, MAX_WORKSPACE_MEMBERS, workspaceInviteLink } from "@/lib/workspaces";
+import { canManageWorkspaceInvite, countWorkspaceMembers, getWorkspaceBySlug, getWorkspaceMembership, isWorkspaceAdmin, isWorkspaceInviteActive, listWorkspaceInvites, MAX_ACTIVE_WORKSPACE_INVITES, MAX_WORKSPACE_MEMBERS, workspaceInviteLink } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -48,13 +48,12 @@ export default async function WorkspaceLandingPage({
   if (!membership) redirect("/onboarding");
 
   const query = await searchParams;
-  const isPreview = isWorkspacePreview(workspace.id);
   // A demo visitor owns this workspace, so the role checks below would happily show
   // them invite management and the danger zone. Every one of those actions is refused
   // server-side and again in the database; showing the controls anyway would just be
   // a set of buttons that fail.
   const isDemo = isDemoUser(user);
-  const canManageInvites = !isPreview && !isDemo && isWorkspaceAdmin(membership.role);
+  const canManageInvites = !isDemo && isWorkspaceAdmin(membership.role);
   const invites = canManageInvites ? await listWorkspaceInvites(workspace.id, user.id) : [];
   const memberCount = canManageInvites ? await countWorkspaceMembers(workspace.id) : 0;
   const activeInviteCount = invites.filter((invite) => isWorkspaceInviteActive(invite)).length;
@@ -84,12 +83,6 @@ export default async function WorkspaceLandingPage({
       {query.error ? (
         <div className="st-danger rounded-[var(--radius-card)] border px-4 py-3 text-sm" style={{ marginBottom: 18 }}>
           {query.error}
-        </div>
-      ) : null}
-
-      {isPreview ? (
-        <div className="banner" style={{ marginBottom: 18 }}>
-          <Link2 size={16} /> This is a read-only preview. Sharing and deletion are disabled.
         </div>
       ) : null}
 
@@ -217,11 +210,9 @@ export default async function WorkspaceLandingPage({
             <div className="card card-pad">
               <div className="section-title">Workspace access</div>
               <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
-                {isPreview
-                  ? "Demo Clinic is a read-only preview. Create your own workspace to invite members and use workspace management actions."
-                  : isDemo
-                    ? "Demo workspaces are yours alone. Inviting people and deleting the workspace need a free account. Signing up starts you a workspace of your own; this one stays a demo and expires on its own."
-                    : "Requesters can submit requests and view their own tickets. Workspace invite sharing is available to admins and owners."}
+                {isDemo
+                  ? "Demo workspaces are yours alone. Inviting people and deleting the workspace need a free account. Signing up starts you a workspace of your own; this one stays a demo and expires on its own."
+                  : "Requesters can submit requests and view their own tickets. Workspace invite sharing is available to admins and owners."}
               </p>
               {isDemo ? (
                 <Link href={DEMO_SIGNUP_HREF} className="btn btn--primary btn--sm" style={{ marginTop: 14, width: "fit-content" }}>
@@ -259,7 +250,7 @@ export default async function WorkspaceLandingPage({
             ) : null}
           </div>
 
-          {membership.role === "owner" && !isPreview && !isDemo ? (
+          {membership.role === "owner" && !isDemo ? (
             <div className="card card-pad" style={{ borderColor: "color-mix(in srgb, var(--danger) 30%, var(--border))" }}>
               <div className="cluster" style={{ gap: 8, marginBottom: 8 }}>
                 <AlertTriangle size={16} style={{ color: "var(--danger)" }} />

@@ -51,7 +51,6 @@ import {
   assertWorkspaceMutable,
   getPostAuthWorkspacePath,
   isWorkspaceAdmin,
-  isWorkspacePreview,
   joinWorkspaceWithInvite,
   joinWorkspaceWithInviteCode,
   leaveWorkspace,
@@ -187,7 +186,7 @@ async function requireActionWorkspace(formData: FormData) {
 
 async function requireActionAdmin(formData: FormData) {
   const context = await requireActionWorkspace(formData);
-  if (!isWorkspaceAdmin(context.access.membership.role) && !isWorkspacePreview(context.access.workspace.id)) {
+  if (!isWorkspaceAdmin(context.access.membership.role)) {
     redirect(scopedWorkspaceHref(context.workspaceSlug, "/tickets"));
   }
   return context;
@@ -195,7 +194,7 @@ async function requireActionAdmin(formData: FormData) {
 
 async function requireActionOwner(formData?: FormData) {
   const context = formData ? await requireActionWorkspace(formData) : { access: await requireOwner(), workspaceSlug: undefined };
-  if (context.access.membership.role !== "owner" || isWorkspacePreview(context.access.workspace.id)) {
+  if (context.access.membership.role !== "owner") {
     redirect(scopedWorkspaceHref(context.workspaceSlug, "/tickets"));
   }
   return context;
@@ -562,8 +561,8 @@ export async function markNotificationsReadAction() {
 
 // Backs the global search palette. Read-only, so there is no demo budget, but each
 // keystroke (debounced client-side) is a query, so it is still rate limited. Scoped
-// to the active workspace, and to the caller's own tickets unless they administer it
-// or are in the read-only preview, matching what the tickets page shows them.
+// to the active workspace, and to the caller's own tickets unless they administer it,
+// matching what the tickets page shows them.
 export async function searchWorkspaceAction(input: string): Promise<{ tickets: GlobalSearchTicket[]; error?: string }> {
   try {
     await requireTrustedActionRequest();
@@ -579,7 +578,7 @@ export async function searchWorkspaceAction(input: string): Promise<{ tickets: G
       message: "Searching too quickly. Wait a moment and try again.",
     });
     const term = globalSearchQuerySchema.parse(input);
-    const seesAll = isWorkspaceAdmin(access.membership.role) || isWorkspacePreview(access.workspace.id);
+    const seesAll = isWorkspaceAdmin(access.membership.role);
     return { tickets: await searchTickets(term, seesAll ? undefined : user.id, access.workspace.id) };
   } catch (error) {
     if (!(error instanceof ZodError) && !(error instanceof RateLimitError)) {
@@ -973,7 +972,7 @@ function safeWorkspaceReturnPath(next: string, workspaceSlug: string) {
 // switch prompt (deep-link gate, join "already belong", onboarding hub).
 //
 // It MUST redirect: the active workspace lives in a cookie the root layout reads
-// for the header, sidebar, and preview banner. A client-side revalidate alone
+// for the header, sidebar, and demo banner. A client-side revalidate alone
 // leaves that shared layout rendered from the old cookie until a manual refresh;
 // a navigation is what reliably re-renders it. When the user deep-linked into a
 // page of the target workspace we return there, otherwise its dashboard/tickets.
@@ -986,7 +985,7 @@ export async function switchActiveWorkspaceAction(formData: FormData) {
   revalidatePath("/", "layout");
   revalidatePath("/onboarding");
   const landing =
-    isWorkspacePreview(access.workspace.id) || access.membership.role !== "requester"
+    access.membership.role !== "requester"
       ? scopedWorkspaceHref(workspaceSlug, "/")
       : scopedWorkspaceHref(workspaceSlug, "/tickets");
   redirect(safeWorkspaceReturnPath(formText(formData, "next"), workspaceSlug) ?? landing);

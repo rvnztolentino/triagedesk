@@ -5,14 +5,13 @@ import { requireWorkspaceContext } from "@/lib/auth";
 import { listDepartments } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
 import { defaultDepartmentIds } from "@/lib/schema";
-import { isWorkspacePreview, MAX_CUSTOM_WORKSPACE_DEPARTMENTS } from "@/lib/workspaces";
+import { MAX_CUSTOM_WORKSPACE_DEPARTMENTS } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
 export async function SettingsPageView({ searchParams, workspaceSlug }: { searchParams: Promise<{ error?: string }>; workspaceSlug?: string }) {
   const { membership, workspace } = await requireWorkspaceContext(workspaceSlug);
-  const isPreview = isWorkspacePreview(workspace.id);
-  const isAdmin = isPreview || membership.role === "admin" || membership.role === "owner";
+  const isAdmin = membership.role === "admin" || membership.role === "owner";
   const params = await searchParams;
 
   if (!isAdmin) {
@@ -55,7 +54,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
   const policies = [
     { label: "Workspace entry", value: "Invite only" },
     { label: "Assigned role", value: "From invite" },
-    { label: "Invite creation", value: isPreview ? "Locked in preview" : membership.role === "owner" ? "Requester or admin" : "Requester only" },
+    { label: "Invite creation", value: membership.role === "owner" ? "Requester or admin" : "Requester only" },
   ];
 
   return (
@@ -122,13 +121,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
               <span className="badge" data-hue={departmentsAtLimit ? "danger" : "neutral"}>
                 {customDepartmentCount} / {MAX_CUSTOM_WORKSPACE_DEPARTMENTS} custom
               </span>
-              {!isPreview ? (
-                <AddDepartmentPopover workspaceSlug={workspaceSlug} disabled={departmentsAtLimit} />
-              ) : (
-                <span className="badge" data-hue="warn">
-                  <Lock size={11} /> Locked
-                </span>
-              )}
+              <AddDepartmentPopover workspaceSlug={workspaceSlug} disabled={departmentsAtLimit} />
             </div>
           </div>
           <div className="list">
@@ -155,7 +148,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
                         </div>
                       ) : null}
                     </div>
-                    {!isPreview && !isDefault ? (
+                    {!isDefault ? (
                       <form action={deleteWorkspaceDepartmentAction}>
                         {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
                         <input type="hidden" name="id" value={department.id} />
@@ -170,13 +163,6 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
             })}
           </div>
 
-          {isPreview ? (
-            <div className="card-pad" style={{ borderTop: "1px solid var(--border)" }}>
-              <div className="banner">
-                <Lock size={15} /> Departments can&apos;t be changed in the read-only preview.
-              </div>
-            </div>
-          ) : null}
         </div>
         </div>
       </div>

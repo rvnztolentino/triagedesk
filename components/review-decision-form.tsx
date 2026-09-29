@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { AlertTriangle, Check, LockKeyhole, X } from "lucide-react";
+import { AlertTriangle, Check, X } from "lucide-react";
 import { approveRequestAction, rejectRequestAction } from "@/app/actions";
 import { CharLimitedTextarea } from "@/components/char-limited-textarea";
 import { SubmitButton } from "@/components/submit-button";
@@ -11,12 +11,10 @@ const initialState: ActionState = {};
 
 export function ReviewDecisionForm({
   formId,
-  isPreview,
   decided,
   children,
 }: {
   formId: string;
-  isPreview: boolean;
   decided: boolean;
   children: React.ReactNode;
 }) {
@@ -29,18 +27,12 @@ export function ReviewDecisionForm({
 
   return (
     <form id={formId} action={approveAction} className="stack" style={{ gap: 16 }}>
-      <fieldset disabled={isPreview || decided} className="stack disabled:opacity-60" style={{ gap: 16 }}>
+      <fieldset disabled={decided} className="stack disabled:opacity-60" style={{ gap: 16 }}>
         {children}
 
         <div className="card card-pad">
           <div className="section-title" style={{ marginBottom: 14 }}>Decision</div>
 
-          {isPreview ? (
-            <div className="banner" style={{ marginBottom: 14 }}>
-              <LockKeyhole size={15} className="shrink-0" />
-              <span><span className="font-semibold">Preview locked.</span> Review fields are visible for evaluation, but approval actions are disabled.</span>
-            </div>
-          ) : null}
           {error ? (
             <div role="alert" className="st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2" style={{ marginBottom: 14 }}>
               <AlertTriangle size={15} className="mt-0.5 shrink-0" />
@@ -63,10 +55,9 @@ export function ReviewDecisionForm({
 
           <div className="cluster" style={{ gap: 10, justifyContent: "space-between" }}>
             <SubmitButton pending={approvePending} pendingText="Approving..." className="btn--sm w-auto">
-              {isPreview ? <><LockKeyhole size={15} /> Preview locked</> : <><Check size={15} /> Approve</>}
+              <Check size={15} /> Approve
             </SubmitButton>
             <SubmitButton
-              disabled={isPreview}
               formAction={rejectAction}
               pending={rejectPending}
               pendingText="Rejecting..."

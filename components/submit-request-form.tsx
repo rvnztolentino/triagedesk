@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
-import { AlertTriangle, LockKeyhole, MapPin, Sparkles, User } from "lucide-react";
+import { AlertTriangle, MapPin, Sparkles, User } from "lucide-react";
 import { submitRequestAction } from "@/app/actions";
 import { AiTriageLoading } from "@/components/ai-triage-loading";
 import { CharCounter } from "@/components/char-limited-textarea";
@@ -23,13 +23,11 @@ const SAMPLES = [
 // While the request is submitting, step the form aside and show the dedicated
 // triaging screen in its place (no blur over the form).
 function FormBody({
-  isPreview,
   allowAttachments,
   ticketsHref,
   description,
   setDescription,
 }: {
-  isPreview: boolean;
   allowAttachments: boolean;
   ticketsHref: string;
   description: string;
@@ -40,7 +38,7 @@ function FormBody({
   if (pending) return <AiTriageLoading />;
 
   return (
-    <fieldset disabled={isPreview} className="space-y-6 disabled:opacity-60">
+    <fieldset className="space-y-6">
       <div className="field">
         <label htmlFor="description" className="label">
           Description <span style={{ color: "var(--danger)" }} aria-hidden="true">*</span>
@@ -109,7 +107,7 @@ function FormBody({
       <div className="pt-5 border-t border-border flex items-center justify-between">
         <Link href={ticketsHref} className="btn btn--ghost btn--sm">Cancel</Link>
         <SubmitButton pendingText="Triaging..." className="btn--sm w-auto">
-          {isPreview ? <><LockKeyhole size={15} /> Preview locked</> : <><Sparkles size={15} /> Submit &amp; triage</>}
+          <Sparkles size={15} /> Submit &amp; triage
         </SubmitButton>
       </div>
     </fieldset>
@@ -118,12 +116,10 @@ function FormBody({
 
 export function SubmitRequestForm({
   workspaceSlug,
-  isPreview,
   allowAttachments,
   ticketsHref,
 }: {
   workspaceSlug?: string;
-  isPreview: boolean;
   allowAttachments: boolean;
   ticketsHref: string;
 }) {
@@ -133,12 +129,6 @@ export function SubmitRequestForm({
   return (
     <form action={formAction} className="space-y-6">
       {workspaceSlug ? <input type="hidden" name="workspaceSlug" value={workspaceSlug} /> : null}
-      {isPreview ? (
-        <div className="st-warn rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
-          <LockKeyhole size={15} className="mt-0.5 shrink-0" />
-          <p><span className="font-semibold">Preview locked.</span> This sample form is visible for evaluation. Create your own workspace to submit a request.</p>
-        </div>
-      ) : null}
       {state.error ? (
         <div role="alert" className="st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
           <AlertTriangle size={15} className="mt-0.5 shrink-0" />
@@ -146,7 +136,6 @@ export function SubmitRequestForm({
         </div>
       ) : null}
       <FormBody
-        isPreview={isPreview}
         allowAttachments={allowAttachments}
         ticketsHref={ticketsHref}
         description={description}

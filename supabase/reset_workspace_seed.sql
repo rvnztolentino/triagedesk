@@ -6,39 +6,12 @@ on conflict (id) do update set
   name = excluded.name,
   slug = excluded.slug;
 
+-- The template is not joinable, so make sure no invite or membership points at it.
 delete from workspace_invites
-where id = '00000000-0000-4000-8000-000000000002'
-  or code = 'DEMO-SCHOOL-2026';
-
-insert into workspace_invites (
-  id,
-  workspace_id,
-  code,
-  role,
-  created_by,
-  expires_at,
-  used_at,
-  revoked_at,
-  is_reusable
-) values (
-  '00000000-0000-4000-8000-000000000002',
-  '00000000-0000-4000-8000-000000000001',
-  'DEMO-CLINIC-2026',
-  'requester',
-  null,
-  null,
-  null,
-  null,
-  true
-)
-on conflict (code) do update set
-  workspace_id = excluded.workspace_id,
-  role = excluded.role,
-  created_by = excluded.created_by,
-  expires_at = excluded.expires_at,
-  used_at = excluded.used_at,
-  revoked_at = excluded.revoked_at,
-  is_reusable = excluded.is_reusable;
+where workspace_id = '00000000-0000-4000-8000-000000000001'
+  or code in ('DEMO-CLINIC-2026', 'DEMO-SCHOOL-2026');
+delete from notifications where workspace_id = '00000000-0000-4000-8000-000000000001';
+delete from workspace_members where workspace_id = '00000000-0000-4000-8000-000000000001';
 
 alter table requests alter column workspace_id set default '00000000-0000-4000-8000-000000000001';
 alter table ai_triage_results alter column workspace_id set default '00000000-0000-4000-8000-000000000001';

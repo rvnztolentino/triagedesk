@@ -10,7 +10,6 @@ import {
   Building2,
   Inbox,
   LayoutDashboard,
-  LockKeyhole,
   LogOut,
   Menu,
   PlusCircle,
@@ -44,9 +43,6 @@ const ownerNavItems = [
 ];
 
 const adminNavItems = ownerNavItems;
-// The demo preview exposes the full owner surface (including a sample Users
-// roster); all actions on those pages are locked server-side.
-const previewNavItems = ownerNavItems;
 
 const requesterNavItems = [
   { href: "/submit", icon: PlusCircle, label: "New Request" },
@@ -81,9 +77,9 @@ function isAuthPath(path: string) {
 }
 
 // Standalone pages render without the active-workspace chrome (sidebar, header,
-// preview banner). Invite pages live at `/join` and are cross-workspace by
-// nature, so showing the currently-open workspace's chrome around them, e.g. a
-// "Preview locked" banner from demo-clinic, is misleading. `/demo/expired` is
+// demo banner). Invite pages live at `/join` and are cross-workspace by
+// nature, so showing the currently-open workspace's chrome around them is
+// misleading. `/demo/expired` is
 // reached with no resolvable user at all, so the shell would render an empty
 // sidebar around it.
 function isStandalonePath(path: string) {
@@ -122,7 +118,7 @@ export function AppLayout({
 }: {
   children: React.ReactNode;
   currentUser: AppUser | null;
-  activeWorkspace: { name: string; slug: string; role: UserRole; isPreview: boolean; isDemo?: boolean } | null;
+  activeWorkspace: { name: string; slug: string; role: UserRole; isDemo?: boolean } | null;
   demo?: { expiresAt?: string; remainingLabel?: string } | null;
   notifications?: NotificationView[];
   unreadNotifications?: number;
@@ -184,13 +180,11 @@ export function AppLayout({
   }, []);
 
   const isStandalonePage = isStandalonePath(pathname);
-  const operationalNavItems = activeWorkspace?.isPreview
-    ? previewNavItems
-    : activeWorkspace?.role === "owner"
-      ? ownerNavItems
-      : activeWorkspace?.role === "admin"
-        ? adminNavItems
-        : requesterNavItems;
+  const operationalNavItems = activeWorkspace?.role === "owner"
+    ? ownerNavItems
+    : activeWorkspace?.role === "admin"
+      ? adminNavItems
+      : requesterNavItems;
   const navItems = activeWorkspace ? [...operationalNavItems, workspaceNavItem] : [workspaceNavItem];
   const activeSlug = activeWorkspace?.slug;
   const searchPages = React.useMemo(
@@ -376,7 +370,7 @@ export function AppLayout({
               </div>
               <div className={cn("min-w-0 flex-1", collapsed && "md:hidden")}>
                 <div className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-faint leading-none">
-                  {activeWorkspace?.isPreview ? "Preview" : isDemoSession ? "Demo" : "Workspace"}
+                  {isDemoSession ? "Demo" : "Workspace"}
                 </div>
                 <div className="mt-1 truncate text-sm font-medium text-fg leading-tight transition-colors">
                   {activeWorkspace?.name ?? "Choose workspace"}
@@ -440,18 +434,7 @@ export function AppLayout({
 
         {/* Bottom section */}
         <div className={cn("mt-auto px-4 pb-5 pt-3 border-t border-border", collapsed && "md:px-2")}>
-          {activeWorkspace?.isPreview ? (
-            <div
-              className={cn(
-                "st-warn flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 mb-3",
-                collapsed && "md:justify-center md:px-0"
-              )}
-              title={collapsed ? "Preview - read-only" : undefined}
-            >
-              <LockKeyhole size={12} className="shrink-0" />
-              <span className={cn("whitespace-nowrap text-[11px] font-medium", collapsed && "md:hidden")}>Preview - read-only</span>
-            </div>
-          ) : isDemoSession ? (
+          {isDemoSession ? (
             <div
               className={cn(
                 "mb-3 flex items-center gap-2 rounded-[var(--radius-control)] border border-accent-border bg-accent-soft px-3 py-2 text-accent",
@@ -514,7 +497,7 @@ export function AppLayout({
             {currentUser ? (
               <Link
                 href="/onboarding"
-                aria-label={activeWorkspace ? `Current ${activeWorkspace.isPreview ? "preview " : ""}workspace: ${activeWorkspace.name}` : "Choose a workspace"}
+                aria-label={activeWorkspace ? `Current workspace: ${activeWorkspace.name}` : "Choose a workspace"}
                 className="hidden sm:inline-flex items-center gap-2 h-9 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-left hover:border-border-strong hover:bg-surface-hover transition-colors duration-200"
               >
                 <Building2 size={14} className={activeWorkspace ? "text-accent shrink-0" : "text-muted shrink-0"} />
@@ -576,9 +559,9 @@ export function AppLayout({
                       <div style={{ marginTop: 10 }}>
                         <span
                           className="badge"
-                          data-hue={activeWorkspace?.isPreview ? "warn" : isDemoSession ? "accent" : roleHue(activeWorkspace?.role ?? currentUser.role)}
+                          data-hue={isDemoSession ? "accent" : roleHue(activeWorkspace?.role ?? currentUser.role)}
                         >
-                          {activeWorkspace?.isPreview ? "Preview" : isDemoSession ? "Demo" : activeWorkspace?.role ?? currentUser.role}
+                          {isDemoSession ? "Demo" : activeWorkspace?.role ?? currentUser.role}
                         </span>
                       </div>
                     </div>
@@ -616,17 +599,6 @@ export function AppLayout({
           className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4 pt-20 md:px-8 md:pb-8 md:pt-24"
           aria-busy={pendingPath ? true : undefined}
         >
-          {activeWorkspace?.isPreview ? (
-            <div className="st-warn mb-6 rounded-[var(--radius-card)] border p-4">
-              <div className="flex items-start gap-2 text-sm">
-                <LockKeyhole size={15} className="mt-0.5 shrink-0" />
-                <p>
-                  <span className="font-semibold">Preview locked.</span>{" "}
-                  Demo Clinic is read-only. Explore the sample workflow, then create your own workspace to use actions.
-                </p>
-              </div>
-            </div>
-          ) : null}
           {isDemoSession ? <DemoBanner expiresAt={demo?.expiresAt} initialLabel={demo?.remainingLabel} /> : null}
           <div key={pathname} className="app-page-in">{children}</div>
         </main>

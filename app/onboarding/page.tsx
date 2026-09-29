@@ -5,7 +5,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { WorkspaceOpenLink } from "@/components/workspace-open-link";
 import { getActiveWorkspaceAccess, isDemoUser, requireUser } from "@/lib/auth";
 import { DEMO_SIGNUP_HREF } from "@/lib/demo-ui";
-import { countOwnedWorkspaces, DEMO_WORKSPACE_INVITE_CODE, isWorkspacePreview, listUserWorkspaces, MAX_WORKSPACES_PER_USER } from "@/lib/workspaces";
+import { countOwnedWorkspaces, listUserWorkspaces, MAX_WORKSPACES_PER_USER } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,6 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
     searchParams,
   ]);
   const atWorkspaceLimit = ownedCount >= MAX_WORKSPACES_PER_USER;
-  const activeWorkspaceIsPreview = activeWorkspace ? isWorkspacePreview(activeWorkspace.workspace.id) : false;
   const isDemo = isDemoUser(user);
 
   return (
@@ -67,15 +66,9 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
                 <div style={{ minWidth: 0 }}>
                   <div className="cluster wrap" style={{ gap: 8 }}>
                     <span style={{ fontWeight: 700, fontSize: 19 }}>{activeWorkspace.workspace.name}</span>
-                    {activeWorkspaceIsPreview ? (
-                      <span className="badge" data-hue="warn">
-                        Read-only
-                      </span>
-                    ) : (
-                      <span className="badge" data-hue={ROLE_HUE[activeWorkspace.membership.role] ?? "neutral"}>
-                        {activeWorkspace.membership.role}
-                      </span>
-                    )}
+                    <span className="badge" data-hue={ROLE_HUE[activeWorkspace.membership.role] ?? "neutral"}>
+                      {activeWorkspace.membership.role}
+                    </span>
                   </div>
                   <div className="muted" style={{ fontSize: 13.5, marginTop: 3 }}>
                     Requests, tickets, and settings are scoped to this workspace.
@@ -103,7 +96,6 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
           ) : (
             workspaces.map(({ workspace, membership }) => {
               const isActive = activeWorkspace?.workspace.id === workspace.id;
-              const isPreview = isWorkspacePreview(workspace.id);
               return (
                 <WorkspaceOpenLink
                   key={workspace.id}
@@ -111,7 +103,6 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
                   slug={workspace.slug}
                   role={membership.role}
                   isActive={isActive}
-                  isPreview={isPreview}
                 />
               );
             })
@@ -196,7 +187,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
                 <label htmlFor="code" className="label">
                   Invite code or link
                 </label>
-                <input id="code" name="code" required minLength={6} maxLength={500} placeholder={DEMO_WORKSPACE_INVITE_CODE} className="input mono" />
+                <input id="code" name="code" required minLength={6} maxLength={500} placeholder="DEMO-CLINIC-2026" className="input mono" />
                 <span className="field-hint">Try the active invite code from the demo workspace.</span>
               </div>
               <SubmitButton pendingText="Joining workspace..." className="btn--neutral btn--sm btn--block" style={{ marginTop: 12 }}>
