@@ -48,11 +48,15 @@ export const triageDraftSchema = z.object({
   similarTicketIds: z.array(z.string()).default([]),
 });
 
+// A workspace member's user id, or empty for unassigned.
+export const assigneeUserIdSchema = z.union([z.literal(""), z.string().uuid()]).default("");
+
 export const reviewApprovalSchema = z.object({
   requestId: z.string().min(1),
   title: z.string().trim().min(3).max(160),
   priority: prioritySchema,
   department: departmentSchema,
+  assigneeUserId: assigneeUserIdSchema,
   summary: z.string().trim().min(10).max(1200),
   note: z.string().trim().max(2000).default(""),
 });
@@ -62,8 +66,7 @@ export const ticketUpdateSchema = z.object({
   status: ticketStatusSchema,
   priority: prioritySchema,
   department: departmentSchema,
-  // Empty means unassigned.
-  assigneeUserId: z.union([z.literal(""), z.string().uuid()]).default(""),
+  assigneeUserId: assigneeUserIdSchema,
   resolutionNotes: z.string().trim().max(4000).default(""),
   note: z.string().trim().max(2000).default(""),
 });

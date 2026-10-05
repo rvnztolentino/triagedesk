@@ -29,15 +29,21 @@ function from(table: string) {
     if (table === "tickets") {
       if (ticketsError) return { data: null, error: ticketsError };
       if (!call.single) return { data: affectedTickets, error: null };
+      // Approval first asks whether the request already has a ticket. It does not.
+      if (call.op === "select" && "request_id" in call.filters) return { data: null, error: null };
       return { data: call.op === "update" ? { ...ticketRow, ...(call.payload as object) } : ticketRow, error: null };
     }
     if (table === "workspace_members") return { data: memberRow, error: null };
     if (table === "workspaces") return { data: { is_demo: false }, error: null };
     if (table === "user_profiles") return { data: { display_name: "Ana Reyes", email: "ana@example.com" }, error: null };
+    if (table === "requests") return { data: requestRow, error: null };
+    if (table === "ai_triage_results") return { data: triageRow, error: null };
     return { data: null, error: null };
   };
   const chain: Record<string, unknown> = {
     select: () => chain,
+    order: () => chain,
+    limit: () => chain,
     eq: (column: string, value: unknown) => {
       call.filters[column] = value;
       return chain;
@@ -71,6 +77,34 @@ vi.mock("@/lib/supabase", () => ({
   requestAttachmentBucket: () => "request-attachments",
 }));
 vi.mock("@/lib/monitoring", () => ({ captureOperationalError: (...args: unknown[]) => captureOperationalError(...args) }));
+
+const requestRow = {
+  id: "REQ-1001",
+  workspace_id: WORKSPACE_ID,
+  requester_user_id: null,
+  description: "The printer shows offline.",
+  location: "Front desk",
+  contact_name: "",
+  urgency_note: "",
+  status: "needs-review",
+  created_at: "2026-06-01T07:55:00.000Z",
+};
+const triageRow = {
+  id: "TRI-1001",
+  workspace_id: WORKSPACE_ID,
+  request_id: "REQ-1001",
+  source: "rules",
+  title: "Front desk printer offline",
+  category: "Hardware",
+  priority: "medium",
+  department: "it",
+  summary: "Printer offline at the front desk.",
+  priority_reasoning: "Blocks visitor check-in.",
+  similar_ticket_ids: [],
+  created_at: "2026-06-01T07:56:00.000Z",
+};
+const approval = { requestId: "REQ-1001", title: "Front desk printer offline", priority: "high" as const, department: "it", summary: "Printer offline at the front desk." };
+const owner = { id: OWNER_ID, name: "Olivia Owner" };
 
 const update = { ticketId: "TRG-1001", status: "open" as const, priority: "high" as const, department: "it", resolutionNotes: "", note: "" };
 
@@ -257,5 +291,71 @@ describe("ticket assignee", () => {
     expect(ticketsHref("acme", current, { assignee: "me", page: 1 })).toBe("/w/acme/tickets?filter=all&assignee=me&page=1");
     expect(ticketsHref("acme", { ...current, assignee: "unassigned" }, { page: 2 })).toBe("/w/acme/tickets?filter=all&assignee=unassigned&page=2");
     expect(ticketsHref("acme", { ...current, assignee: "me" }, { assignee: "all" })).toBe("/w/acme/tickets?filter=all&page=3");
+  });
+});
+
+describe("assigning at approval", () => {
+  it("creates the ticket already assigned, says so in the approval entry, and notifies the assignee", async () => {
+    const { approveRequest } = await import("./store");
+
+    const ticket = await approveRequest({ ...approval, assigneeUserId: ADMIN_ID, note: "Toner is in the supply room." }, WORKSPACE_ID, owner);
+
+    expect(ticket.assigneeUserId).toBe(ADMIN_ID);
+    expect(callsTo("workspace_members", "select")[0].filters).toEqual({ workspace_id: WORKSPACE_ID, user_id: ADMIN_ID });
+    expect(callsTo("tickets", "insert")[0].payload).toMatchObject({ request_id: "REQ-1001", status: "new", assignee_user_id: ADMIN_ID });
+    expect(callsTo("ticket_activity", "insert")[0].payload).toMatchObject({
+      action: "Ticket approved",
+      actor: "Olivia Owner",
+      details: "Approved as high priority for it. Assigned to Ana Reyes. Note: Toner is in the supply room.",
+    });
+    expect(callsTo("notifications", "insert")[0].payload).toEqual([
+      expect.objectContaining({ user_id: ADMIN_ID, type: "ticket_assigned", body: "Front desk printer offline", actor: "Olivia Owner" }),
+    ]);
+  });
+
+  it("leaves the ticket unassigned when no assignee is picked", async () => {
+    const { approveRequest } = await import("./store");
+
+    const ticket = await approveRequest({ ...approval, assigneeUserId: "" }, WORKSPACE_ID, owner);
+
+    expect(ticket.assigneeUserId).toBeUndefined();
+    expect(callsTo("tickets", "insert")[0].payload).not.toHaveProperty("assignee_user_id");
+    expect(callsTo("ticket_activity", "insert")[0].payload).toMatchObject({ details: "Approved as high priority for it." });
+    expect(callsTo("workspace_members", "select")).toHaveLength(0);
+    expect(callsTo("notifications", "insert")).toHaveLength(0);
+  });
+
+  it("does not notify a reviewer who assigns the new ticket to themselves", async () => {
+    const { approveRequest } = await import("./store");
+
+    await approveRequest({ ...approval, assigneeUserId: ADMIN_ID }, WORKSPACE_ID, { id: ADMIN_ID, name: "Ana Reyes" });
+
+    expect(callsTo("tickets", "insert")[0].payload).toMatchObject({ assignee_user_id: ADMIN_ID });
+    expect(callsTo("notifications", "insert")).toHaveLength(0);
+  });
+
+  // The request is marked approved before the ticket is inserted, so a refusal has to
+  // land before either write or the request would be approved with no ticket.
+  it("refuses a requester as assignee before approving anything", async () => {
+    memberRow = { ...memberRow, role: "requester" };
+    const { approveRequest } = await import("./store");
+
+    await expect(approveRequest({ ...approval, assigneeUserId: ADMIN_ID }, WORKSPACE_ID, owner)).rejects.toThrow(
+      "Tickets can only be assigned to an admin or owner of this workspace."
+    );
+
+    expect(callsTo("requests", "update")).toHaveLength(0);
+    expect(callsTo("tickets", "insert")).toHaveLength(0);
+    expect(callsTo("ticket_activity", "insert")).toHaveLength(0);
+  });
+
+  it("offers the assignee picker only while the request is still undecided", () => {
+    const reviewSource = readFileSync(new URL("../app/review/[id]/page.tsx", import.meta.url), "utf8");
+    const actionsSource = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
+    const approveActionSource = actionsSource.slice(actionsSource.indexOf("export async function approveRequestAction("), actionsSource.indexOf("export async function rejectRequestAction("));
+
+    expect(reviewSource).toContain("{decided ? null : (");
+    expect(reviewSource).toContain('<select id="assigneeUserId" name="assigneeUserId" defaultValue="" className="select">');
+    expect(approveActionSource).toContain('assigneeUserId: formText(formData, "assigneeUserId"),');
   });
 });

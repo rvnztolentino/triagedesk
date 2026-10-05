@@ -454,6 +454,9 @@ function ticketToRow(ticket: TicketRecord) {
     workspace_id: ticket.workspaceId,
     request_id: ticket.requestId ?? null,
     requester_user_id: ticket.requesterUserId ?? null,
+    // Only sent when set, so creating an unassigned ticket still works on a database
+    // that has not added the assignee column yet.
+    ...(ticket.assigneeUserId ? { assignee_user_id: ticket.assigneeUserId } : {}),
     title: ticket.title,
     description: ticket.description,
     location: ticket.location,
@@ -1177,6 +1180,7 @@ export async function approveRequest(input: {
   title: string;
   priority: Priority;
   department: Department;
+  assigneeUserId?: string;
   summary: string;
   note?: string;
 }, workspaceId = DEMO_WORKSPACE_ID, actor?: { id: string; name: string }) {
@@ -1203,6 +1207,10 @@ export async function approveRequest(input: {
   requireNoError(existingError, "Check existing ticket");
   if (existingData) return ticketFromRow(existingData as SupabaseRow);
 
+  // Checked before anything is written, so a bad assignee cannot leave the request
+  // approved with no ticket behind it.
+  const assignee = input.assigneeUserId ? await requireAssignableWorkspaceMember(workspaceId, input.assigneeUserId) : undefined;
+
   const request = requestFromRow(requestData as SupabaseRow);
   const timestamp = now();
   const ticket: TicketRecord = {
@@ -1210,6 +1218,7 @@ export async function approveRequest(input: {
     workspaceId,
     requestId: request.id,
     requesterUserId: request.requesterUserId,
+    assigneeUserId: assignee?.id,
     title: input.title,
     description: request.description,
     location: request.location,
@@ -1262,7 +1271,7 @@ export async function approveRequest(input: {
     requestId: request.id,
     action: "Ticket approved",
     actor: actor?.name || "Admin",
-    details: `Approved as ${ticket.priority} priority for ${ticket.department}.${decisionNote ? ` Note: ${decisionNote}` : ""}`,
+    details: `Approved as ${ticket.priority} priority for ${ticket.department}.${assignee ? ` Assigned to ${assignee.name}.` : ""}${decisionNote ? ` Note: ${decisionNote}` : ""}`,
     createdAt: timestamp,
   });
 
@@ -1275,6 +1284,17 @@ export async function approveRequest(input: {
     actorUserId: actor?.id,
     ticketId: ticket.id,
   });
+
+  if (assignee) {
+    await notifyTicketAssigned(client, {
+      workspaceId,
+      ticketId: ticket.id,
+      ticketTitle: ticket.title,
+      assigneeUserId: assignee.id,
+      actorName: actor?.name || "An admin",
+      actorUserId: actor?.id,
+    });
+  }
 
   return ticket;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { globalSearchQuerySchema, requestSubmissionSchema, ticketUpdateSchema, triageDraftSchema, userRoleSchema, userRoleUpdateSchema, workspaceInviteCodeSchema, workspaceNameSchema, workspaceSlugSchema } from "./schema";
+import { globalSearchQuerySchema, requestSubmissionSchema, reviewApprovalSchema, ticketUpdateSchema, triageDraftSchema, userRoleSchema, userRoleUpdateSchema, workspaceInviteCodeSchema, workspaceNameSchema, workspaceSlugSchema } from "./schema";
 
 describe("schemas", () => {
   it("rejects empty request details", () => {
@@ -113,5 +113,14 @@ describe("schemas", () => {
     expect(ticketUpdateSchema.parse({ ...update, assigneeUserId: "" }).assigneeUserId).toBe("");
     expect(ticketUpdateSchema.parse({ ...update, assigneeUserId: userId }).assigneeUserId).toBe(userId);
     expect(ticketUpdateSchema.safeParse({ ...update, assigneeUserId: "ana@example.com" }).success).toBe(false);
+  });
+
+  it("accepts an optional assignee on approval", () => {
+    const approval = { requestId: "REQ-1001", title: "Printer offline", priority: "high", department: "it", summary: "Printer offline at the front desk." };
+    const userId = "33333333-3333-4333-8333-333333333333";
+
+    expect(reviewApprovalSchema.parse(approval).assigneeUserId).toBe("");
+    expect(reviewApprovalSchema.parse({ ...approval, assigneeUserId: userId }).assigneeUserId).toBe(userId);
+    expect(reviewApprovalSchema.safeParse({ ...approval, assigneeUserId: "ana@example.com" }).success).toBe(false);
   });
 });

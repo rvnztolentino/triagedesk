@@ -401,6 +401,7 @@ export async function approveRequestAction(_prevState: ActionState, formData: Fo
       title: formText(formData, "title"),
       priority: formText(formData, "priority"),
       department: formText(formData, "department"),
+      assigneeUserId: formText(formData, "assigneeUserId"),
       summary: formText(formData, "summary"),
       note: formText(formData, "note"),
     });

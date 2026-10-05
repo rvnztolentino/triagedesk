@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, Building2, ChevronRight, Clock, FileText, Inbox, MapPin, Paperclip, Sparkles, Ticket, User } from "lucide-react";
+import { AlertTriangle, Building2, ChevronRight, Clock, FileText, Inbox, MapPin, Paperclip, Sparkles, Ticket, User, UserCheck } from "lucide-react";
 import { AttachmentFileName } from "@/components/attachment-file-name";
 import { CharLimitedTextarea } from "@/components/char-limited-textarea";
 import { ConfidenceMeter } from "@/components/confidence-meter";
@@ -10,6 +10,7 @@ import { formatDateTime, relativeTime } from "@/lib/format";
 import type { RequestStatus } from "@/lib/schema";
 import { getRequestBundle, listDepartments } from "@/lib/store";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
+import { listTicketAssignees } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -33,11 +34,12 @@ function Meta({ label, value, icon: Icon }: { label: string; value: string; icon
 }
 
 export async function ReviewDetailView({ params, workspaceSlug }: { params: Promise<{ id: string }>; workspaceSlug?: string }) {
-  const { workspace } = await requireWorkspaceAdminContext(workspaceSlug);
+  const { workspace, user } = await requireWorkspaceAdminContext(workspaceSlug);
   const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
   const { id } = await params;
   const bundle = await getRequestBundle(id, undefined, workspace.id);
   const departments = await listDepartments(workspace.id);
+  const assignees = await listTicketAssignees(workspace.id, user.id);
 
   if (!bundle) {
     notFound();
@@ -155,7 +157,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
                   <input id="title" name="title" type="text" maxLength={160} defaultValue={triage.title} className="input" />
                 </div>
 
-                <div className="grid cols-2" style={{ gap: 12 }}>
+                <div className={decided ? "grid cols-2" : "grid cols-3"} style={{ gap: 12 }}>
                   <div className="field">
                     <label htmlFor="priority" className="label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <AlertTriangle size={12} /> Priority
@@ -177,6 +179,21 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
                       ))}
                     </select>
                   </div>
+                  {/* A decided request shows the AI's values, not the ticket's, so an
+                      assignee picker there would always read Unassigned. */}
+                  {decided ? null : (
+                    <div className="field">
+                      <label htmlFor="assigneeUserId" className="label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <UserCheck size={12} /> Assignee
+                      </label>
+                      <select id="assigneeUserId" name="assigneeUserId" defaultValue="" className="select">
+                        <option value="">Unassigned</option>
+                        {assignees.map((member) => (
+                          <option key={member.id} value={member.id}>{member.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="field">
