@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, Building2, ChevronLeft, ChevronRight, Clock, MapPin, RefreshCw, Sparkles, User } from "lucide-react";
+import { Activity, Building2, ChevronRight, Clock, MapPin, RefreshCw, Sparkles, User, UserCheck } from "lucide-react";
 import { ConfidenceMeter } from "@/components/confidence-meter";
 import { TicketUpdateForm } from "@/components/ticket-update-form";
 import { getUserProfile, requireWorkspaceContext } from "@/lib/auth";
@@ -10,6 +10,7 @@ import { getTicketDetail, listDepartments } from "@/lib/store";
 import { ticketStatusBadgeClass } from "@/lib/ticket-status";
 import { cn } from "@/lib/utils";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
+import { listTicketAssignees } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -39,22 +40,22 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
   const { id } = await params;
   const detail = await getTicketDetail(id, isAdmin ? undefined : user.id, workspace.id);
   const departments = await listDepartments(workspace.id);
+  const assignees = await listTicketAssignees(workspace.id, user.id);
 
   if (!detail) {
     notFound();
   }
 
-  const { ticket, activity, notes, similarTickets } = detail;
+  const { ticket, aiPriority, activity, notes, similarTickets } = detail;
   const requester = ticket.requesterUserId ? await getUserProfile(ticket.requesterUserId) : undefined;
   const requesterName = requester?.displayName || ticket.contactName || "Anonymous";
+  // An assignee who has since left or been demoted is not in the list, so the ticket
+  // reads as unassigned and the next save clears it.
+  const assignee = assignees.find((member) => member.id === ticket.assigneeUserId);
   const departmentName = departments.find((department) => department.id === ticket.department)?.name ?? ticket.department;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 py-4">
-      <Link href={href("/tickets")} className="btn btn--ghost btn--sm w-fit">
-        <ChevronLeft size={15} /> Tickets
-      </Link>
-
       <div className="between wrap" style={{ gap: 14, alignItems: "flex-start" }}>
         <div style={{ minWidth: 0 }}>
           <div className="cluster wrap" style={{ gap: 10 }}>
@@ -81,6 +82,7 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
 
               <div className="grid cols-2" style={{ gap: 14, marginTop: 18 }}>
                 <Meta label="Department" value={departmentName} icon={Building2} />
+                <Meta label="Assignee" value={assignee?.name ?? "Unassigned"} icon={UserCheck} />
                 <Meta label="Location" value={ticket.location || "-"} icon={MapPin} />
                 <Meta label="Requester" value={requesterName} icon={User} />
                 <Meta label="Contact" value={ticket.contactName || "Anonymous"} icon={User} />
@@ -94,6 +96,11 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
                 </div>
                 <p style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.55 }}>{ticket.triageSummary}</p>
                 <p className="muted" style={{ marginTop: 6, fontSize: 12.5 }}>{ticket.priorityReasoning}</p>
+                {aiPriority && aiPriority !== ticket.priority ? (
+                  <p className="faint" style={{ marginTop: 6, fontSize: 12 }}>
+                    AI suggested {aiPriority} priority. This ticket is now {ticket.priority}, so the reasoning above describes the original suggestion.
+                  </p>
+                ) : null}
                 <ConfidenceMeter seed={`${ticket.id}:${ticket.department}`} similarCount={similarTickets.length} className="mt-4" />
               </div>
 
@@ -165,11 +172,13 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
               <TicketUpdateForm
                 workspaceSlug={workspaceSlug}
                 ticketId={ticket.id}
-               
                 status={ticket.status}
+                priority={ticket.priority}
                 department={ticket.department}
+                assigneeUserId={assignee?.id ?? ""}
                 resolutionNotes={ticket.resolutionNotes}
                 departments={departments}
+                assignees={assignees}
               />
             </div>
           ) : null}

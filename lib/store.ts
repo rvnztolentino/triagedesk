@@ -25,13 +25,16 @@ import {
   type TriageDraft,
   type TriageResultRecord,
 } from "@/lib/schema";
-import { assertWorkspaceMutable, DEMO_WORKSPACE_ID, MAX_CUSTOM_WORKSPACE_DEPARTMENTS } from "@/lib/workspaces";
+import { assertWorkspaceMutable, DEMO_WORKSPACE_ID, MAX_CUSTOM_WORKSPACE_DEPARTMENTS, requireAssignableWorkspaceMember } from "@/lib/workspaces";
 import { PublicError } from "@/lib/errors";
 import {
+  getUserDisplayName,
   notifyRequestSubmitted,
   notifyRequestDecision,
+  notifyTicketAssigned,
   notifyTicketStatusChanged,
 } from "@/lib/notifications";
+import { captureOperationalError } from "@/lib/monitoring";
 
 export interface ReviewItem {
   request: RequestRecord;
@@ -477,6 +480,7 @@ function ticketFromRow(row: SupabaseRow): TicketRecord {
     workspaceId: asString(row.workspace_id),
     requestId: row.request_id ? asString(row.request_id) : undefined,
     requesterUserId: row.requester_user_id ? asString(row.requester_user_id) : undefined,
+    assigneeUserId: row.assignee_user_id ? asString(row.assignee_user_id) : undefined,
     title: asString(row.title),
     description: asString(row.description),
     location: asString(row.location),
@@ -1072,15 +1076,20 @@ export async function getTicketDetail(ticketId: string, requesterUserId?: string
   if (!data) return undefined;
 
   const ticket = ticketFromRow(data as SupabaseRow);
-  const [{ data: activityData, error: activityError }, { data: notesData, error: notesError }] = await Promise.all([
+  const [{ data: activityData, error: activityError }, { data: notesData, error: notesError }, triage] = await Promise.all([
     client.from("ticket_activity").select("*").eq("workspace_id", workspaceId).eq("ticket_id", ticket.id).order("created_at", { ascending: false }),
     client.from("ticket_notes").select("*").eq("workspace_id", workspaceId).eq("ticket_id", ticket.id).order("created_at", { ascending: false }),
+    ticket.requestId ? getLatestTriage(client, ticket.requestId, workspaceId) : undefined,
   ]);
   requireNoError(activityError, "Get ticket activity");
   requireNoError(notesError, "Get ticket notes");
 
   return {
     ticket,
+    // What the AI originally suggested. The ticket's own priority can differ once an
+    // admin overrides it at approval or edits it later, while priorityReasoning still
+    // argues for this one.
+    aiPriority: triage?.priority,
     activity: ((activityData ?? []) as SupabaseRow[]).map(activityFromRow),
     notes: ((notesData ?? []) as SupabaseRow[]).map(noteFromRow),
     similarTickets: await getSimilarTicketsFromClient(client, `${ticket.title} ${ticket.description} ${ticket.location}`, ticket.id, ticket.department, workspaceId),
@@ -1329,10 +1338,29 @@ export async function markDuplicate(requestId: string, duplicateOfTicketId: stri
   });
 }
 
+// resolved_at and closed_at describe the ticket's current state, not its history. A
+// ticket moved back to an active status drops both, otherwise a reopened ticket keeps
+// counting as resolved in the dashboard's average resolution time and 7-day trend.
+// The first resolve or close time is kept while the ticket stays in that state.
+export function ticketStatusTimestamps(
+  status: TicketStatus,
+  current: { resolvedAt?: string | null; closedAt?: string | null },
+  timestamp: string,
+) {
+  const resolvedAt = current.resolvedAt ?? null;
+  const closedAt = current.closedAt ?? null;
+
+  if (status === "resolved") return { resolvedAt: resolvedAt ?? timestamp, closedAt: null };
+  if (status === "closed") return { resolvedAt, closedAt: closedAt ?? timestamp };
+  return { resolvedAt: null, closedAt: null };
+}
+
 export async function updateTicket(input: {
   ticketId: string;
   status: TicketStatus;
+  priority: Priority;
   department: Department;
+  assigneeUserId: string;
   resolutionNotes: string;
   note: string;
 }, workspaceId = DEMO_WORKSPACE_ID, actor = "Admin", actorUserId?: string) {
@@ -1346,17 +1374,28 @@ export async function updateTicket(input: {
   const timestamp = now();
   const changes: string[] = [];
   const statusChanged = ticket.status !== input.status;
-  let resolvedAt = ticket.resolvedAt ?? null;
-  let closedAt = ticket.closedAt ?? null;
+  const { resolvedAt, closedAt } = ticketStatusTimestamps(input.status, ticket, timestamp);
 
   if (statusChanged) {
     changes.push(`Status changed from ${ticket.status} to ${input.status}.`);
-    if (input.status === "resolved" && !resolvedAt) resolvedAt = timestamp;
-    if (input.status === "closed" && !closedAt) closedAt = timestamp;
+  }
+
+  if (ticket.priority !== input.priority) {
+    changes.push(`Priority changed from ${ticket.priority} to ${input.priority}.`);
   }
 
   if (ticket.department !== input.department) {
     changes.push(`Department changed from ${ticket.department} to ${input.department}.`);
+  }
+
+  // The assignee is only looked up, and only written, when it actually changes, so an
+  // ordinary save costs no extra query. An empty id unassigns the ticket.
+  const assigneeChanged = (ticket.assigneeUserId ?? "") !== input.assigneeUserId;
+  const assignee = assigneeChanged && input.assigneeUserId
+    ? await requireAssignableWorkspaceMember(workspaceId, input.assigneeUserId)
+    : undefined;
+  if (assigneeChanged) {
+    changes.push(assignee ? `Assigned to ${assignee.name}.` : "Unassigned.");
   }
 
   if (ticket.resolutionNotes !== input.resolutionNotes) {
@@ -1381,7 +1420,9 @@ export async function updateTicket(input: {
     .from("tickets")
     .update({
       status: input.status,
+      priority: input.priority,
       department: input.department,
+      ...(assigneeChanged ? { assignee_user_id: assignee?.id ?? null } : {}),
       resolution_notes: input.resolutionNotes,
       updated_at: timestamp,
       resolved_at: resolvedAt,
@@ -1418,7 +1459,60 @@ export async function updateTicket(input: {
     });
   }
 
+  if (assignee) {
+    await notifyTicketAssigned(client, {
+      workspaceId,
+      ticketId: ticket.id,
+      ticketTitle: ticket.title,
+      assigneeUserId: assignee.id,
+      actorName: actor,
+      actorUserId,
+    });
+  }
+
   return ticketFromRow(updatedData as SupabaseRow);
+}
+
+const MEMBER_UNASSIGN_REASON = {
+  left: "left the workspace",
+  removed: "was removed from the workspace",
+  demoted: "is now a requester",
+} as const;
+
+// A member who leaves, is removed, or is demoted to requester can no longer open the
+// tickets assigned to them, so those go back to unassigned, and each one records why
+// so its history does not just stop at "Assigned to". Best-effort, like
+// notifications: the membership change has already happened and must not be reported
+// as failed. Ticket pages treat an assignee who is not a current admin as unassigned,
+// so a missed row here is never shown as a live assignment.
+export async function unassignMemberTickets(workspaceId: string, memberUserId: string, reason: keyof typeof MEMBER_UNASSIGN_REASON) {
+  try {
+    const client = requireSupabaseAdminClient();
+    const { data, error } = await client
+      .from("tickets")
+      .update({ assignee_user_id: null })
+      .eq("workspace_id", workspaceId)
+      .eq("assignee_user_id", memberUserId)
+      .select("id, request_id");
+    requireNoError(error, "Unassign member tickets");
+
+    const rows = (data ?? []) as SupabaseRow[];
+    if (rows.length === 0) return;
+
+    const memberName = await getUserDisplayName(client, memberUserId);
+    for (const row of rows) {
+      await addActivity(client, {
+        workspaceId,
+        ticketId: asString(row.id),
+        requestId: row.request_id ? asString(row.request_id) : undefined,
+        action: "Ticket updated",
+        actor: "System",
+        details: `Unassigned because ${memberName} ${MEMBER_UNASSIGN_REASON[reason]}.`,
+      });
+    }
+  } catch (error) {
+    captureOperationalError(error, { area: "unassign_member_tickets" });
+  }
 }
 
 export async function getDashboardData(workspaceId = DEMO_WORKSPACE_ID): Promise<DashboardData> {
@@ -1447,7 +1541,7 @@ export async function getDashboardData(workspaceId = DEMO_WORKSPACE_ID): Promise
       newRequests: requests.filter((request) => request.status === "needs-review").length,
       openTickets: activeTickets.length,
       highPriority: activeTickets.filter((ticket) => ["high", "critical"].includes(ticket.priority)).length,
-      assigned: activeTickets.filter((ticket) => ticket.status === "in-progress").length,
+      assigned: activeTickets.filter((ticket) => ticket.assigneeUserId).length,
       resolved: tickets.filter((ticket) => ["resolved", "closed"].includes(ticket.status)).length,
       averageResolutionHours,
       slaRisk: activeTickets.filter((ticket) => ticket.priority === "critical" || (ticket.priority === "high" && ticket.status !== "in-progress")).length,

@@ -252,6 +252,13 @@ describe("foreign-key covering indexes", () => {
       "create index if not exists tickets_duplicate_of_ticket_id_idx on tickets (duplicate_of_ticket_id) where duplicate_of_ticket_id is not null;"
     );
   });
+
+  it("adds the ticket assignee column with a partial covering index", () => {
+    expect(schemaSql).toContain("alter table tickets add column if not exists assignee_user_id uuid references user_profiles(id) on delete set null;");
+    expect(schemaSql).toContain(
+      "create index if not exists tickets_assignee_user_id_idx on tickets (assignee_user_id) where assignee_user_id is not null;"
+    );
+  });
 });
 
 describe("live demo schema", () => {
@@ -324,5 +331,61 @@ describe("live demo schema", () => {
     expect(pruneSql).toContain("delete from workspaces");
     expect(pruneSql).toContain("where is_demo");
     expect(pruneSql).toContain("and not exists (select 1 from workspace_members m where m.user_id = p.id);");
+  });
+});
+
+describe("ticket updates", () => {
+  const resolvedAt = "2026-05-20T05:30:00.000Z";
+  const closedAt = "2026-05-20T06:00:00.000Z";
+  const timestamp = "2026-06-01T09:00:00.000Z";
+
+  it("stamps the first resolve and close and keeps them while the state holds", async () => {
+    const { ticketStatusTimestamps } = await import("./store");
+
+    expect(ticketStatusTimestamps("resolved", {}, timestamp)).toEqual({ resolvedAt: timestamp, closedAt: null });
+    expect(ticketStatusTimestamps("resolved", { resolvedAt }, timestamp)).toEqual({ resolvedAt, closedAt: null });
+    expect(ticketStatusTimestamps("closed", { resolvedAt }, timestamp)).toEqual({ resolvedAt, closedAt: timestamp });
+    expect(ticketStatusTimestamps("closed", { resolvedAt, closedAt }, timestamp)).toEqual({ resolvedAt, closedAt });
+    // Closing without resolving is not a resolution, so it must not invent one.
+    expect(ticketStatusTimestamps("closed", {}, timestamp)).toEqual({ resolvedAt: null, closedAt: timestamp });
+  });
+
+  // A reopened ticket that kept resolved_at still counted toward the dashboard's
+  // average resolution time and 7-day resolved trend.
+  it("clears the resolve and close times when a ticket is reopened", async () => {
+    const { ticketStatusTimestamps } = await import("./store");
+
+    for (const status of ["new", "open", "in-progress"] as const) {
+      expect(ticketStatusTimestamps(status, { resolvedAt, closedAt }, timestamp)).toEqual({ resolvedAt: null, closedAt: null });
+    }
+    expect(ticketStatusTimestamps("resolved", { resolvedAt, closedAt }, timestamp)).toEqual({ resolvedAt, closedAt: null });
+  });
+
+  it("saves and logs a priority change from the ticket update form", () => {
+    const updateTicketSource = storeSource.slice(storeSource.indexOf("export async function updateTicket("), storeSource.indexOf("export async function getDashboardData("));
+    const formSource = readFileSync(new URL("../components/ticket-update-form.tsx", import.meta.url), "utf8");
+    const actionsSource = readFileSync(new URL("../app/actions.ts", import.meta.url), "utf8");
+
+    expect(updateTicketSource).toContain("priority: input.priority,");
+    expect(updateTicketSource).toContain("`Priority changed from ${ticket.priority} to ${input.priority}.`");
+    expect(formSource).toContain('<select id="priority" name="priority" defaultValue={priority} className="select">');
+    expect(actionsSource).toContain('priority: formText(formData, "priority"),');
+  });
+
+  // "Assigned" used to count in-progress tickets, which said nothing about ownership.
+  it("counts assigned tickets by assignee, not by status", () => {
+    expect(storeSource).toContain("assigned: activeTickets.filter((ticket) => ticket.assigneeUserId).length,");
+  });
+
+  // The stored reasoning argues for the AI's priority. Once an admin picks a different
+  // one, the ticket page has to say so or the badge and the reasoning contradict.
+  it("flags AI reasoning that no longer matches the ticket priority", () => {
+    const detailSource = storeSource.slice(storeSource.indexOf("export async function getTicketDetail("), storeSource.indexOf("export async function getSimilarTickets("));
+    const pageSource = readFileSync(new URL("../app/tickets/[id]/page.tsx", import.meta.url), "utf8");
+
+    expect(detailSource).toContain("ticket.requestId ? getLatestTriage(client, ticket.requestId, workspaceId) : undefined,");
+    expect(detailSource).toContain("aiPriority: triage?.priority,");
+    expect(pageSource).toContain("{aiPriority && aiPriority !== ticket.priority ? (");
+    expect(pageSource).toContain("AI suggested {aiPriority} priority. This ticket is now {ticket.priority}, so the reasoning above describes the original suggestion.");
   });
 });

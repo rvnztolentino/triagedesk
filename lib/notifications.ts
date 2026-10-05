@@ -94,7 +94,7 @@ async function getWorkspaceMemberUserIds(
     .filter((id) => id && id !== excludeUserId);
 }
 
-async function getUserDisplayName(client: SupabaseClient, userId: string): Promise<string> {
+export async function getUserDisplayName(client: SupabaseClient, userId: string): Promise<string> {
   const { data, error } = await client
     .from("user_profiles")
     .select("display_name, email")
@@ -278,6 +278,33 @@ export async function notifyTicketStatusChanged(
       type: "ticket_status_changed",
       title: `Ticket ${input.ticketId} moved to ${statusLabel(input.toStatus)}`,
       body: `Status changed from ${statusLabel(input.fromStatus)} to ${statusLabel(input.toStatus)}.`,
+      link: `/tickets/${input.ticketId}`,
+      actor: input.actorName,
+    },
+  ]);
+}
+
+// A ticket was assigned → notify the new assignee, unless they assigned it themselves.
+export async function notifyTicketAssigned(
+  client: SupabaseClient,
+  input: {
+    workspaceId: string;
+    ticketId: string;
+    ticketTitle: string;
+    assigneeUserId: string;
+    actorName: string;
+    actorUserId?: string;
+  }
+) {
+  if (input.assigneeUserId === input.actorUserId) return;
+
+  await insertNotifications(client, [
+    {
+      workspaceId: input.workspaceId,
+      userId: input.assigneeUserId,
+      type: "ticket_assigned",
+      title: `Ticket ${input.ticketId} was assigned to you`,
+      body: input.ticketTitle,
       link: `/tickets/${input.ticketId}`,
       actor: input.actorName,
     },

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, Building2, ChevronLeft, ChevronRight, Clock, FileText, Inbox, MapPin, Paperclip, Sparkles, Ticket, User } from "lucide-react";
+import { AlertTriangle, Building2, ChevronRight, Clock, FileText, Inbox, MapPin, Paperclip, Sparkles, Ticket, User } from "lucide-react";
 import { AttachmentFileName } from "@/components/attachment-file-name";
 import { CharLimitedTextarea } from "@/components/char-limited-textarea";
 import { ConfidenceMeter } from "@/components/confidence-meter";
@@ -52,10 +52,6 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 py-4">
-      <Link href={href("/review")} className="btn btn--ghost btn--sm w-fit">
-        <ChevronLeft size={15} /> Review queue
-      </Link>
-
       <div className="between wrap" style={{ gap: 14, alignItems: "flex-start" }}>
         <div style={{ minWidth: 0 }}>
           <span className="eyebrow">Review · {request.id}</span>

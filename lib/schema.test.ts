@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { globalSearchQuerySchema, requestSubmissionSchema, triageDraftSchema, userRoleSchema, userRoleUpdateSchema, workspaceInviteCodeSchema, workspaceNameSchema, workspaceSlugSchema } from "./schema";
+import { globalSearchQuerySchema, requestSubmissionSchema, ticketUpdateSchema, triageDraftSchema, userRoleSchema, userRoleUpdateSchema, workspaceInviteCodeSchema, workspaceNameSchema, workspaceSlugSchema } from "./schema";
 
 describe("schemas", () => {
   it("rejects empty request details", () => {
@@ -95,5 +95,23 @@ describe("schemas", () => {
     expect(globalSearchQuerySchema.safeParse("a").success).toBe(false);
     expect(globalSearchQuerySchema.safeParse("%%%").success).toBe(false);
     expect(globalSearchQuerySchema.safeParse("x".repeat(201)).success).toBe(false);
+  });
+
+  it("requires a known priority on ticket updates", () => {
+    const update = { ticketId: "TRG-1001", status: "open", department: "it" };
+
+    expect(ticketUpdateSchema.safeParse({ ...update, priority: "critical" }).success).toBe(true);
+    expect(ticketUpdateSchema.safeParse(update).success).toBe(false);
+    expect(ticketUpdateSchema.safeParse({ ...update, priority: "urgent" }).success).toBe(false);
+  });
+
+  it("treats an empty assignee as unassigned and rejects anything that is not a user id", () => {
+    const update = { ticketId: "TRG-1001", status: "open", priority: "high", department: "it" };
+    const userId = "33333333-3333-4333-8333-333333333333";
+
+    expect(ticketUpdateSchema.parse(update).assigneeUserId).toBe("");
+    expect(ticketUpdateSchema.parse({ ...update, assigneeUserId: "" }).assigneeUserId).toBe("");
+    expect(ticketUpdateSchema.parse({ ...update, assigneeUserId: userId }).assigneeUserId).toBe(userId);
+    expect(ticketUpdateSchema.safeParse({ ...update, assigneeUserId: "ana@example.com" }).success).toBe(false);
   });
 });

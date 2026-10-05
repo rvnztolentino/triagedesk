@@ -6,12 +6,13 @@ export interface TicketRouteState {
   page: number;
   priority: string;
   dept: string;
+  assignee: string;
 }
 
 export function ticketsHref(
   workspaceSlug: string | undefined,
   current: TicketRouteState,
-  next: { filter?: string; q?: string; page?: number; priority?: string; dept?: string }
+  next: { filter?: string; q?: string; page?: number; priority?: string; dept?: string; assignee?: string }
 ) {
   const nextParams = new URLSearchParams();
   nextParams.set("filter", next.filter ?? current.filter);
@@ -21,6 +22,8 @@ export function ticketsHref(
   if (nextPriority && nextPriority !== "all") nextParams.set("priority", nextPriority);
   const nextDept = next.dept ?? current.dept;
   if (nextDept && nextDept !== "all") nextParams.set("dept", nextDept);
+  const nextAssignee = next.assignee ?? current.assignee;
+  if (nextAssignee && nextAssignee !== "all") nextParams.set("assignee", nextAssignee);
   nextParams.set("page", String(next.page ?? current.page));
   return scopedWorkspaceHref(workspaceSlug, `/tickets?${nextParams.toString()}`);
 }

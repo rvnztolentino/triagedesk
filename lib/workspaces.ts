@@ -296,6 +296,44 @@ export async function listWorkspaceMembers(workspaceId: string, userId: string) 
   });
 }
 
+// Only admins and owners can open every ticket, so only they can be assigned one.
+// Returns the member's id and display name, or throws when the user is not an
+// admin or owner of this workspace.
+export async function requireAssignableWorkspaceMember(workspaceId: string, memberUserId: string) {
+  const client = requireSupabaseAdminClient();
+  const { data, error } = await client
+    .from("workspace_members")
+    .select("*, user_profiles(id, email, display_name)")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", memberUserId)
+    .maybeSingle();
+  if (error) throw new Error(`Get assignable workspace member failed: ${error.message}`);
+
+  const row = data as SupabaseRow | null;
+  if (!row || !isWorkspaceAdmin(asUserRole(row.role))) {
+    throw new PublicError("Tickets can only be assigned to an admin or owner of this workspace.");
+  }
+
+  const profile = row.user_profiles;
+  const profileRow = profile && !Array.isArray(profile) && typeof profile === "object" ? profile as SupabaseRow : {};
+  return {
+    id: asString(row.user_id),
+    name: workspaceMemberName({ displayName: asString(profileRow.display_name), email: asString(profileRow.email) }),
+  };
+}
+
+// The admins and owners a ticket can be assigned to, for pickers and name lookups.
+export async function listTicketAssignees(workspaceId: string, userId: string) {
+  const members = await listWorkspaceMembers(workspaceId, userId);
+  return members
+    .filter((member) => isWorkspaceAdmin(member.role))
+    .map((member) => ({ id: member.userId, name: workspaceMemberName(member) }));
+}
+
+export function workspaceMemberName(member: { displayName: string; email: string }) {
+  return member.displayName || member.email || "A member";
+}
+
 export function isWorkspaceInviteActive(invite: WorkspaceInviteRecord, at = new Date()) {
   if (invite.revokedAt) return false;
   if (invite.expiresAt && new Date(invite.expiresAt).getTime() <= at.getTime()) return false;

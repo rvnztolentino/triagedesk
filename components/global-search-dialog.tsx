@@ -109,7 +109,7 @@ export function GlobalSearchDialog({
     }));
     const allTickets: Option = {
       key: "all-tickets",
-      href: ticketsHref(workspaceSlug, { filter: "all", q: "", page: 1, priority: "all", dept: "all" }, { q: term }),
+      href: ticketsHref(workspaceSlug, { filter: "all", q: "", page: 1, priority: "all", dept: "all", assignee: "all" }, { q: term }),
       icon: Search,
       label: `Search all tickets for "${term}"`,
       group: "Tickets",

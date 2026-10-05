@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowLeft, ArrowRight, Building2, Ticket } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Ticket, UserCheck } from "lucide-react";
 import { requireWorkspaceContext } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { listDepartments, listTickets } from "@/lib/store";
 import { getRuntimeSetupStatus } from "@/lib/supabase";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { ticketsHref } from "@/lib/ticket-links";
+import { listTicketAssignees } from "@/lib/workspaces";
 import { TicketsTableShell, TicketsTableSkeleton } from "./tickets-table-shell";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,10 @@ interface TicketParams {
   page?: string;
   priority?: string;
   dept?: string;
+  assignee?: string;
 }
+
+const ASSIGNEE_FILTERS = ["all", "me", "unassigned"];
 
 function normalizeSearch(value: string | undefined) {
   return (value ?? "").trim();
@@ -55,7 +59,9 @@ async function TicketTable({
   requestedPage,
   priority,
   dept,
+  assignee,
   deptNames,
+  assigneeNames,
   isAdmin,
   userId,
   workspaceId,
@@ -66,7 +72,9 @@ async function TicketTable({
   requestedPage: number;
   priority: string;
   dept: string;
+  assignee: string;
   deptNames: Record<string, string>;
+  assigneeNames: Record<string, string>;
   isAdmin: boolean;
   userId: string;
   workspaceId: string;
@@ -77,6 +85,13 @@ async function TicketTable({
   const filteredTickets = tickets
     .filter((ticket) => priority === "all" || ticket.priority === priority)
     .filter((ticket) => dept === "all" || ticket.department === dept)
+    // An assignee who is no longer an admin here has no name, and counts as unassigned.
+    .filter((ticket) => {
+      const assigneeId = ticket.assigneeUserId && assigneeNames[ticket.assigneeUserId] ? ticket.assigneeUserId : undefined;
+      if (assignee === "me") return assigneeId === userId;
+      if (assignee === "unassigned") return !assigneeId;
+      return true;
+    })
     .filter((ticket) =>
       !normalizedQuery
         ? true
@@ -91,8 +106,8 @@ async function TicketTable({
   const visibleTickets = filteredTickets.slice(pageStart, pageStart + TICKETS_PER_PAGE);
   const setup = getRuntimeSetupStatus();
   const isSetupRequired = setup.missing.length > 0;
-  const hasFilters = query.length > 0 || priority !== "all" || dept !== "all" || filter !== "all";
-  const current = { filter, q: query, page: currentPage, priority, dept };
+  const hasFilters = query.length > 0 || priority !== "all" || dept !== "all" || assignee !== "all" || filter !== "all";
+  const current = { filter, q: query, page: currentPage, priority, dept, assignee };
 
   return (
     <>
@@ -131,6 +146,11 @@ async function TicketTable({
                       <span className="chip" style={{ padding: "2px 8px", fontSize: 11 }}>
                         <Building2 size={11} /> {deptNames[ticket.department] ?? capitalize(ticket.department)}
                       </span>
+                      {ticket.assigneeUserId && assigneeNames[ticket.assigneeUserId] ? (
+                        <span className="chip" style={{ padding: "2px 8px", fontSize: 11 }}>
+                          <UserCheck size={11} /> {assigneeNames[ticket.assigneeUserId]}
+                        </span>
+                      ) : null}
                       <span className="faint" style={{ fontSize: 11.5 }}>
                         {ticket.location || "No location"} · updated {formatDate(ticket.updatedAt)}
                       </span>
@@ -192,7 +212,13 @@ export async function TicketListView({ searchParams, workspaceSlug }: { searchPa
   const priority = params.priority || "all";
   const dept = params.dept || "all";
   const isAdmin = membership.role === "admin" || membership.role === "owner";
-  const departments = await listDepartments(workspace.id);
+  // Requesters only see their own tickets, so the assignee filter is admin-only.
+  const assignee = isAdmin && ASSIGNEE_FILTERS.includes(params.assignee ?? "") ? params.assignee! : "all";
+  const [departments, assignees] = await Promise.all([
+    listDepartments(workspace.id),
+    listTicketAssignees(workspace.id, user.id),
+  ]);
+  const assigneeNames = Object.fromEntries(assignees.map((member) => [member.id, member.name]));
   const deptOptions = departments.map((d) => ({ id: d.id, name: d.name }));
   const deptNames = Object.fromEntries(deptOptions.map((d) => [d.id, d.name]));
 
@@ -214,17 +240,21 @@ export async function TicketListView({ searchParams, workspaceSlug }: { searchPa
         requestedPage={requestedPage}
         priority={priority}
         dept={dept}
+        assignee={assignee}
+        showAssigneeFilter={isAdmin}
         departments={deptOptions}
         workspaceSlug={workspaceSlug}
       >
-        <Suspense key={`${filter}:${query}:${requestedPage}:${priority}:${dept}`} fallback={<TicketsTableSkeleton />}>
+        <Suspense key={`${filter}:${query}:${requestedPage}:${priority}:${dept}:${assignee}`} fallback={<TicketsTableSkeleton />}>
           <TicketTable
             filter={filter}
             query={query}
             requestedPage={requestedPage}
             priority={priority}
             dept={dept}
+            assignee={assignee}
             deptNames={deptNames}
+            assigneeNames={assigneeNames}
             isAdmin={isAdmin}
             userId={user.id}
             workspaceId={workspace.id}

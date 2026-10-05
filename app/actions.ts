@@ -40,6 +40,7 @@ import {
   resetWorkspaceData,
   saveTriageResult,
   searchTickets,
+  unassignMemberTickets,
   updateTicket,
 } from "@/lib/store";
 import { clearNotifications, countUnreadNotifications, listNotifications, markAllNotificationsRead } from "@/lib/notifications";
@@ -465,7 +466,9 @@ export async function updateTicketAction(_prevState: ActionState, formData: Form
     const input = ticketUpdateSchema.parse({
       ticketId: formText(formData, "ticketId"),
       status: formText(formData, "status"),
+      priority: formText(formData, "priority"),
       department: formText(formData, "department"),
+      assigneeUserId: formText(formData, "assigneeUserId"),
       resolutionNotes: formText(formData, "resolutionNotes"),
       note: formText(formData, "note"),
     });
@@ -730,6 +733,7 @@ export async function updateUserRoleAction(formData: FormData) {
       role: formText(formData, "role"),
     });
     await updateWorkspaceMemberRole(workspace.id, input.userId, input.role, actor.id);
+    if (input.role === "requester") await unassignMemberTickets(workspace.id, input.userId, "demoted");
     revalidatePath(returnPath);
   } catch (error) {
     redirectWithError(returnPath, error);
@@ -912,6 +916,7 @@ export async function leaveWorkspaceAction(formData: FormData) {
     const workspaceId = formText(formData, "workspaceId");
     const activeWorkspace = await getActiveWorkspaceAccess(user.id);
     await leaveWorkspace(workspaceId, user.id);
+    await unassignMemberTickets(workspaceId, user.id, "left");
     if (activeWorkspace?.workspace.id === workspaceId) {
       await clearActiveWorkspaceCookie();
     }
@@ -931,7 +936,9 @@ export async function removeWorkspaceMemberAction(formData: FormData) {
     assertRealUser(user);
     const workspaceId = formText(formData, "workspaceId");
     await enforceAdminMutationLimit("member_remove_user_hour", user.id, workspaceId, 30, "Too many member changes. Try again later.");
-    await removeWorkspaceMember(workspaceId, formText(formData, "memberUserId"), user.id);
+    const memberUserId = formText(formData, "memberUserId");
+    await removeWorkspaceMember(workspaceId, memberUserId, user.id);
+    await unassignMemberTickets(workspaceId, memberUserId, "removed");
     revalidatePath(returnPath);
     revalidatePath("/onboarding");
   } catch (error) {

@@ -30,12 +30,14 @@ function matchesCurrentRouteState(href: string, current: TicketRouteState) {
   const nextPage = normalizedPage(nextUrl.searchParams.get("page"));
   const nextPriority = nextUrl.searchParams.get("priority") || "all";
   const nextDept = nextUrl.searchParams.get("dept") || "all";
+  const nextAssignee = nextUrl.searchParams.get("assignee") || "all";
   return (
     nextFilter === current.filter &&
     nextQuery === current.q &&
     nextPage === current.page &&
     nextPriority === current.priority &&
-    nextDept === current.dept
+    nextDept === current.dept &&
+    nextAssignee === current.assignee
   );
 }
 
@@ -69,6 +71,8 @@ export function TicketsTableShell({
   requestedPage,
   priority,
   dept,
+  assignee,
+  showAssigneeFilter,
   departments,
   workspaceSlug,
   children,
@@ -78,6 +82,8 @@ export function TicketsTableShell({
   requestedPage: number;
   priority: string;
   dept: string;
+  assignee: string;
+  showAssigneeFilter: boolean;
   departments: { id: string; name: string }[];
   workspaceSlug?: string;
   children: React.ReactNode;
@@ -86,13 +92,13 @@ export function TicketsTableShell({
   const [tableLoading, setTableLoading] = React.useState(false);
   const [optimisticFilter, setOptimisticFilter] = React.useState(filter);
   const current = React.useMemo<TicketRouteState>(
-    () => ({ filter, q: query, page: requestedPage, priority, dept }),
-    [filter, query, requestedPage, priority, dept]
+    () => ({ filter, q: query, page: requestedPage, priority, dept, assignee }),
+    [filter, query, requestedPage, priority, dept, assignee]
   );
 
   // Clear the skeleton the moment new route state arrives from the server. Done
   // during render (not in an effect) so it happens in one pass.
-  const routeKey = `${filter} ${query} ${requestedPage} ${priority} ${dept}`;
+  const routeKey = `${filter} ${query} ${requestedPage} ${priority} ${dept} ${assignee}`;
   const [seenRouteKey, setSeenRouteKey] = React.useState(routeKey);
   if (routeKey !== seenRouteKey) {
     setSeenRouteKey(routeKey);
@@ -181,6 +187,19 @@ export function TicketsTableShell({
               </option>
             ))}
           </select>
+          {showAssigneeFilter ? (
+            <select
+              className="select"
+              style={{ width: "auto" }}
+              aria-label="Filter by assignee"
+              value={assignee}
+              onChange={(event) => handleSelectNavigate(ticketsHref(workspaceSlug, current, { assignee: event.target.value, page: 1 }))}
+            >
+              <option value="all">All assignees</option>
+              <option value="me">Assigned to me</option>
+              <option value="unassigned">Unassigned</option>
+            </select>
+          ) : null}
         </div>
       </div>
 

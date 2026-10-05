@@ -120,6 +120,7 @@ create table if not exists tickets (
   workspace_id uuid not null references workspaces(id) on delete cascade,
   request_id text references requests(id),
   requester_user_id uuid references user_profiles(id) on delete set null,
+  assignee_user_id uuid references user_profiles(id) on delete set null,
   title text not null,
   description text not null,
   location text not null,
@@ -196,6 +197,9 @@ create table if not exists notifications (
 
 alter table requests add column if not exists requester_user_id uuid references user_profiles(id) on delete set null;
 alter table tickets add column if not exists requester_user_id uuid references user_profiles(id) on delete set null;
+-- The admin or owner working the ticket. Null means unassigned. The app clears it
+-- when the assignee leaves the workspace, is removed, or is demoted to requester.
+alter table tickets add column if not exists assignee_user_id uuid references user_profiles(id) on delete set null;
 alter table requests add column if not exists workspace_id uuid references workspaces(id) on delete cascade;
 alter table ai_triage_results add column if not exists workspace_id uuid references workspaces(id) on delete cascade;
 alter table tickets add column if not exists workspace_id uuid references workspaces(id) on delete cascade;
@@ -372,6 +376,9 @@ create index if not exists workspaces_created_by_idx on workspaces (created_by);
 -- Duplicate links are sparse, so this stays partial: it only has to answer the
 -- cascade check for tickets that actually point at another ticket.
 create index if not exists tickets_duplicate_of_ticket_id_idx on tickets (duplicate_of_ticket_id) where duplicate_of_ticket_id is not null;
+-- Most tickets are unassigned, so this is partial too. It answers the set-null check
+-- when an account is deleted and the lookup that unassigns a departing member.
+create index if not exists tickets_assignee_user_id_idx on tickets (assignee_user_id) where assignee_user_id is not null;
 
 do $$
 begin

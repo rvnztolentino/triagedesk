@@ -15,6 +15,7 @@ export const notificationTypes = [
   "request_rejected",
   "request_duplicate",
   "ticket_status_changed",
+  "ticket_assigned",
   "member_joined",
   "member_left",
   "member_removed",
@@ -59,7 +60,10 @@ export const reviewApprovalSchema = z.object({
 export const ticketUpdateSchema = z.object({
   ticketId: z.string().min(1),
   status: ticketStatusSchema,
+  priority: prioritySchema,
   department: departmentSchema,
+  // Empty means unassigned.
+  assigneeUserId: z.union([z.literal(""), z.string().uuid()]).default(""),
   resolutionNotes: z.string().trim().max(4000).default(""),
   note: z.string().trim().max(2000).default(""),
 });
@@ -208,6 +212,7 @@ export interface TicketRecord {
   workspaceId: string;
   requestId?: string;
   requesterUserId?: string;
+  assigneeUserId?: string;
   title: string;
   description: string;
   location: string;

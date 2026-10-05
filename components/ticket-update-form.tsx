@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { AlertTriangle, MessageSquare } from "lucide-react";
 import { updateTicketAction } from "@/app/actions";
 import { CharLimitedTextarea } from "@/components/char-limited-textarea";
-import { ticketStatuses, type DepartmentRecord } from "@/lib/schema";
+import { priorities, ticketStatuses, type DepartmentRecord, type Priority } from "@/lib/schema";
 import type { ActionState } from "@/lib/errors";
 
 const initialState: ActionState = {};
@@ -13,16 +13,22 @@ export function TicketUpdateForm({
   workspaceSlug,
   ticketId,
   status,
+  priority,
   department,
+  assigneeUserId,
   resolutionNotes,
   departments,
+  assignees,
 }: {
   workspaceSlug?: string;
   ticketId: string;
   status: string;
+  priority: Priority;
   department: string;
+  assigneeUserId: string;
   resolutionNotes: string;
   departments: DepartmentRecord[];
+  assignees: { id: string; name: string }[];
 }) {
   const [state, formAction] = useActionState(updateTicketAction, initialState);
 
@@ -51,13 +57,32 @@ export function TicketUpdateForm({
             </select>
           </div>
           <div className="space-y-2">
-            <label htmlFor="department" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Department</label>
-            <select id="department" name="department" defaultValue={department} className="select">
-              {departments.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
+            <label htmlFor="priority" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Priority</label>
+            <select id="priority" name="priority" defaultValue={priority} className="select">
+              {priorities.map((value) => (
+                <option key={value} value={value}>{value}</option>
               ))}
             </select>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="department" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Department</label>
+          <select id="department" name="department" defaultValue={department} className="select">
+            {departments.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="assigneeUserId" className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em]">Assignee</label>
+          <select id="assigneeUserId" name="assigneeUserId" defaultValue={assigneeUserId} className="select">
+            <option value="">Unassigned</option>
+            {assignees.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-2">
