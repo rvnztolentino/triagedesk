@@ -38,9 +38,11 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
   const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
   const isAdmin = membership.role === "admin" || membership.role === "owner";
   const { id } = await params;
-  const detail = await getTicketDetail(id, isAdmin ? undefined : user.id, workspace.id);
-  const departments = await listDepartments(workspace.id);
-  const assignees = await listTicketAssignees(workspace.id, user.id);
+  const [detail, departments, assignees] = await Promise.all([
+    getTicketDetail(id, isAdmin ? undefined : user.id, workspace.id),
+    listDepartments(workspace.id),
+    listTicketAssignees(workspace.id, user.id),
+  ]);
 
   if (!detail) {
     notFound();

@@ -21,8 +21,7 @@ function capitalize(value: string) {
 export async function ReviewQueueView({ workspaceSlug }: { workspaceSlug?: string } = {}) {
   const { workspace } = await requireWorkspaceAdminContext(workspaceSlug);
   const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
-  const queue = await listReviewItems(workspace.id);
-  const departments = await listDepartments(workspace.id);
+  const [queue, departments] = await Promise.all([listReviewItems(workspace.id), listDepartments(workspace.id)]);
   const deptNames = Object.fromEntries(departments.map((d) => [d.id, d.name]));
   const setup = getRuntimeSetupStatus();
   const isSetupRequired = setup.missing.length > 0;

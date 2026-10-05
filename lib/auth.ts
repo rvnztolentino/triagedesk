@@ -5,7 +5,6 @@ import type { NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { workspaceSlugSchema, type AppUser, type UserProfileRecord, type UserRole } from "@/lib/schema";
 import { getSupabaseAdminClient, getRuntimeSetupStatus, requireSupabaseAdminClient } from "@/lib/supabase";
-import { SetupRequiredError } from "@/lib/supabase";
 import { PublicError } from "@/lib/errors";
 import { assertCleanDisplayName, addMonths, nameChangeStatus, NAME_CHANGE_WINDOW_MONTHS } from "@/lib/display-name";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
@@ -46,6 +45,18 @@ function displayNameFromClerk(user: ClerkUserLike) {
   const full = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
   if (full) return full;
   return asString(user.username);
+}
+
+// A Clerk name is user-supplied, and unsafeMetadata is writable straight from the
+// browser, so it goes through the same filter as a name edited in account settings.
+// A name that fails is dropped in favor of the email prefix rather than blocking
+// sign-in over it.
+function seedDisplayName(user: ClerkUserLike) {
+  try {
+    return assertCleanDisplayName(displayNameFromClerk(user));
+  } catch {
+    return undefined;
+  }
 }
 
 export function getSeedAdminEmail() {
@@ -347,7 +358,7 @@ export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
     profile = await upsertProfileFromClerk({
       clerkUserId: userId,
       email,
-      displayName: displayNameFromClerk(clerkUser),
+      displayName: seedDisplayName(clerkUser),
       role: roleForEmail(email),
     });
   } else {
@@ -566,57 +577,4 @@ export function getPostVerificationRedirect(next?: string) {
 export function getAuthSetupMissing() {
   const setup = getRuntimeSetupStatus();
   return setup.missing.filter((item) => item === "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" || item === "CLERK_SECRET_KEY" || item === "SEED_ADMIN_EMAIL");
-}
-
-export async function listUserProfiles() {
-  const client = requireSupabaseAdminClient();
-  const { data, error } = await client.from("user_profiles").select("*").order("created_at", { ascending: false });
-  if (error) {
-    throw new Error(`List users failed: ${error.message}`);
-  }
-
-  return ((data ?? []) as ProfileRow[]).map(profileFromRow);
-}
-
-export async function countAdmins() {
-  const client = requireSupabaseAdminClient();
-  const { count, error } = await client.from("user_profiles").select("id", { count: "exact", head: true }).in("role", ["admin", "owner"]);
-  if (error) {
-    throw new Error(`Count admins failed: ${error.message}`);
-  }
-
-  return count ?? 0;
-}
-
-export async function updateUserRole(actor: AppUser, userId: string, role: UserRole) {
-  if (actor.role !== "owner") {
-    throw new SetupRequiredError("Owner access is required.", []);
-  }
-
-  if (role === "owner") {
-    throw new Error("Owner access is reserved for the configured seed owner email.");
-  }
-
-  const target = await getUserProfile(userId);
-  if (!target) {
-    throw new Error("User profile not found.");
-  }
-
-  if (target.role === "owner") {
-    throw new Error("Owner access cannot be changed from user management.");
-  }
-
-  const client = requireSupabaseAdminClient();
-  const { data, error } = await client
-    .from("user_profiles")
-    .update({ role, updated_at: new Date().toISOString() })
-    .eq("id", userId)
-    .select("*")
-    .single();
-
-  if (error) {
-    throw new Error(`Update user role failed: ${error.message}`);
-  }
-
-  return profileFromRow(data as ProfileRow);
 }

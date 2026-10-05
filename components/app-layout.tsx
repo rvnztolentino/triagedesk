@@ -148,6 +148,9 @@ export function AppLayout({
     // just dropped was the whole identity, so go straight home instead of asking
     // Clerk to end a session that was never created.
     if (isDemoSession) {
+      // A full page load on purpose: the root layout renders from the cookie that was
+      // just cleared, and a client-side push would keep showing the signed-in shell.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/";
       return;
     }

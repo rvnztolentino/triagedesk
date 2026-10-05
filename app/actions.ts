@@ -11,7 +11,6 @@ import {
   getActiveWorkspaceAccess,
   getCurrentUser,
   isDemoUser,
-  requireAdmin,
   requireOperationalWorkspace,
   requireOwner,
   requireUser,
@@ -258,14 +257,14 @@ async function validateAttachmentSignature(file: File, extension: string) {
               : false;
 
   if (!valid) {
-    throw new Error(`${file.name} does not match its declared file type.`);
+    throw new PublicError(`${file.name} does not match its declared file type.`);
   }
 
   if (extension === ".json") {
     try {
       JSON.parse(await file.text());
     } catch {
-      throw new Error(`${file.name} must contain valid JSON.`);
+      throw new PublicError(`${file.name} must contain valid JSON.`);
     }
   }
 }
@@ -273,20 +272,20 @@ async function validateAttachmentSignature(file: File, extension: string) {
 async function validateRequestAttachments(formData: FormData) {
   const files = formData.getAll("attachments").filter((value): value is File => value instanceof File && value.size > 0);
   if (files.length > MAX_REQUEST_ATTACHMENTS) {
-    throw new Error(`Attach up to ${MAX_REQUEST_ATTACHMENTS} files per request.`);
+    throw new PublicError(`Attach up to ${MAX_REQUEST_ATTACHMENTS} files per request.`);
   }
 
   for (const file of files) {
     const extension = fileExtension(file.name);
     const expectedType = allowedAttachmentTypes.get(extension);
     if (!expectedType) {
-      throw new Error("Attachments must be JPG, PNG, WebP, PDF, DOCX, TXT, CSV, or JSON files.");
+      throw new PublicError("Attachments must be JPG, PNG, WebP, PDF, DOCX, TXT, CSV, or JSON files.");
     }
     if (file.type && file.type !== expectedType && !(extension === ".csv" && file.type === "application/vnd.ms-excel")) {
-      throw new Error(`${file.name} does not match an allowed file type.`);
+      throw new PublicError(`${file.name} does not match an allowed file type.`);
     }
     if (file.size > MAX_REQUEST_ATTACHMENT_BYTES) {
-      throw new Error(`${file.name} must be 10 MB or smaller.`);
+      throw new PublicError(`${file.name} must be 10 MB or smaller.`);
     }
     await validateAttachmentSignature(file, extension);
   }
@@ -352,9 +351,12 @@ export async function submitRequestAction(
     if (attachments.length > 0) assertRealUser(user);
     await enforceRequestSubmissionLimits(user.id, workspace.id, attachments);
     await enforceDemoTriageBudget(user);
-    const departments = await listDepartments(workspace.id);
-    const similarTickets = await getSimilarTickets(`${input.description} ${input.location} ${input.urgencyNote}`, undefined, workspace.id);
-    const reusableTriage = await findReusableTriageDraft(input, workspace.id);
+    // Three independent reads ahead of the model call, so they share one wait.
+    const [departments, similarTickets, reusableTriage] = await Promise.all([
+      listDepartments(workspace.id),
+      getSimilarTickets(`${input.description} ${input.location} ${input.urgencyNote}`, undefined, workspace.id),
+      findReusableTriageDraft(input, workspace.id),
+    ]);
     const triage = reusableTriage
       ? {
           ...reusableTriage,
@@ -425,6 +427,7 @@ export async function rejectRequestAction(_prevState: ActionState, formData: For
     const { access: { workspace, user }, workspaceSlug } = await requireActionAdmin(formData);
     assertWorkspaceMutable(workspace.id);
     await enforceAdminMutationLimit("request_reject_user_hour", user?.id, workspace.id, 60, "Too many rejections. Try again later.");
+    await enforceDemoMutationBudget(user);
     await rejectRequest(formText(formData, "requestId"), workspace.id, { id: user.id, name: user.displayName || "An admin" });
 
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));
@@ -444,6 +447,7 @@ export async function markDuplicateAction(_prevState: ActionState, formData: For
     const { access: { workspace, user }, workspaceSlug } = await requireActionAdmin(formData);
     assertWorkspaceMutable(workspace.id);
     await enforceAdminMutationLimit("request_mark_duplicate_user_hour", user?.id, workspace.id, 60, "Too many actions. Try again later.");
+    await enforceDemoMutationBudget(user);
     await markDuplicate(formText(formData, "requestId"), formText(formData, "duplicateOfTicketId"), workspace.id, { id: user.id, name: user.displayName || "An admin" });
 
     revalidatePath(scopedWorkspaceHref(workspaceSlug, "/"));

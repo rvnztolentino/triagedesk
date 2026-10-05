@@ -28,8 +28,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ work
     // mutation would be dropped from this hand-built response, leaving the
     // header/sidebar pinned to the previously active workspace.
     return applyActiveWorkspaceCookie(NextResponse.redirect(new URL(destination, url)), parsedSlug.data);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Workspace access is required.";
-    return NextResponse.redirect(new URL(`/onboarding?error=${encodeURIComponent(message)}`, url));
+  } catch {
+    // A fixed message: the thrown one can carry database detail, and this lands in a URL.
+    return NextResponse.redirect(new URL(`/onboarding?error=${encodeURIComponent("Workspace access is required.")}`, url));
   }
 }

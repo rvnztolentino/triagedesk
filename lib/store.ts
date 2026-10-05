@@ -1,4 +1,3 @@
-import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getRuntimeSetupStatus,
@@ -328,6 +327,12 @@ const seededNotes: SeedRecord<TicketNoteRecord>[] = [
   },
 ];
 
+// Shown when a review decision arrives for a request that is no longer waiting on one.
+const REQUEST_ALREADY_REVIEWED_MESSAGE = "That request was already reviewed. Refresh the queue to see where it stands.";
+
+// What the activity feed records in place of an internal note's text.
+export const INTERNAL_NOTE_ACTIVITY_TEXT = "Internal note added.";
+
 function now() {
   return new Date().toISOString();
 }
@@ -611,15 +616,34 @@ async function insertRows(client: SupabaseClient, table: string, rows: SupabaseR
 // is a type error here rather than a runtime exception from Postgres.
 type EntityIdPrefix = "REQ" | "TRG" | "TRI" | "ACT" | "NOTE";
 
-// Is this workspace a live-demo workspace? Cached per request so the five id call
-// sites below share one lookup instead of each re-asking, and so a signed-in user's
-// write path costs a single extra primary-key read at most. Resolved here rather than
-// threaded through every store function so no call site can forget to pass it.
-export const isDemoWorkspace = cache(async (client: SupabaseClient, workspaceId: string) => {
+// Is this workspace a live-demo workspace? Resolved here rather than threaded through
+// every store function so no call site can forget to pass it.
+//
+// is_demo is written once, when the workspace is created, and nothing ever changes
+// it, so the answer is remembered for the life of the server instance. React's
+// cache() cannot do this job: it only memoizes during a render, and ids are allocated
+// from server actions, which run outside one. There every id paid for this lookup
+// again, four times for a single submitted request.
+const demoWorkspaceFlags = new Map<string, boolean>();
+const DEMO_WORKSPACE_FLAG_LIMIT = 500;
+
+export async function isDemoWorkspace(client: SupabaseClient, workspaceId: string) {
+  const known = demoWorkspaceFlags.get(workspaceId);
+  if (known !== undefined) return known;
+
   const { data, error } = await client.from("workspaces").select("is_demo").eq("id", workspaceId).maybeSingle();
   requireNoError(error, "Check demo workspace");
-  return (data as SupabaseRow | null)?.is_demo === true;
-});
+
+  const row = data as SupabaseRow | null;
+  const isDemo = row?.is_demo === true;
+  // A missing row is not remembered, so an id asked for before its workspace exists
+  // cannot pin the wrong answer.
+  if (row) {
+    if (demoWorkspaceFlags.size >= DEMO_WORKSPACE_FLAG_LIMIT) demoWorkspaceFlags.clear();
+    demoWorkspaceFlags.set(workspaceId, isDemo);
+  }
+  return isDemo;
+}
 
 // Human-readable ids come from Postgres sequences via next_entity_id, which is
 // atomic and O(1). This previously selected every row in the table to find the
@@ -721,7 +745,36 @@ async function listRequestAttachmentsFromClient(client: SupabaseClient, requestI
   return ((data ?? []) as SupabaseRow[]).map(attachmentFromRow);
 }
 
-async function getLatestNeedsReview(client: SupabaseClient, workspaceId = DEMO_WORKSPACE_ID): Promise<ReviewItem | undefined> {
+// Everything a review screen shows for one request. The three reads do not depend on
+// each other, so they run together. Pass `candidates` when the caller already holds
+// the workspace's tickets, and `requesterUserId` to match a requester against their
+// own tickets only.
+async function loadReviewItem(
+  client: SupabaseClient,
+  request: RequestRecord,
+  workspaceId: string,
+  options: { candidates?: SimilarityCandidate[] | Promise<SimilarityCandidate[]>; requesterUserId?: string } = {},
+): Promise<ReviewItem | undefined> {
+  const [triage, attachments, candidates] = await Promise.all([
+    getLatestTriage(client, request.id, workspaceId),
+    listRequestAttachmentsFromClient(client, request.id, workspaceId),
+    options.candidates ?? fetchSimilarityCandidates(client, workspaceId, options.requesterUserId),
+  ]);
+  if (!triage) return undefined;
+
+  return {
+    request,
+    triage,
+    similarTickets: rankSimilarTickets(candidates, `${request.description} ${request.location}`, request.id, triage.department),
+    attachments,
+  };
+}
+
+async function getLatestNeedsReview(
+  client: SupabaseClient,
+  workspaceId = DEMO_WORKSPACE_ID,
+  candidates?: Promise<SimilarityCandidate[]>,
+): Promise<ReviewItem | undefined> {
   const { data, error } = await client
     .from("requests")
     .select("*")
@@ -734,16 +787,7 @@ async function getLatestNeedsReview(client: SupabaseClient, workspaceId = DEMO_W
 
   if (!data) return undefined;
 
-  const request = requestFromRow(data as SupabaseRow);
-  const triage = await getLatestTriage(client, request.id, workspaceId);
-  if (!triage) return undefined;
-
-  return {
-    request,
-    triage,
-    similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department, workspaceId),
-    attachments: await listRequestAttachmentsFromClient(client, request.id, workspaceId),
-  };
+  return loadReviewItem(client, requestFromRow(data as SupabaseRow), workspaceId, { candidates });
 }
 
 export async function resetWorkspaceData(workspaceId = DEMO_WORKSPACE_ID) {
@@ -888,21 +932,22 @@ export async function createRequest(input: RequestSubmission, requester: AppUser
   const { error } = await client.from("requests").insert(requestToRow(request));
   requireNoError(error, "Create request");
 
-  await addActivity(client, {
-    workspaceId,
-    requestId: request.id,
-    action: "Request saved",
-    actor: requester.displayName,
-    details: `${request.location}: ${request.description}`,
-    createdAt: timestamp,
-  });
-
-  await notifyRequestSubmitted(client, {
-    workspaceId,
-    requestId: request.id,
-    requesterName: requester.displayName || requester.email,
-    requesterUserId: requester.id,
-  });
+  await Promise.all([
+    addActivity(client, {
+      workspaceId,
+      requestId: request.id,
+      action: "Request saved",
+      actor: requester.displayName,
+      details: `${request.location}: ${request.description}`,
+      createdAt: timestamp,
+    }),
+    notifyRequestSubmitted(client, {
+      workspaceId,
+      requestId: request.id,
+      requesterName: requester.displayName || requester.email,
+      requesterUserId: requester.id,
+    }),
+  ]);
 
   return request;
 }
@@ -940,9 +985,12 @@ export async function createRequestAttachment(
 export async function saveTriageResult(requestId: string, triage: TriageDraft, workspaceId = DEMO_WORKSPACE_ID) {
   assertWorkspaceMutable(workspaceId);
   const client = requireSupabaseAdminClient();
-  await requireWorkspaceRequest(client, requestId, workspaceId);
+  const [, id] = await Promise.all([
+    requireWorkspaceRequest(client, requestId, workspaceId),
+    nextEntityId(client, "TRI", workspaceId),
+  ]);
   const record: TriageResultRecord = {
-    id: await nextEntityId(client, "TRI", workspaceId),
+    id,
     workspaceId,
     requestId,
     ...triage,
@@ -977,20 +1025,39 @@ export async function listReviewItems(workspaceId = DEMO_WORKSPACE_ID): Promise<
   requireNoError(error, "List review items");
 
   const requests = ((data ?? []) as SupabaseRow[]).map(requestFromRow);
-  const items = await Promise.all(
-    requests.map(async (request) => {
-      const triage = await getLatestTriage(client, request.id, workspaceId);
-      if (!triage) return undefined;
-      return {
-        request,
-        triage,
-        similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department, workspaceId),
-        attachments: await listRequestAttachmentsFromClient(client, request.id, workspaceId),
-      };
-    })
-  );
+  if (requests.length === 0) return [];
 
-  return items.filter((item): item is ReviewItem => Boolean(item));
+  // One read per table for the whole queue. This used to run three queries per queued
+  // request, one of which re-read every ticket in the workspace each time.
+  const requestIds = requests.map((request) => request.id);
+  const [triageRows, attachmentRows, candidates] = await Promise.all([
+    selectByRequestIds(client, "ai_triage_results", requestIds, workspaceId, false, "List review triage results"),
+    selectByRequestIds(client, "request_attachments", requestIds, workspaceId, true, "List review attachments"),
+    fetchSimilarityCandidates(client, workspaceId),
+  ]);
+
+  // Rows arrive newest first, so the first one seen for a request is its latest triage.
+  const triageByRequest = new Map<string, TriageResultRecord>();
+  for (const row of triageRows) {
+    const triage = triageFromRow(row);
+    if (!triageByRequest.has(triage.requestId)) triageByRequest.set(triage.requestId, triage);
+  }
+  const attachmentsByRequest = new Map<string, RequestAttachmentRecord[]>();
+  for (const row of attachmentRows) {
+    const attachment = attachmentFromRow(row);
+    attachmentsByRequest.set(attachment.requestId, [...(attachmentsByRequest.get(attachment.requestId) ?? []), attachment]);
+  }
+
+  return requests.flatMap((request): ReviewItem[] => {
+    const triage = triageByRequest.get(request.id);
+    if (!triage) return [];
+    return [{
+      request,
+      triage,
+      similarTickets: rankSimilarTickets(candidates, `${request.description} ${request.location}`, request.id, triage.department),
+      attachments: attachmentsByRequest.get(request.id) ?? [],
+    }];
+  });
 }
 
 export async function getRequestBundle(requestId: string, requesterUserId?: string, workspaceId = DEMO_WORKSPACE_ID): Promise<ReviewItem | undefined> {
@@ -1006,16 +1073,7 @@ export async function getRequestBundle(requestId: string, requesterUserId?: stri
 
   if (!data) return undefined;
 
-  const request = requestFromRow(data as SupabaseRow);
-  const triage = await getLatestTriage(client, request.id, workspaceId);
-  if (!triage) return undefined;
-
-  return {
-    request,
-    triage,
-    similarTickets: await getSimilarTicketsFromClient(client, `${request.description} ${request.location}`, request.id, triage.department, workspaceId),
-    attachments: await listRequestAttachmentsFromClient(client, request.id, workspaceId),
-  };
+  return loadReviewItem(client, requestFromRow(data as SupabaseRow), workspaceId, { requesterUserId });
 }
 
 export async function getVisibleRequestAttachment(attachmentId: string, requesterUserId: string | undefined, workspaceId = DEMO_WORKSPACE_ID) {
@@ -1088,10 +1146,15 @@ export async function getTicketDetail(ticketId: string, requesterUserId?: string
   if (!data) return undefined;
 
   const ticket = ticketFromRow(data as SupabaseRow);
-  const [{ data: activityData, error: activityError }, { data: notesData, error: notesError }, triage] = await Promise.all([
+  const [{ data: activityData, error: activityError }, { data: notesData, error: notesError }, triage, candidates] = await Promise.all([
     client.from("ticket_activity").select("*").eq("workspace_id", workspaceId).eq("ticket_id", ticket.id).order("created_at", { ascending: false }),
-    client.from("ticket_notes").select("*").eq("workspace_id", workspaceId).eq("ticket_id", ticket.id).order("created_at", { ascending: false }),
+    // Internal notes are for admins and owners. A requester-scoped read never loads them.
+    requesterUserId
+      ? { data: [], error: null }
+      : client.from("ticket_notes").select("*").eq("workspace_id", workspaceId).eq("ticket_id", ticket.id).order("created_at", { ascending: false }),
     ticket.requestId ? getLatestTriage(client, ticket.requestId, workspaceId) : undefined,
+    // A requester may only open their own tickets, so those are all they are matched against.
+    fetchSimilarityCandidates(client, workspaceId, requesterUserId),
   ]);
   requireNoError(activityError, "Get ticket activity");
   requireNoError(notesError, "Get ticket notes");
@@ -1105,14 +1168,14 @@ export async function getTicketDetail(ticketId: string, requesterUserId?: string
     summaryEdited: triageSummaryEdited(triage?.summary, ticket.triageSummary),
     activity: ((activityData ?? []) as SupabaseRow[]).map(activityFromRow),
     notes: ((notesData ?? []) as SupabaseRow[]).map(noteFromRow),
-    similarTickets: await getSimilarTicketsFromClient(client, `${ticket.title} ${ticket.description} ${ticket.location}`, ticket.id, ticket.department, workspaceId),
+    similarTickets: rankSimilarTickets(candidates, `${ticket.title} ${ticket.description} ${ticket.location}`, ticket.id, ticket.department),
   };
 }
 
 export async function getSimilarTickets(text: string, department?: Department, workspaceId = DEMO_WORKSPACE_ID) {
   const client = getSupabaseAdminClient();
   if (!client) return [];
-  return getSimilarTicketsFromClient(client, text, undefined, department, workspaceId);
+  return rankSimilarTickets(await fetchSimilarityCandidates(client, workspaceId), text, undefined, department);
 }
 
 // Backs the global search palette. `term` must already be sanitized by
@@ -1207,11 +1270,17 @@ export async function approveRequest(input: {
   requireNoError(existingError, "Check existing ticket");
   if (existingData) return ticketFromRow(existingData as SupabaseRow);
 
+  // A rejected or duplicate request stays decided. "approved" with no ticket is an
+  // approval whose ticket insert failed, which a retry is allowed to finish.
+  const request = requestFromRow(requestData as SupabaseRow);
+  if (request.status !== "needs-review" && request.status !== "approved") {
+    throw new PublicError(REQUEST_ALREADY_REVIEWED_MESSAGE);
+  }
+
   // Checked before anything is written, so a bad assignee cannot leave the request
   // approved with no ticket behind it.
   const assignee = input.assigneeUserId ? await requireAssignableWorkspaceMember(workspaceId, input.assigneeUserId) : undefined;
 
-  const request = requestFromRow(requestData as SupabaseRow);
   const timestamp = now();
   const ticket: TicketRecord = {
     id: await nextEntityId(client, "TRG", workspaceId),
@@ -1235,15 +1304,18 @@ export async function approveRequest(input: {
     updatedAt: timestamp,
   };
 
+  // Only while the status is still the one read above, so a reject or duplicate that
+  // lands in between wins instead of leaving a rejected request with a ticket.
   const { data: updatedRequest, error: updateError } = await client
     .from("requests")
     .update({ status: "approved", reviewed_at: timestamp })
     .eq("workspace_id", workspaceId)
     .eq("id", request.id)
+    .eq("status", request.status)
     .select("id")
     .maybeSingle();
   requireNoError(updateError, "Approve request");
-  if (!updatedRequest) throw new Error("Request not found.");
+  if (!updatedRequest) throw new PublicError(REQUEST_ALREADY_REVIEWED_MESSAGE);
 
   const { error: insertError } = await client.from("tickets").insert(ticketToRow(ticket));
   if (insertError) {
@@ -1265,36 +1337,36 @@ export async function approveRequest(input: {
   }
 
   const decisionNote = input.note?.trim();
-  await addActivity(client, {
-    workspaceId,
-    ticketId: ticket.id,
-    requestId: request.id,
-    action: "Ticket approved",
-    actor: actor?.name || "Admin",
-    details: `Approved as ${ticket.priority} priority for ${ticket.department}.${assignee ? ` Assigned to ${assignee.name}.` : ""}${decisionNote ? ` Note: ${decisionNote}` : ""}`,
-    createdAt: timestamp,
-  });
-
-  await notifyRequestDecision(client, {
-    workspaceId,
-    requestId: request.id,
-    requesterUserId: request.requesterUserId,
-    decision: "approved",
-    actorName: actor?.name || "An admin",
-    actorUserId: actor?.id,
-    ticketId: ticket.id,
-  });
-
-  if (assignee) {
-    await notifyTicketAssigned(client, {
+  await Promise.all([
+    addActivity(client, {
       workspaceId,
       ticketId: ticket.id,
-      ticketTitle: ticket.title,
-      assigneeUserId: assignee.id,
+      requestId: request.id,
+      action: "Ticket approved",
+      actor: actor?.name || "Admin",
+      details: `Approved as ${ticket.priority} priority for ${ticket.department}.${assignee ? ` Assigned to ${assignee.name}.` : ""}${decisionNote ? ` Note: ${decisionNote}` : ""}`,
+      createdAt: timestamp,
+    }),
+    notifyRequestDecision(client, {
+      workspaceId,
+      requestId: request.id,
+      requesterUserId: request.requesterUserId,
+      decision: "approved",
       actorName: actor?.name || "An admin",
       actorUserId: actor?.id,
-    });
-  }
+      ticketId: ticket.id,
+    }),
+    assignee
+      ? notifyTicketAssigned(client, {
+          workspaceId,
+          ticketId: ticket.id,
+          ticketTitle: ticket.title,
+          assigneeUserId: assignee.id,
+          actorName: actor?.name || "An admin",
+          actorUserId: actor?.id,
+        })
+      : undefined,
+  ]);
 
   return ticket;
 }
@@ -1309,28 +1381,32 @@ export async function rejectRequest(requestId: string, workspaceId = DEMO_WORKSP
     .update({ status: "rejected", reviewed_at: timestamp })
     .eq("workspace_id", workspaceId)
     .eq("id", requestId)
+    // Only an undecided request can be rejected. Without this an approved request
+    // could be flipped to rejected while its ticket lived on.
+    .eq("status", "needs-review")
     .select("id, requester_user_id")
     .maybeSingle();
   requireNoError(error, "Reject request");
-  if (!data) throw new Error("Request not found.");
+  if (!data) throw new PublicError(REQUEST_ALREADY_REVIEWED_MESSAGE);
 
-  await addActivity(client, {
-    workspaceId,
-    requestId,
-    action: "Request rejected",
-    actor: actor?.name || "Admin",
-    details: "Request rejected during human review.",
-    createdAt: timestamp,
-  });
-
-  await notifyRequestDecision(client, {
-    workspaceId,
-    requestId,
-    requesterUserId: (data as SupabaseRow).requester_user_id ? asString((data as SupabaseRow).requester_user_id) : undefined,
-    decision: "rejected",
-    actorName: actor?.name || "An admin",
-    actorUserId: actor?.id,
-  });
+  await Promise.all([
+    addActivity(client, {
+      workspaceId,
+      requestId,
+      action: "Request rejected",
+      actor: actor?.name || "Admin",
+      details: "Request rejected during human review.",
+      createdAt: timestamp,
+    }),
+    notifyRequestDecision(client, {
+      workspaceId,
+      requestId,
+      requesterUserId: (data as SupabaseRow).requester_user_id ? asString((data as SupabaseRow).requester_user_id) : undefined,
+      decision: "rejected",
+      actorName: actor?.name || "An admin",
+      actorUserId: actor?.id,
+    }),
+  ]);
 }
 
 export async function markDuplicate(requestId: string, duplicateOfTicketId: string, workspaceId = DEMO_WORKSPACE_ID, actor?: { id: string; name: string }) {
@@ -1344,28 +1420,31 @@ export async function markDuplicate(requestId: string, duplicateOfTicketId: stri
     .update({ status: "duplicate", duplicate_of_ticket_id: duplicateOfTicketId, reviewed_at: timestamp })
     .eq("workspace_id", workspaceId)
     .eq("id", requestId)
+    // Same rule as rejecting: only an undecided request can be closed as a duplicate.
+    .eq("status", "needs-review")
     .select("id, requester_user_id")
     .maybeSingle();
   requireNoError(error, "Mark request duplicate");
-  if (!data) throw new Error("Request not found.");
+  if (!data) throw new PublicError(REQUEST_ALREADY_REVIEWED_MESSAGE);
 
-  await addActivity(client, {
-    workspaceId,
-    requestId,
-    action: "Marked duplicate",
-    actor: actor?.name || "Admin",
-    details: `Marked as duplicate of ${duplicateOfTicketId}.`,
-    createdAt: timestamp,
-  });
-
-  await notifyRequestDecision(client, {
-    workspaceId,
-    requestId,
-    requesterUserId: (data as SupabaseRow).requester_user_id ? asString((data as SupabaseRow).requester_user_id) : undefined,
-    decision: "duplicate",
-    actorName: actor?.name || "An admin",
-    actorUserId: actor?.id,
-  });
+  await Promise.all([
+    addActivity(client, {
+      workspaceId,
+      requestId,
+      action: "Marked duplicate",
+      actor: actor?.name || "Admin",
+      details: `Marked as duplicate of ${duplicateOfTicketId}.`,
+      createdAt: timestamp,
+    }),
+    notifyRequestDecision(client, {
+      workspaceId,
+      requestId,
+      requesterUserId: (data as SupabaseRow).requester_user_id ? asString((data as SupabaseRow).requester_user_id) : undefined,
+      decision: "duplicate",
+      actorName: actor?.name || "An admin",
+      actorUserId: actor?.id,
+    }),
+  ]);
 }
 
 // resolved_at and closed_at describe the ticket's current state, not its history. A
@@ -1433,7 +1512,10 @@ export async function updateTicket(input: {
   }
 
   if (input.note) {
-    changes.push(input.note);
+    // The note itself is stored in ticket_notes, which only admins and owners read.
+    // The activity feed is shown to the requester too, so it records that a note was
+    // added and never what it says.
+    changes.push(INTERNAL_NOTE_ACTIVITY_TEXT);
     const note: TicketNoteRecord = {
       id: await nextEntityId(client, "NOTE", workspaceId),
       workspaceId,
@@ -1465,40 +1547,40 @@ export async function updateTicket(input: {
   requireNoError(updateError, "Update ticket");
   if (!updatedData) throw new Error("Ticket not found.");
 
-  if (changes.length > 0) {
-    await addActivity(client, {
-      workspaceId,
-      ticketId: ticket.id,
-      requestId: ticket.requestId,
-      action: "Ticket updated",
-      actor,
-      details: changes.join(" "),
-      createdAt: timestamp,
-    });
-  }
-
-  if (statusChanged) {
-    await notifyTicketStatusChanged(client, {
-      workspaceId,
-      ticketId: ticket.id,
-      requesterUserId: ticket.requesterUserId,
-      fromStatus: ticket.status,
-      toStatus: input.status,
-      actorName: actor,
-      actorUserId,
-    });
-  }
-
-  if (assignee) {
-    await notifyTicketAssigned(client, {
-      workspaceId,
-      ticketId: ticket.id,
-      ticketTitle: ticket.title,
-      assigneeUserId: assignee.id,
-      actorName: actor,
-      actorUserId,
-    });
-  }
+  await Promise.all([
+    changes.length > 0
+      ? addActivity(client, {
+          workspaceId,
+          ticketId: ticket.id,
+          requestId: ticket.requestId,
+          action: "Ticket updated",
+          actor,
+          details: changes.join(" "),
+          createdAt: timestamp,
+        })
+      : undefined,
+    statusChanged
+      ? notifyTicketStatusChanged(client, {
+          workspaceId,
+          ticketId: ticket.id,
+          requesterUserId: ticket.requesterUserId,
+          fromStatus: ticket.status,
+          toStatus: input.status,
+          actorName: actor,
+          actorUserId,
+        })
+      : undefined,
+    assignee
+      ? notifyTicketAssigned(client, {
+          workspaceId,
+          ticketId: ticket.id,
+          ticketTitle: ticket.title,
+          assigneeUserId: assignee.id,
+          actorName: actor,
+          actorUserId,
+        })
+      : undefined,
+  ]);
 
   return ticketFromRow(updatedData as SupabaseRow);
 }
@@ -1549,16 +1631,18 @@ export async function getDashboardData(workspaceId = DEMO_WORKSPACE_ID): Promise
   const client = getSupabaseAdminClient();
   if (!client) return emptyDashboardData();
 
-  const [tickets, reviewItem, activityResult, requestsResult] = await Promise.all([
-    fetchTicketRows(client, "all", undefined, workspaceId),
-    getLatestNeedsReview(client, workspaceId),
+  // The featured review item is matched against the same ticket read the counters
+  // use, and the queue size is a count instead of every request row in the workspace.
+  const ticketsRead = fetchTicketRows(client, "all", undefined, workspaceId);
+  const [tickets, reviewItem, activityResult, newRequestsResult] = await Promise.all([
+    ticketsRead,
+    getLatestNeedsReview(client, workspaceId, ticketsRead),
     client.from("ticket_activity").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).limit(20),
-    client.from("requests").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending: false }),
+    client.from("requests").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).eq("status", "needs-review"),
   ]);
   requireNoError(activityResult.error, "List recent activity");
-  requireNoError(requestsResult.error, "List requests");
+  requireNoError(newRequestsResult.error, "Count new requests");
 
-  const requests = ((requestsResult.data ?? []) as SupabaseRow[]).map(requestFromRow);
   const activeTickets = tickets.filter((ticket) => ["new", "open", "in-progress"].includes(ticket.status));
   const resolvedTickets = tickets.filter((ticket) => ticket.resolvedAt);
   const totalResolutionMs = resolvedTickets.reduce((sum, ticket) => {
@@ -1568,7 +1652,7 @@ export async function getDashboardData(workspaceId = DEMO_WORKSPACE_ID): Promise
 
   return {
     counts: {
-      newRequests: requests.filter((request) => request.status === "needs-review").length,
+      newRequests: newRequestsResult.count ?? 0,
       openTickets: activeTickets.length,
       highPriority: activeTickets.filter((ticket) => ["high", "critical"].includes(ticket.priority)).length,
       assigned: activeTickets.filter((ticket) => ticket.assigneeUserId).length,
@@ -1624,20 +1708,73 @@ function buildResolutionTrend(tickets: TicketRecord[]) {
   }));
 }
 
-async function getSimilarTicketsFromClient(
+// The columns similarity scoring reads. A full ticket row qualifies, so a caller that
+// already holds the workspace's tickets can pass them straight in.
+type SimilarityCandidate = Pick<TicketRecord, "id" | "requestId" | "title" | "description" | "location" | "category" | "department" | "status" | "priority">;
+
+async function fetchSimilarityCandidates(client: SupabaseClient, workspaceId: string, requesterUserId?: string): Promise<SimilarityCandidate[]> {
+  let query = client
+    .from("tickets")
+    .select("id, request_id, title, description, location, category, department, status, priority")
+    .eq("workspace_id", workspaceId);
+  if (requesterUserId) {
+    query = query.eq("requester_user_id", requesterUserId);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false });
+  requireNoError(error, "List similar ticket candidates");
+  return ((data ?? []) as SupabaseRow[]).map((row) => ({
+    id: asString(row.id),
+    requestId: row.request_id ? asString(row.request_id) : undefined,
+    title: asString(row.title),
+    description: asString(row.description),
+    location: asString(row.location),
+    category: asString(row.category),
+    department: asDepartment(row.department),
+    status: asTicketStatus(row.status),
+    priority: asPriority(row.priority),
+  }));
+}
+
+// PostgREST carries an in() list in the URL, so a long review queue is read in slices.
+const REQUEST_ID_FILTER_CHUNK = 100;
+
+async function selectByRequestIds(
   client: SupabaseClient,
+  table: "ai_triage_results" | "request_attachments",
+  requestIds: string[],
+  workspaceId: string,
+  ascending: boolean,
+  context: string,
+) {
+  const slices: string[][] = [];
+  for (let start = 0; start < requestIds.length; start += REQUEST_ID_FILTER_CHUNK) {
+    slices.push(requestIds.slice(start, start + REQUEST_ID_FILTER_CHUNK));
+  }
+
+  const results = await Promise.all(
+    slices.map((slice) =>
+      client.from(table).select("*").eq("workspace_id", workspaceId).in("request_id", slice).order("created_at", { ascending })
+    )
+  );
+  return results.flatMap(({ data, error }) => {
+    requireNoError(error, context);
+    return (data ?? []) as SupabaseRow[];
+  });
+}
+
+function rankSimilarTickets(
+  tickets: SimilarityCandidate[],
   text: string,
   excludeId?: string,
   preferredDepartment?: Department,
-  workspaceId = DEMO_WORKSPACE_ID
-): Promise<SimilarTicket[]> {
+): SimilarTicket[] {
   const tokens = new Set(
     text
       .toLowerCase()
       .split(/[^a-z0-9]+/)
       .filter((token) => token.length > 2)
   );
-  const tickets = await fetchTicketRows(client, "all", undefined, workspaceId);
 
   return tickets
     .filter((ticket) => ticket.id !== excludeId && ticket.requestId !== excludeId)

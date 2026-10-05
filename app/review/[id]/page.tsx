@@ -37,9 +37,11 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
   const { workspace, user } = await requireWorkspaceAdminContext(workspaceSlug);
   const href = (path: string) => scopedWorkspaceHref(workspaceSlug, path);
   const { id } = await params;
-  const bundle = await getRequestBundle(id, undefined, workspace.id);
-  const departments = await listDepartments(workspace.id);
-  const assignees = await listTicketAssignees(workspace.id, user.id);
+  const [bundle, departments, assignees] = await Promise.all([
+    getRequestBundle(id, undefined, workspace.id),
+    listDepartments(workspace.id),
+    listTicketAssignees(workspace.id, user.id),
+  ]);
 
   if (!bundle) {
     notFound();
