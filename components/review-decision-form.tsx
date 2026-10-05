@@ -9,6 +9,15 @@ import type { ActionState } from "@/lib/errors";
 
 const initialState: ActionState = {};
 
+// Approve is the form's default action, so Enter in a text field such as the title
+// would approve the request. Only the buttons may submit. Textareas keep Enter for
+// line breaks and are not inputs, so they are unaffected.
+function blockEnterSubmit(event: React.KeyboardEvent<HTMLFormElement>) {
+  if (event.key === "Enter" && (event.target as HTMLElement).tagName === "INPUT") {
+    event.preventDefault();
+  }
+}
+
 export function ReviewDecisionForm({
   formId,
   decided,
@@ -26,7 +35,7 @@ export function ReviewDecisionForm({
   const error = approveState.error ?? rejectState.error;
 
   return (
-    <form id={formId} action={approveAction} className="stack" style={{ gap: 16 }}>
+    <form id={formId} action={approveAction} onKeyDown={blockEnterSubmit} className="stack" style={{ gap: 16 }}>
       <fieldset disabled={decided} className="stack disabled:opacity-60" style={{ gap: 16 }}>
         {children}
 
@@ -62,6 +71,10 @@ export function ReviewDecisionForm({
               pending={rejectPending}
               pendingText="Rejecting..."
               className="btn--danger btn--sm w-auto"
+              // A decided request locks, so a stray click here cannot be taken back.
+              onClick={(event) => {
+                if (!window.confirm("Reject this request? This cannot be undone.")) event.preventDefault();
+              }}
             >
               <X size={15} /> Reject
             </SubmitButton>
