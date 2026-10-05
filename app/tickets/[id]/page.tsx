@@ -46,7 +46,7 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
     notFound();
   }
 
-  const { ticket, aiPriority, activity, notes, similarTickets } = detail;
+  const { ticket, aiPriority, summaryEdited, activity, notes, similarTickets } = detail;
   const requester = ticket.requesterUserId ? await getUserProfile(ticket.requesterUserId) : undefined;
   const requesterName = requester?.displayName || ticket.contactName || "Anonymous";
   // An assignee who has since left or been demoted is not in the list, so the ticket
@@ -91,8 +91,11 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
               </div>
 
               <div className="callout callout--accent" style={{ marginTop: 18 }}>
-                <div className="label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Sparkles size={12} /> AI triage summary
+                <div className="between wrap" style={{ gap: 8 }}>
+                  <div className="label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Sparkles size={12} /> AI triage summary
+                  </div>
+                  {summaryEdited ? <span className="badge" data-hue="neutral">Edited by admin</span> : null}
                 </div>
                 <p style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.55 }}>{ticket.triageSummary}</p>
                 <p className="muted" style={{ marginTop: 6, fontSize: 12.5 }}>{ticket.priorityReasoning}</p>

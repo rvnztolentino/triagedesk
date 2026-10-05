@@ -388,4 +388,22 @@ describe("ticket updates", () => {
     expect(pageSource).toContain("{aiPriority && aiPriority !== ticket.priority ? (");
     expect(pageSource).toContain("AI suggested {aiPriority} priority. This ticket is now {ticket.priority}, so the reasoning above describes the original suggestion.");
   });
+
+  // The summary under "AI triage summary" is whatever the admin saved at approval,
+  // so a rewritten one must not pass as the AI's own words.
+  it("flags a triage summary an admin rewrote at approval", async () => {
+    const { triageSummaryEdited } = await import("./store");
+    const aiSummary = "Printer offline at the front desk.\nVisitors cannot check in.";
+
+    expect(triageSummaryEdited(aiSummary, "Front desk printer is down. Swap the toner first.")).toBe(true);
+    expect(triageSummaryEdited(aiSummary, aiSummary)).toBe(false);
+    // A textarea round trip changes line breaks and trailing space, not the wording.
+    expect(triageSummaryEdited(aiSummary, "Printer offline at the front desk.\r\nVisitors cannot check in.  ")).toBe(false);
+    // Seeded tickets have no source request, so there is no AI summary to compare.
+    expect(triageSummaryEdited(undefined, "Anything")).toBe(false);
+
+    const pageSource = readFileSync(new URL("../app/tickets/[id]/page.tsx", import.meta.url), "utf8");
+    expect(storeSource).toContain("summaryEdited: triageSummaryEdited(triage?.summary, ticket.triageSummary),");
+    expect(pageSource).toContain('{summaryEdited ? <span className="badge" data-hue="neutral">Edited by admin</span> : null}');
+  });
 });

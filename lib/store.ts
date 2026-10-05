@@ -1063,6 +1063,15 @@ export async function listTickets(statusFilter?: string, requesterUserId?: strin
   return fetchTicketRows(client, statusFilter, requesterUserId, workspaceId);
 }
 
+// An admin can rewrite the AI's summary at approval, and the ticket keeps only the
+// rewritten text. Whitespace is ignored because a textarea submits CRLF line breaks,
+// which would otherwise flag an untouched summary as edited.
+export function triageSummaryEdited(aiSummary: string | undefined, ticketSummary: string) {
+  if (aiSummary === undefined) return false;
+  const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
+  return normalize(aiSummary) !== normalize(ticketSummary);
+}
+
 export async function getTicketDetail(ticketId: string, requesterUserId?: string, workspaceId = DEMO_WORKSPACE_ID) {
   const client = getSupabaseAdminClient();
   if (!client) return undefined;
@@ -1090,6 +1099,7 @@ export async function getTicketDetail(ticketId: string, requesterUserId?: string
     // admin overrides it at approval or edits it later, while priorityReasoning still
     // argues for this one.
     aiPriority: triage?.priority,
+    summaryEdited: triageSummaryEdited(triage?.summary, ticket.triageSummary),
     activity: ((activityData ?? []) as SupabaseRow[]).map(activityFromRow),
     notes: ((notesData ?? []) as SupabaseRow[]).map(noteFromRow),
     similarTickets: await getSimilarTicketsFromClient(client, `${ticket.title} ${ticket.description} ${ticket.location}`, ticket.id, ticket.department, workspaceId),
