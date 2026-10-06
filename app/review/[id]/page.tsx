@@ -25,9 +25,9 @@ function Meta({ label, value, icon: Icon }: { label: string; value: string; icon
   return (
     <div>
       <div className="label" style={{ marginBottom: 5 }}>{label}</div>
-      <div className="cluster" style={{ gap: 7 }}>
-        <Icon size={14} className="faint" />
-        <span style={{ fontWeight: 550, fontSize: 13.5 }}>{value}</span>
+      <div className="cluster" style={{ gap: 7, alignItems: "flex-start" }}>
+        <Icon size={14} className="faint" style={{ marginTop: 3 }} />
+        <span style={{ minWidth: 0, overflowWrap: "anywhere", fontWeight: 550, fontSize: 13.5 }}>{value}</span>
       </div>
     </div>
   );

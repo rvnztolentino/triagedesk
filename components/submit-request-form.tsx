@@ -38,7 +38,7 @@ function FormBody({
   if (pending) return <AiTriageLoading />;
 
   return (
-    <fieldset className="space-y-6">
+    <fieldset className="min-w-0 space-y-6">
       <div className="field">
         <label htmlFor="description" className="label">
           Description <span style={{ color: "var(--danger)" }} aria-hidden="true">*</span>
@@ -132,7 +132,7 @@ export function SubmitRequestForm({
       {state.error ? (
         <div role="alert" className="st-danger rounded-[var(--radius-control)] border px-4 py-3 text-sm flex items-start gap-2">
           <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-          <p><span className="font-semibold">Couldn&apos;t submit.</span> {state.error}</p>
+          <p className="min-w-0 break-words"><span className="font-semibold">Couldn&apos;t submit.</span> {state.error}</p>
         </div>
       ) : null}
       <FormBody

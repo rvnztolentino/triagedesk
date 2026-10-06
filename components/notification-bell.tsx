@@ -175,7 +175,7 @@ export function NotificationBell({
             ) : null}
           </div>
 
-          <div style={{ maxHeight: 380, overflowY: "auto", padding: 6 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 380, overflowY: "auto", padding: 6 }}>
             {notifications.length === 0 ? (
               <div className="stack" style={{ alignItems: "center", gap: 8, padding: "28px 16px", textAlign: "center" }}>
                 <Bell size={22} style={{ color: "var(--muted)" }} />

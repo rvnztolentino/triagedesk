@@ -358,6 +358,10 @@ select {
   .wrap { flex-wrap: wrap; }
   .grow { flex: 1; }
   .divider { height: 1px; background: var(--border); border: 0; }
+  /* An icon is a fixed-size glyph. As a flex item beside text that wants more
+     room than the row has, it would give up width along with the text and
+     render tiny, so no icon shrinks anywhere. */
+  .lucide { flex-shrink: 0; }
 
   /* ── grids (display baked in so we don't shadow Tailwind's `grid`) ── */
   .cols-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
@@ -460,6 +464,11 @@ select {
     background: var(--surface-2);
     font-size: 12.5px;
     color: var(--muted);
+    /* A chip sizes to its content, so one long unbreakable label (an uploaded
+       file name) would push it past its card. Cap it at the row width and let
+       the label inside truncate. */
+    max-width: 100%;
+    min-width: 0;
   }
 
   /* ── avatar ── */

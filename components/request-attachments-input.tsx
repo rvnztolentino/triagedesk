@@ -111,7 +111,7 @@ export function RequestAttachmentsInput() {
         </div>
       ) : null}
 
-      {error ? <p className="mt-3 text-sm text-[var(--st-warn)]">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[var(--st-warn)] break-words">{error}</p> : null}
     </div>
   );
 }
