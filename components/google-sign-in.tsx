@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { useSignIn } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
@@ -26,13 +26,46 @@ function GoogleIcon() {
 const SSO_START_TIMEOUT_MS = 15_000;
 const SSO_TIMEOUT = "SSO_START_TIMEOUT";
 
+// sso() resolving without an error does not prove the browser is leaving. Clerk only
+// navigates when the sign-in attempt carries a fresh provider redirect, and it resolves
+// `{ error: null }` either way. If we are still on this page this long after a
+// "successful" start, the hand-off did not happen, so release the button and say so.
+// The same timer also recovers the button when the user comes Back from Google and
+// the page is restored with `loading` still set.
+const NAVIGATION_WATCHDOG_MS = 8_000;
+
 export function GoogleSignIn({ next, label = "Continue with Google" }: { next?: string; label?: string }) {
   const { signIn } = useSignIn();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const navigationWatchdog = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (navigationWatchdog.current) clearTimeout(navigationWatchdog.current);
+    },
+    []
+  );
+
+  // Clerk keeps one sign-in attempt per browser client and sso() reuses it when it
+  // already has an id. An attempt left behind by an earlier visit (an expired session,
+  // a half-finished password or device-verification step, a previous Google round trip)
+  // has no pending provider redirect, so sso() skips creating a new one, finds nothing
+  // to navigate to, and resolves as if it had worked. That is the "spins but Google
+  // never opens until cookies are cleared" failure. Discarding the leftover attempt
+  // first forces a fresh one with a fresh redirect on every click.
+  async function startGoogleSso() {
+    await signIn.reset();
+    return signIn.sso({
+      strategy: "oauth_google",
+      redirectUrl: safeInternalNext(next) ?? "/onboarding",
+      redirectCallbackUrl: "/auth/callback",
+    });
+  }
 
   async function handleClick() {
     if (loading) return;
+    if (navigationWatchdog.current) clearTimeout(navigationWatchdog.current);
     setError("");
     setLoading(true);
 
@@ -46,11 +79,7 @@ export function GoogleSignIn({ next, label = "Continue with Google" }: { next?: 
       // "Redirecting to Google..." forever with nothing to explain why. Check the
       // returned error, not just thrown ones.
       const { error: ssoError } = await Promise.race([
-        signIn.sso({
-          strategy: "oauth_google",
-          redirectUrl: safeInternalNext(next) ?? "/onboarding",
-          redirectCallbackUrl: "/auth/callback",
-        }),
+        startGoogleSso(),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error(SSO_TIMEOUT)), SSO_START_TIMEOUT_MS)
         ),
@@ -59,9 +88,15 @@ export function GoogleSignIn({ next, label = "Continue with Google" }: { next?: 
       if (ssoError) {
         setError(clerkErrorMessage(ssoError) || "We couldn't start Google sign-in. Please try again.");
         setLoading(false);
+        return;
       }
       // On success the browser navigates to Google, so `loading` stays set on purpose:
-      // clearing it would flash the idle button during the redirect.
+      // clearing it would flash the idle button during the redirect. The watchdog
+      // releases it if that navigation never actually happens.
+      navigationWatchdog.current = setTimeout(() => {
+        setError("Google sign-in didn't open. Please try again.");
+        setLoading(false);
+      }, NAVIGATION_WATCHDOG_MS);
     } catch (err) {
       setError(
         err instanceof Error && err.message === SSO_TIMEOUT
