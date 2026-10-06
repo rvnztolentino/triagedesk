@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, Building2, ChevronRight, Clock, MapPin, RefreshCw, Sparkles, User, UserCheck } from "lucide-react";
+import { Activity, Building2, ChevronRight, Clock, FileText, MapPin, Paperclip, RefreshCw, Sparkles, User, UserCheck } from "lucide-react";
+import { AttachmentFileName } from "@/components/attachment-file-name";
 import { ConfidenceMeter } from "@/components/confidence-meter";
 import { TicketUpdateForm } from "@/components/ticket-update-form";
 import { getUserProfile, requireWorkspaceContext } from "@/lib/auth";
@@ -48,7 +49,7 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
     notFound();
   }
 
-  const { ticket, aiPriority, summaryEdited, activity, notes, similarTickets } = detail;
+  const { ticket, aiPriority, summaryEdited, activity, notes, attachments, similarTickets } = detail;
   const requester = ticket.requesterUserId ? await getUserProfile(ticket.requesterUserId) : undefined;
   const requesterName = requester?.displayName || ticket.contactName || "Anonymous";
   // An assignee who has since left or been demoted is not in the list, so the ticket
@@ -91,6 +92,21 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
                 <Meta label="Opened" value={formatDateTime(ticket.createdAt)} icon={Clock} />
                 <Meta label="Updated" value={relativeTime(ticket.updatedAt)} icon={RefreshCw} />
               </div>
+
+              {attachments.length > 0 ? (
+                <div style={{ marginTop: 18 }}>
+                  <div className="label" style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                    <Paperclip size={12} /> Attachments
+                  </div>
+                  <div className="cluster wrap" style={{ gap: 8 }}>
+                    {attachments.map((attachment) => (
+                      <a key={attachment.id} href={href(`/attachments/${attachment.id}`)} className="chip">
+                        <FileText size={13} /> <AttachmentFileName fileName={attachment.fileName} />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="callout callout--accent" style={{ marginTop: 18 }}>
                 <div className="between wrap" style={{ gap: 8 }}>

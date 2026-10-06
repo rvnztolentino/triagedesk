@@ -294,6 +294,57 @@ describe("what a requester can read on a ticket", () => {
   });
 });
 
+// Files belong to the request. Approval used to hide them, because the ticket page
+// never asked for them.
+describe("attachments on a ticket", () => {
+  function attachment(id: string, requestId: string, fileName: string): Row {
+    return {
+      id,
+      workspace_id: WORKSPACE_ID,
+      request_id: requestId,
+      file_name: fileName,
+      storage_path: `${WORKSPACE_ID}/requests/${requestId}/${id}-${fileName}`,
+      public_url: null,
+      content_type: "image/png",
+      size_bytes: 2048,
+      created_at: "2026-06-01T08:00:30.000Z",
+    };
+  }
+
+  beforeEach(() => {
+    tables.request_attachments = [attachment("ATT-1", "REQ-1", "projector.png"), attachment("ATT-2", "REQ-2", "leak.png")];
+  });
+
+  it("shows the files submitted with the ticket's request, and no other request's", async () => {
+    tables.tickets = [ticket("TRG-1", { request_id: "REQ-1" })];
+    const { getTicketDetail } = await import("./store");
+
+    const asAdmin = await getTicketDetail("TRG-1", undefined, WORKSPACE_ID);
+    expect(asAdmin?.attachments.map((file) => file.fileName)).toEqual(["projector.png"]);
+
+    const asRequester = await getTicketDetail("TRG-1", REQUESTER_ID, WORKSPACE_ID);
+    expect(asRequester?.attachments.map((file) => file.fileName)).toEqual(["projector.png"]);
+
+    expect(tripsTo("request_attachments").every((trip) => trip.filters.workspace_id === WORKSPACE_ID && trip.filters.request_id === "REQ-1")).toBe(true);
+  });
+
+  it("does not query attachments for a ticket with no source request", async () => {
+    tables.tickets = [ticket("TRG-1")];
+    const { getTicketDetail } = await import("./store");
+
+    const detail = await getTicketDetail("TRG-1", undefined, WORKSPACE_ID);
+    expect(detail?.attachments).toEqual([]);
+    expect(tripsTo("request_attachments")).toHaveLength(0);
+  });
+
+  it("links each file on the ticket page through the guarded download route", () => {
+    const pageSource = readFileSync(new URL("../app/tickets/[id]/page.tsx", import.meta.url), "utf8");
+
+    expect(pageSource).toContain("{attachments.length > 0 ? (");
+    expect(pageSource).toContain("<a key={attachment.id} href={href(`/attachments/${attachment.id}`)} className=\"chip\">");
+  });
+});
+
 describe("review decisions on a request that is already decided", () => {
   const approval = { requestId: "REQ-1", title: "Projector issue at Board Room", priority: "medium" as const, department: "it", summary: "IT should review the board room projector." };
 

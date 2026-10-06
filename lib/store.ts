@@ -1146,13 +1146,15 @@ export async function getTicketDetail(ticketId: string, requesterUserId?: string
   if (!data) return undefined;
 
   const ticket = ticketFromRow(data as SupabaseRow);
-  const [{ data: activityData, error: activityError }, { data: notesData, error: notesError }, triage, candidates] = await Promise.all([
+  const [{ data: activityData, error: activityError }, { data: notesData, error: notesError }, triage, attachments, candidates] = await Promise.all([
     client.from("ticket_activity").select("*").eq("workspace_id", workspaceId).eq("ticket_id", ticket.id).order("created_at", { ascending: false }),
     // Internal notes are for admins and owners. A requester-scoped read never loads them.
     requesterUserId
       ? { data: [], error: null }
       : client.from("ticket_notes").select("*").eq("workspace_id", workspaceId).eq("ticket_id", ticket.id).order("created_at", { ascending: false }),
     ticket.requestId ? getLatestTriage(client, ticket.requestId, workspaceId) : undefined,
+    // Files are stored against the request, so a ticket shows the ones its request came with.
+    ticket.requestId ? listRequestAttachmentsFromClient(client, ticket.requestId, workspaceId) : [],
     // A requester may only open their own tickets, so those are all they are matched against.
     fetchSimilarityCandidates(client, workspaceId, requesterUserId),
   ]);
@@ -1168,6 +1170,7 @@ export async function getTicketDetail(ticketId: string, requesterUserId?: string
     summaryEdited: triageSummaryEdited(triage?.summary, ticket.triageSummary),
     activity: ((activityData ?? []) as SupabaseRow[]).map(activityFromRow),
     notes: ((notesData ?? []) as SupabaseRow[]).map(noteFromRow),
+    attachments,
     similarTickets: rankSimilarTickets(candidates, `${ticket.title} ${ticket.description} ${ticket.location}`, ticket.id, ticket.department),
   };
 }
