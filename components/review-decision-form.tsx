@@ -49,7 +49,7 @@ export function ReviewDecisionForm({
             </div>
           ) : null}
 
-          <div className="field" style={{ marginBottom: 14 }}>
+          <div className="field">
             <label htmlFor="note" className="label">Decision note (optional)</label>
             <CharLimitedTextarea
               id="note"
@@ -61,24 +61,26 @@ export function ReviewDecisionForm({
               style={{ minHeight: 64 }}
             />
           </div>
+        </div>
 
-          <div className="cluster" style={{ gap: 10, justifyContent: "space-between" }}>
-            <SubmitButton pending={approvePending} pendingText="Approving..." className="btn--sm w-auto">
-              <Check size={15} /> Approve
-            </SubmitButton>
-            <SubmitButton
-              formAction={rejectAction}
-              pending={rejectPending}
-              pendingText="Rejecting..."
-              className="btn--danger btn--sm w-auto"
-              // A decided request locks, so a stray click here cannot be taken back.
-              onClick={(event) => {
-                if (!window.confirm("Reject this request? This cannot be undone.")) event.preventDefault();
-              }}
-            >
-              <X size={15} /> Reject
-            </SubmitButton>
-          </div>
+        {/* Approve stays first in the DOM so it remains the form's default button.
+            The reversed row draws it on the right with Reject beside it. */}
+        <div className="cluster flex-row-reverse">
+          <SubmitButton pending={approvePending} pendingText="Approving..." className="btn--sm w-auto">
+            <Check size={15} /> Approve
+          </SubmitButton>
+          <SubmitButton
+            formAction={rejectAction}
+            pending={rejectPending}
+            pendingText="Rejecting..."
+            className="btn--danger btn--sm w-auto"
+            // A decided request locks, so a stray click here cannot be taken back.
+            onClick={(event) => {
+              if (!window.confirm("Reject this request? This cannot be undone.")) event.preventDefault();
+            }}
+          >
+            <X size={15} /> Reject
+          </SubmitButton>
         </div>
       </fieldset>
     </form>
