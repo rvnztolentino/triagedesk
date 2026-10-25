@@ -279,7 +279,7 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
       <HomeHeader />
 
       <main>
-        <section className="atmos border-b border-border">
+        <section className="border-b border-border">
           <div className="mx-auto flex min-h-screen max-w-6xl items-center px-5 pt-28 pb-16">
             <div className="grid w-full grid-cols-1 gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
               <div>
