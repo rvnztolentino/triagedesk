@@ -78,7 +78,7 @@ function AuthAside() {
               <Sparkles size={12} /> AI suggestion
             </span>
             <span className="badge" data-hue="warn">
-              <span className="dot" /> High
+              High
             </span>
           </div>
           <div style={{ fontWeight: 650, marginTop: 12, fontSize: 15 }} className="text-fg">

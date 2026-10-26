@@ -158,10 +158,10 @@ async function TicketTable({
                   </div>
                   <div className="cluster" style={{ gap: 10 }}>
                     <span className="badge" data-hue={PRIORITY_HUE[ticket.priority] ?? "neutral"}>
-                      <span className="dot" /> {ticket.priority}
+                      {ticket.priority}
                     </span>
                     <span className="badge" data-hue={STATUS_HUE[ticket.status] ?? "neutral"}>
-                      <span className="dot" /> {ticket.status.replace("-", " ")}
+                      {ticket.status.replace("-", " ")}
                     </span>
                   </div>
                 </div>

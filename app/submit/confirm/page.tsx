@@ -70,7 +70,7 @@ export async function SubmitConfirmView({ searchParams, requestId, workspaceSlug
           </div>
           <div style={{ fontWeight: 650, fontSize: 15.5 }}>{triage.title}</div>
           <div className="cluster wrap" style={{ gap: 8, marginTop: 12 }}>
-            <span className="badge" data-hue={PRIORITY_HUE[triage.priority]}><span className="dot" /> {triage.priority}</span>
+            <span className="badge" data-hue={PRIORITY_HUE[triage.priority]}>{triage.priority}</span>
             <span className="chip"><Building2 size={13} /> {triage.department}</span>
             <span className="chip">{triage.category}</span>
           </div>

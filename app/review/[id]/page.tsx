@@ -61,7 +61,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
           <span className="eyebrow">Review · {request.id}</span>
           <h1 className="page-title" style={{ marginTop: 8 }}>{triage.title}</h1>
         </div>
-        <span className="badge" data-hue={STATUS_HUE[request.status]}><span className="dot" /> {statusLabel}</span>
+        <span className="badge" data-hue={STATUS_HUE[request.status]}>{statusLabel}</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
@@ -214,7 +214,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
           {decided ? (
             <div className="card card-pad" style={{ marginTop: 16 }}>
               <div className="cluster" style={{ gap: 10 }}>
-                <span className="badge" data-hue={STATUS_HUE[request.status]}><span className="dot" /> {statusLabel}</span>
+                <span className="badge" data-hue={STATUS_HUE[request.status]}>{statusLabel}</span>
                 {request.reviewedAt ? <span className="muted" style={{ fontSize: 13 }}>{formatDateTime(request.reviewedAt)}</span> : null}
               </div>
             </div>

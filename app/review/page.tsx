@@ -99,7 +99,7 @@ export async function ReviewQueueView({ workspaceSlug }: { workspaceSlug?: strin
                     </div>
                     <div className="cluster" style={{ gap: 10 }}>
                       <span className="badge" data-hue={PRIORITY_HUE[triage.priority] ?? "neutral"}>
-                        <span className="dot" /> {triage.priority}
+                        {triage.priority}
                       </span>
                       <span className="badge" data-hue="accent">
                         <Sparkles size={11} /> {triage.category}

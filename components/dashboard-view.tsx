@@ -227,7 +227,6 @@ export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string 
       <div className="card">
         <div className="panel-head">
           <div className="section-title">Workflow</div>
-          <span className="eyebrow">Submit → Review → Resolve</span>
         </div>
         <div className="flow">
           {workflow.map((step) => {
@@ -266,7 +265,7 @@ export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string 
                 <div className="between wrap" style={{ gap: 10 }}>
                   <div style={{ fontWeight: 650, fontSize: 16 }}>{featured.triage.title}</div>
                   <span className="badge" data-hue={PRIORITY_HUE[featured.triage.priority] ?? "neutral"}>
-                    <span className="dot" /> {featured.triage.priority}
+                    {featured.triage.priority}
                   </span>
                 </div>
                 <div className="cluster wrap" style={{ gap: 8, marginTop: 12 }}>
@@ -355,7 +354,7 @@ export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string 
             <div className="between" style={{ marginBottom: 8 }}>
               <div className="section-title">Resolution trend</div>
               <span className="badge" data-hue="done">
-                <span className="dot" /> 7 days
+                7 days
               </span>
             </div>
             <div className="mono" style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.03em" }}>

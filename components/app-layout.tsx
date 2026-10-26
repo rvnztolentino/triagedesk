@@ -426,9 +426,6 @@ export function AppLayout({
                         )}
                       />
                       <span className={cn("whitespace-nowrap", collapsed && "md:hidden")}>{item.label}</span>
-                      {active ? (
-                        <span className={cn("ml-auto h-1.5 w-1.5 rounded-full bg-accent", collapsed && "md:hidden")} />
-                      ) : null}
                     </Link>
                   );
                 })

@@ -77,14 +77,14 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
             <div className="panel-head">
               <div className="section-title">System health</div>
               <span className="badge" data-hue={allUp ? "done" : "warn"}>
-                <span className="dot" /> {allUp ? "All core systems up" : "Action needed"}
+                {allUp ? "All core systems up" : "Action needed"}
               </span>
             </div>
             <div className="stack" style={{ gap: 2, padding: "4px 18px 12px" }}>
               {healthRows.map((row) => (
                 <div key={row.label} className="between" style={{ padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
                   <div className="cluster" style={{ gap: 10 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 999, background: `var(--${row.hue})`, boxShadow: `0 0 8px var(--${row.hue})` }} />
+                    <span style={{ width: 8, height: 8, borderRadius: 999, background: `var(--${row.hue})` }} />
                     <span style={{ fontWeight: 550, fontSize: 14 }}>{row.label}</span>
                   </div>
                   <span className="badge" data-hue={row.hue}>

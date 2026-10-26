@@ -453,7 +453,6 @@ select {
     white-space: nowrap;
     border: 1px solid transparent;
   }
-  .badge .dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
   .badge[data-hue="info"] { color: var(--info); background: var(--info-soft); border-color: color-mix(in srgb, var(--info) 26%, transparent); }
   .badge[data-hue="warn"] { color: var(--warn); background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 26%, transparent); }
   .badge[data-hue="active"] { color: var(--active); background: var(--active-soft); border-color: color-mix(in srgb, var(--active) 26%, transparent); }
@@ -535,18 +534,13 @@ select {
     background: var(--accent);
     color: var(--accent-ink);
     border-color: transparent;
-    box-shadow: 0 8px 20px -10px var(--accent);
   }
   /* Mixing toward the page background (not white) keeps the hover shift visible
      in both directions now that the accent is white on dark / black on light. */
   .btn--primary:hover {
     background: color-mix(in srgb, var(--accent) 86%, var(--bg));
     border-color: transparent;
-    box-shadow: 0 10px 26px -10px var(--accent);
   }
-  /* Light mode keeps the primary button flat; the accent-colored drop
-     shadow only reads as intended on dark. */
-  html[data-theme="light"] .btn--primary:not(:focus-visible) { box-shadow: none; }
   .btn--ghost { background: transparent; border-color: transparent; color: var(--muted); }
   .btn--ghost:hover { background: var(--surface-hover); color: var(--fg); border-color: transparent; }
   .btn--danger {
