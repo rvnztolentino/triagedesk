@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
+  BadgeCheck,
   Building2,
   CheckCircle2,
   Clock,
@@ -307,18 +308,10 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
                   <HeroDemoCta demoEnabled={demoEnabled} />
                 </div>
 
-                <div className="mt-10 flex flex-wrap gap-x-10 gap-y-6">
-                  {[
-                    ["4", "priority levels"],
-                    ["6", "default departments"],
-                    ["0", "setup required"],
-                  ].map(([n, l]) => (
-                    <div key={l}>
-                      <div className="mono" style={{ fontSize: 26, fontWeight: 700, color: "var(--accent-text)" }}>{n}</div>
-                      <div className="eyebrow" style={{ marginTop: 4 }}>{l}</div>
-                    </div>
-                  ))}
-                </div>
+                <p className="mt-6 flex items-center gap-2 text-sm text-muted">
+                  <BadgeCheck className="h-4 w-4 shrink-0" style={{ color: "var(--accent-text)" }} aria-hidden="true" />
+                  No ticket is created without admin approval.
+                </p>
               </div>
 
               <HeroTriageFlow />
