@@ -54,7 +54,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
           <div
             style={{
               padding: 20,
-              background: "radial-gradient(500px 300px at 90% -20%, var(--accent-soft), transparent 60%), var(--surface)",
+              background: "var(--surface)",
             }}
           >
             <div className="eyebrow">Currently open</div>
