@@ -95,7 +95,7 @@
   --shadow-pop: 0 20px 50px -16px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.4);
   --card-shadow: var(--shadow-sm);
 
-  /* The workspace panel: one large rounded card that holds every page. */
+  /* The shell cards: the sidebar and the main column each sit in one. */
   --panel: #0d0d0d;
   --panel-border: rgba(255, 255, 255, 0.08);
   --panel-shadow: none;
@@ -453,22 +453,21 @@ select {
   .card > .list:first-child > :first-child { border-top-left-radius: calc(var(--r-card) - 1px); border-top-right-radius: calc(var(--r-card) - 1px); }
   .card > .list:last-child > :last-child { border-bottom-left-radius: calc(var(--r-card) - 1px); border-bottom-right-radius: calc(var(--r-card) - 1px); }
 
-  /* The workspace panel: every signed-in page renders inside this one large
-     card. On a phone the chrome falls away so content keeps the full width. */
-  .ws-panel {
+  /* Shell cards: the sidebar and the main column (header plus page) each sit
+     in one large rounded card. On a phone the main card's chrome falls away so
+     content keeps the full width; the sidebar drawer keeps its card. */
+  .shell-card {
     background: var(--panel);
     border: 1px solid var(--panel-border);
     border-radius: var(--r-panel);
     box-shadow: var(--panel-shadow);
-    padding: clamp(20px, 3vw, 40px);
   }
-  @media (max-width: 640px) {
-    .ws-panel {
-      background: transparent;
+  @media (max-width: 767.98px) {
+    .shell-main {
+      background: var(--bg);
       border: 0;
       border-radius: 0;
       box-shadow: none;
-      padding: 0;
     }
   }
   .card-pad { padding: 18px; }
@@ -768,7 +767,7 @@ select {
   .nav-item[aria-current="page"] .nav-icon {
     background: var(--accent);
     color: var(--accent-fg);
-    box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent);
+    box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--accent);
   }
   /* Round header and sidebar controls (icon buttons and pills). */
   .shell-ctrl {

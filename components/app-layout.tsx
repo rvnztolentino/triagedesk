@@ -190,6 +190,14 @@ export function AppLayout({
       : requesterNavItems;
   const navItems = activeWorkspace ? [...operationalNavItems, workspaceNavItem] : [workspaceNavItem];
   const activeSlug = activeWorkspace?.slug;
+  // The header names the section the current page belongs to, mirroring the
+  // highlighted sidebar link.
+  const currentSection = currentUser
+    ? navItems.find((item) => {
+        const href = scopedWorkspaceHref(activeSlug, item.href);
+        return pathname === href || (href !== "/" && pathname.startsWith(href));
+      })
+    : undefined;
   const searchPages = React.useMemo(
     () => operationalNavItems.map((item) => ({ ...item, href: scopedWorkspaceHref(activeSlug, item.href) })),
     [operationalNavItems, activeSlug]
@@ -307,7 +315,9 @@ export function AppLayout({
   }
 
   return (
-    <div className="bg-bg text-fg h-dvh w-full flex overflow-hidden font-sans">
+    // Two cards side by side: the sidebar and the main card (header plus page).
+    // The window never scrolls; only the page area inside the main card does.
+    <div className="bg-bg text-fg h-dvh w-full flex overflow-hidden font-sans md:gap-3 md:p-3">
       <RouteProgress active={!!pendingPath} />
       {/* Mobile overlay: kept mounted so it can fade in/out with the sidebar */}
       <button
@@ -325,10 +335,9 @@ export function AppLayout({
       {/* ── Sidebar ── */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-[120] w-72 shrink-0 overscroll-contain flex flex-col overflow-hidden transition-[transform,width] duration-300 ease-out md:static md:z-auto md:w-[17rem] md:translate-x-0",
-          "bg-bg border-r border-border md:border-r-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full",
-          collapsed && "md:w-[4.25rem]"
+          "shell-card fixed inset-y-2 left-2 z-[120] w-72 shrink-0 overscroll-contain flex flex-col overflow-hidden transition-[transform,width] duration-300 ease-out md:static md:z-auto md:w-[16.5rem] md:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-[calc(100%+1rem)]",
+          collapsed && "md:w-[4.5rem]"
         )}
       >
         {/* Brand area */}
@@ -453,18 +462,19 @@ export function AppLayout({
       </aside>
 
       {/* ── Main column ── */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
-        {/* Header */}
-        <header
-          className={cn(
-            "absolute top-0 left-0 right-0 z-[90] shrink-0 flex items-center justify-between gap-4 px-4 md:px-6 h-16 transition-colors duration-200",
-            isScrolled
-              ? "bg-bg/70 backdrop-blur-md border-b border-border"
-              : "bg-transparent border-b border-transparent"
-          )}
-        >
-          {/* Left: mobile hamburger + spacer */}
-          <div className="flex items-center gap-3">
+      <div className="shell-card shell-main flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
+        {/* Header: the top row of the main card. It stays put while the page
+            scrolls beneath it, and a hairline fades in once content passes under. */}
+        <header className="relative z-[90] shrink-0 flex items-center justify-between gap-4 px-4 md:px-8 h-16 md:h-[76px]">
+          <span
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute bottom-0 left-4 right-4 h-px bg-border transition-opacity duration-200 md:left-8 md:right-8",
+              isScrolled ? "opacity-100" : "opacity-0"
+            )}
+          />
+          {/* Left: mobile hamburger + brand, desktop section name */}
+          <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
               aria-label="Open sidebar"
@@ -479,6 +489,10 @@ export function AppLayout({
               <BrandIcon size={22} className="rounded-md" />
               <span className="text-sm font-semibold tracking-tight text-fg">TriageDesk</span>
             </Link>
+
+            {currentSection ? (
+              <span className="hidden md:block truncate text-[15px] font-semibold tracking-tight text-fg">{currentSection.label}</span>
+            ) : null}
           </div>
 
           {/* Right side: actions */}
@@ -581,17 +595,11 @@ export function AppLayout({
         {/* Main content */}
         <main
           ref={mainRef}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4 pt-20 md:pl-2 md:pr-6 md:pb-6"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-6 pt-2 md:px-8 md:pb-8"
           aria-busy={pendingPath ? true : undefined}
         >
-          {/* The panel fills the rest of the viewport even on a short page, and
-              stays mounted across navigations so only its contents animate. */}
-          <div className="flex min-h-full flex-col">
-            {isDemoSession ? <DemoBanner expiresAt={demo?.expiresAt} initialLabel={demo?.remainingLabel} /> : null}
-            <div className="ws-panel flex-1">
-              <div key={pathname} className="app-page-in">{children}</div>
-            </div>
-          </div>
+          {isDemoSession ? <DemoBanner expiresAt={demo?.expiresAt} initialLabel={demo?.remainingLabel} /> : null}
+          <div key={pathname} className="app-page-in">{children}</div>
         </main>
       </div>
     </div>
