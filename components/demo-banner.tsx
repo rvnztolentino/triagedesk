@@ -29,7 +29,7 @@ export function DemoBanner({ expiresAt, initialLabel }: { expiresAt?: string; in
 
   return (
     <div
-      className="mb-6 rounded-[var(--radius-card)] border border-accent-border bg-accent-soft p-4"
+      className="notice mb-6 rounded-[var(--radius-card)] p-4"
       role="status"
       aria-live="off"
     >

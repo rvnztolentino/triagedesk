@@ -61,7 +61,7 @@ export function GlobalSearch({
         aria-keyshortcuts="Meta+K Control+K"
         title={collapsed ? `Search${shortcut ? ` (${shortcut})` : ""}` : undefined}
         className={cn(
-          "flex w-full items-center gap-2.5 rounded-[var(--radius-control)] border border-border bg-surface px-3 py-2 text-sm text-faint transition-colors duration-200 hover:border-border-strong hover:text-fg",
+          "flex w-full items-center gap-2.5 rounded-[var(--radius-control)] border border-border bg-surface shadow-(--control-shadow) px-3 py-2 text-sm text-faint transition-colors duration-200 hover:border-border-strong hover:text-fg",
           collapsed && "md:justify-center md:px-0"
         )}
       >

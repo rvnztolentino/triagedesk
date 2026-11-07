@@ -98,50 +98,68 @@
   --sidebar-w-collapsed: 72px;
   --header-h: 60px;
   --ring: 0 0 0 3px var(--accent-soft);
+
+  /* Controls (buttons, inputs) and selected states (active nav item, segmented
+     filter). Dark keeps its tinted fills; light swaps them for raised white. */
+  --control-bg: var(--surface-2);
+  --control-shadow: none;
+  --selected-bg: var(--accent-soft);
+  --selected-fg: var(--accent-text);
+  --selected-shadow: none;
 }
 
 html[data-theme="light"] {
-  /* Paper and card: a soft off-white canvas behind the shell, pure white cards
-     on top, and a faint tint for insets (inputs, chips, buttons). Three steps,
-     the same layering dark mode gets from #0a0a0a / #0f0f0f / #141414. With
-     every layer white the borders had nothing to separate and pages read blank. */
-  --bg: #f6f6f4;
+  /* Paper and card, cool neutral. A soft gray canvas behind the shell, pure
+     white cards and controls on top, and a faint tint reserved for insets
+     (chips, kbd, tracks). Interactive things are white and lifted by a
+     hairline shadow rather than filled gray, which is what keeps light mode
+     reading crisp instead of flat. */
+  --bg: #f7f7f8;
   --surface: #ffffff;
-  --surface-2: #f9f9f8;
-  --surface-hover: #efefed;
-  --border: rgba(24, 24, 20, 0.1);
-  --border-strong: rgba(24, 24, 20, 0.17);
-  --fg: #171717;
-  --muted: #5f5f5c;
-  --faint: #8a8a86;
+  --surface-2: #f4f4f5;
+  --surface-hover: #f1f1f3;
+  --border: rgba(10, 10, 15, 0.085);
+  --border-strong: rgba(10, 10, 15, 0.15);
+  --fg: #111113;
+  --muted: #5d5d66;
+  --faint: #8b8b94;
 
   --accent: #000000;
-  --accent-soft: color-mix(in srgb, var(--accent) 8%, white);
-  --accent-softer: color-mix(in srgb, var(--accent) 3%, white);
-  --accent-border: color-mix(in srgb, var(--accent) 18%, white);
+  --accent-soft: color-mix(in srgb, var(--accent) 5%, white);
+  --accent-softer: color-mix(in srgb, var(--accent) 2.5%, white);
+  --accent-border: color-mix(in srgb, var(--accent) 11%, white);
   --accent-text: var(--accent);
   --accent-fg: #ffffff;
 
-  /* status hues (light): muted, readable on white */
+  /* status hues (light): saturated enough to scan, still readable on white */
   --st-warn: #b45309;
-  --st-info: #2e5aa8;
-  --st-active: #6249a6;
-  --st-done: #2c7148;
+  --st-info: #2563c9;
+  --st-active: #6d4fd0;
+  --st-done: #1f7a4d;
   --st-danger: #b91c1c;
 
-  --info-soft: color-mix(in srgb, var(--info) 8%, white);
-  --warn-soft: color-mix(in srgb, var(--warn) 9%, white);
-  --active-soft: color-mix(in srgb, var(--active) 8%, white);
-  --done-soft: color-mix(in srgb, var(--done) 9%, white);
-  --danger-soft: color-mix(in srgb, var(--danger) 8%, white);
-  --neutral-soft: color-mix(in srgb, var(--fg) 5%, white);
+  --info-soft: color-mix(in srgb, var(--info) 7%, white);
+  --warn-soft: color-mix(in srgb, var(--warn) 7%, white);
+  --active-soft: color-mix(in srgb, var(--active) 7%, white);
+  --done-soft: color-mix(in srgb, var(--done) 7%, white);
+  --danger-soft: color-mix(in srgb, var(--danger) 7%, white);
+  --neutral-soft: color-mix(in srgb, var(--fg) 4%, white);
 
-  /* elevation (light): a hairline lift so white cards sit on the canvas
+  /* elevation (light): a hairline lift so white surfaces sit on the canvas
      instead of dissolving into it. Tight and low-opacity, never a glow. */
-  --shadow-sm: 0 1px 2px rgba(24, 24, 20, 0.04), 0 1px 1px rgba(24, 24, 20, 0.02);
-  --shadow-md: 0 6px 18px -8px rgba(24, 24, 20, 0.12), 0 1px 2px rgba(24, 24, 20, 0.04);
-  --shadow-lg: 0 10px 28px -10px rgba(24, 24, 20, 0.14), 0 2px 6px rgba(24, 24, 20, 0.04);
-  --shadow-pop: 0 14px 36px -12px rgba(24, 24, 20, 0.18), 0 2px 8px rgba(24, 24, 20, 0.06);
+  --shadow-xs: 0 1px 2px rgba(10, 10, 15, 0.05);
+  --shadow-sm: 0 1px 2px rgba(10, 10, 15, 0.04), 0 1px 3px rgba(10, 10, 15, 0.03);
+  --shadow-md: 0 8px 20px -10px rgba(10, 10, 15, 0.12), 0 2px 4px rgba(10, 10, 15, 0.04);
+  --shadow-lg: 0 16px 40px -16px rgba(10, 10, 15, 0.16), 0 2px 6px rgba(10, 10, 15, 0.04);
+  --shadow-pop: 0 18px 44px -14px rgba(10, 10, 15, 0.2), 0 3px 10px rgba(10, 10, 15, 0.06);
+
+  --ring: 0 0 0 3px rgba(10, 10, 15, 0.08);
+
+  --control-bg: #ffffff;
+  --control-shadow: var(--shadow-xs);
+  --selected-bg: #ffffff;
+  --selected-fg: var(--fg);
+  --selected-shadow: 0 0 0 1px var(--border), var(--shadow-xs);
 }
 
 html {
@@ -417,6 +435,7 @@ select {
     border-color: var(--border-strong);
     box-shadow: var(--shadow-md);
   }
+  html[data-theme="light"] .card-hover:hover { transform: translateY(-1px); }
   .panel-head {
     display: flex;
     align-items: center;
@@ -523,8 +542,9 @@ select {
     font-weight: 550;
     font-size: 12.5px;
     border: 1px solid var(--border);
-    background: var(--surface-2);
+    background: var(--control-bg);
     color: var(--fg);
+    box-shadow: var(--control-shadow);
     transition: background 0.15s, border-color 0.15s, transform 0.08s, color 0.15s, box-shadow 0.15s;
     white-space: nowrap;
   }
@@ -537,13 +557,18 @@ select {
     color: var(--accent-ink);
     border-color: transparent;
   }
+  /* Light: a soft top highlight and a tight drop shadow give the black button
+     some material instead of a flat cutout. */
+  html[data-theme="light"] .btn--primary {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 1px 2px rgba(10, 10, 15, 0.2);
+  }
   /* Mixing toward the page background (not white) keeps the hover shift visible
      in both directions now that the accent is white on dark / black on light. */
   .btn--primary:hover {
     background: color-mix(in srgb, var(--accent) 86%, var(--bg));
     border-color: transparent;
   }
-  .btn--ghost { background: transparent; border-color: transparent; color: var(--muted); }
+  .btn--ghost { background: transparent; border-color: transparent; color: var(--muted); box-shadow: none; }
   .btn--ghost:hover { background: var(--surface-hover); color: var(--fg); border-color: transparent; }
   .btn--danger {
     background: var(--danger-soft);
@@ -559,12 +584,12 @@ select {
   /* Explicit neutral reset, so a caller can opt out of a primary base
      (e.g. the shared SubmitButton) back to the plain surface button. */
   .btn--neutral {
-    background: var(--surface-2);
+    background: var(--control-bg);
     color: var(--fg);
     border-color: var(--border);
-    box-shadow: none;
+    box-shadow: var(--control-shadow);
   }
-  .btn--neutral:hover { background: var(--surface-hover); border-color: var(--border-strong); box-shadow: none; }
+  .btn--neutral:hover { background: var(--surface-hover); border-color: var(--border-strong); box-shadow: var(--control-shadow); }
   .btn--sm { padding: 4px 10px; font-size: 12.5px; gap: 6px; }
   .btn--lg { padding: 9px 18px; font-size: 14px; }
   .btn--block { width: 100%; }
@@ -583,9 +608,10 @@ select {
   .textarea,
   .select {
     width: 100%;
-    background: var(--surface-2);
+    background: var(--control-bg);
     border: 1px solid var(--border);
     border-radius: var(--r-ctrl);
+    box-shadow: var(--control-shadow);
     padding: 6px 11px;
     font-size: 12.5px;
     font-weight: 450;
@@ -597,6 +623,9 @@ select {
   .textarea::placeholder { font-weight: 400; }
   .input::placeholder,
   .textarea::placeholder { color: var(--faint); }
+  .input:hover,
+  .textarea:hover,
+  .select:hover { border-color: var(--border-strong); }
   .input:focus,
   .textarea:focus,
   .select:focus {
@@ -605,6 +634,9 @@ select {
     box-shadow: var(--ring);
     background: var(--surface);
   }
+  html[data-theme="light"] .input:focus,
+  html[data-theme="light"] .textarea:focus,
+  html[data-theme="light"] .select:focus { border-color: color-mix(in srgb, var(--accent) 35%, white); }
   .textarea { resize: vertical; min-height: 96px; line-height: 1.55; }
   .select {
     appearance: none;
@@ -667,7 +699,14 @@ select {
   .seg-filter button:hover,
   .seg-filter a:hover { color: var(--fg); }
   .seg-filter button.on,
-  .seg-filter a.on { background: var(--accent-soft); color: var(--accent-text); }
+  .seg-filter a.on { background: var(--selected-bg); color: var(--selected-fg); box-shadow: var(--selected-shadow); }
+
+  /* Active sidebar link. Tinted in dark; a raised white tab in light. */
+  .nav-active {
+    background: var(--selected-bg);
+    color: var(--selected-fg);
+    box-shadow: var(--selected-shadow);
+  }
 
   /* ── metrics ── */
   .metric {
@@ -1005,6 +1044,17 @@ select {
     background: var(--surface-2);
   }
   .callout--accent { border-color: var(--accent-border); background: var(--accent-softer); }
+  /* Page-level notice (the demo banner). Tinted in dark; a plain white card in
+     light, where a gray fill on a gray canvas reads heavy. */
+  .notice {
+    border: 1px solid var(--accent-border);
+    background: var(--accent-soft);
+  }
+  html[data-theme="light"] .notice {
+    border-color: var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
   .ai-reason {
     border-left: 2px solid var(--accent);
     padding: 10px 0 10px 14px;

@@ -359,7 +359,7 @@ export function AppLayout({
               href="/onboarding"
               title={collapsed ? activeWorkspace?.name ?? "Choose workspace" : undefined}
               className={cn(
-                "group flex items-center gap-2.5 rounded-[var(--radius-control)] border border-border bg-surface px-3 py-2.5 transition-colors duration-200 hover:border-border-strong hover:bg-surface-hover",
+                "group flex items-center gap-2.5 rounded-[var(--radius-control)] border border-border bg-surface shadow-(--control-shadow) px-3 py-2.5 transition-colors duration-200 hover:border-border-strong hover:bg-surface-hover",
                 collapsed && "md:justify-center md:px-0"
               )}
             >
@@ -413,7 +413,7 @@ export function AppLayout({
                       className={cn(
                         "group flex items-center gap-3 px-3 py-2 rounded-[var(--radius-control)] text-sm font-medium transition-colors duration-200",
                         active
-                          ? "bg-accent-soft text-accent"
+                          ? "nav-active"
                           : "text-muted hover:text-fg hover:bg-surface-hover",
                         collapsed && "md:justify-center md:gap-0 md:px-0"
                       )}
@@ -498,7 +498,7 @@ export function AppLayout({
               <Link
                 href="/onboarding"
                 aria-label={activeWorkspace ? `Current workspace: ${activeWorkspace.name}` : "Choose a workspace"}
-                className="hidden sm:inline-flex items-center gap-2 h-9 rounded-[var(--radius-control)] border border-border bg-surface px-3 text-left hover:border-border-strong hover:bg-surface-hover transition-colors duration-200"
+                className="hidden sm:inline-flex items-center gap-2 h-9 rounded-[var(--radius-control)] border border-border bg-surface shadow-(--control-shadow) px-3 text-left hover:border-border-strong hover:bg-surface-hover transition-colors duration-200"
               >
                 <Building2 size={14} className={activeWorkspace ? "text-accent shrink-0" : "text-muted shrink-0"} />
                 <span className="max-w-[10rem] truncate text-xs font-medium text-muted">
