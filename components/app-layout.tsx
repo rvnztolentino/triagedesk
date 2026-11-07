@@ -32,7 +32,7 @@ import { GlobalSearch } from "@/components/global-search";
 import { DEMO_SIGNUP_HREF } from "@/lib/demo-ui";
 import type { AppUser, NotificationView, UserRole } from "@/lib/schema";
 import { cn } from "@/lib/utils";
-import { scopedWorkspaceHref } from "@/lib/workspace-routing";
+import { isNavPathActive, scopedWorkspaceHref } from "@/lib/workspace-routing";
 
 const ownerNavItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -194,11 +194,11 @@ export function AppLayout({
   // The header names the section the current page belongs to, mirroring the
   // highlighted sidebar link.
   const currentSection = currentUser
-    ? navItems.find((item) => {
-        const href = scopedWorkspaceHref(activeSlug, item.href);
-        return pathname === href || (href !== "/" && pathname.startsWith(href));
-      })
+    ? navItems.find((item) => isNavPathActive(pathname, item.href, activeSlug))
     : undefined;
+  const workspaceSectionActive = currentSection?.href === workspaceNavItem.href;
+  // The brand goes straight to the dashboard URL so the Dashboard link lights up.
+  const homeHref = currentUser ? scopedWorkspaceHref(activeSlug, "/") : "/";
   const searchPages = React.useMemo(
     () => operationalNavItems.map((item) => ({ ...item, href: scopedWorkspaceHref(activeSlug, item.href) })),
     [operationalNavItems, activeSlug]
@@ -344,7 +344,7 @@ export function AppLayout({
         {/* Brand area */}
         <div className={cn("px-5 pt-5 pb-4", collapsed && "md:px-0")}>
           <div className={cn("flex items-center justify-between gap-3", collapsed && "md:justify-center")}>
-            <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+            <Link href={homeHref} className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
               <BrandIcon size={26} className="rounded-md" />
               <span className={cn("whitespace-nowrap text-[15px] font-semibold tracking-tight text-fg", collapsed && "md:hidden")}>TriageDesk</span>
               <span className={cn("rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none tracking-wide text-muted", collapsed && "md:hidden")}>
@@ -368,15 +368,17 @@ export function AppLayout({
             <Link
               href="/onboarding"
               title={collapsed ? activeWorkspace?.name ?? "Choose workspace" : undefined}
+              aria-current={workspaceSectionActive ? "page" : undefined}
               className={cn(
                 "shell-ctrl group flex w-full justify-start gap-2.5 rounded-[22px] py-1.5 pl-1.5 pr-3",
+                workspaceSectionActive && "border-accent-border",
                 collapsed && "md:justify-center md:p-1.5"
               )}
             >
               <div
                 className={cn(
-                  "h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-surface",
-                  activeWorkspace ? "text-fg" : "text-muted"
+                  "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+                  workspaceSectionActive ? "bg-accent text-accent-fg" : cn("bg-surface", activeWorkspace ? "text-fg" : "text-muted")
                 )}
               >
                 <Building2 size={14} />
@@ -412,7 +414,7 @@ export function AppLayout({
                 .filter((item) => item.href !== "/onboarding")
                 .map((item) => {
                   const href = scopedWorkspaceHref(activeWorkspace?.slug, item.href);
-                  const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+                  const active = isNavPathActive(pathname, item.href, activeWorkspace?.slug);
                   return (
                     <Link
                       key={item.href}
@@ -495,7 +497,7 @@ export function AppLayout({
             </button>
 
             {/* Mobile brand */}
-            <Link href="/" className="flex items-center gap-2 md:hidden" aria-label="TriageDesk home">
+            <Link href={homeHref} className="flex items-center gap-2 md:hidden" aria-label="TriageDesk home">
               <BrandIcon size={22} className="rounded-md" />
               <span className="text-sm font-semibold tracking-tight text-fg">TriageDesk</span>
             </Link>

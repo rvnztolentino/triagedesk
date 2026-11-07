@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { requestReceivedHref, scopedWorkspaceHref } from "./workspace-routing";
+import { isNavPathActive, requestReceivedHref, scopedWorkspaceHref } from "./workspace-routing";
 
 describe("workspace routing", () => {
   it("maps operational routes into a workspace slug", () => {
@@ -15,5 +15,21 @@ describe("workspace routing", () => {
   it("uses request detail routes after workspace-scoped submission", () => {
     expect(requestReceivedHref("demo-clinic", "REQ-1001")).toBe("/w/demo-clinic/requests/REQ-1001");
     expect(requestReceivedHref(undefined, "REQ-1001")).toBe("/submit/confirm?id=REQ-1001");
+  });
+
+  it("marks the current sidebar section, including the bare home and workspace pages", () => {
+    expect(isNavPathActive("/w/acme/dashboard", "/", "acme")).toBe(true);
+    expect(isNavPathActive("/", "/", "acme")).toBe(true);
+    expect(isNavPathActive("/w/acme/tickets", "/", "acme")).toBe(false);
+    expect(isNavPathActive("/w/acme/tickets/TKT-1", "/tickets", "acme")).toBe(true);
+    expect(isNavPathActive("/w/acme/requests/new", "/submit", "acme")).toBe(true);
+
+    expect(isNavPathActive("/onboarding", "/onboarding", "acme")).toBe(true);
+    expect(isNavPathActive("/w/acme", "/onboarding", "acme")).toBe(true);
+    expect(isNavPathActive("/w/new-team", "/onboarding", "acme")).toBe(true);
+    expect(isNavPathActive("/w/new-team", "/onboarding", undefined)).toBe(true);
+    expect(isNavPathActive("/w/new-team/tickets", "/onboarding", "acme")).toBe(true);
+    expect(isNavPathActive("/w/acme/tickets", "/onboarding", "acme")).toBe(false);
+    expect(isNavPathActive("/w/new-team", "/", "acme")).toBe(false);
   });
 });
