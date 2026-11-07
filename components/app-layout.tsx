@@ -25,7 +25,7 @@ import dynamic from "next/dynamic";
 import { useClerk } from "@clerk/nextjs";
 import { signOutAction } from "@/app/actions";
 import { BrandIcon } from "@/components/brand-icon";
-import { ThemeButton } from "@/components/theme-controls";
+import { ThemeToggle } from "@/components/theme-controls";
 import { NotificationBell } from "@/components/notification-bell";
 import { GlobalSearch } from "@/components/global-search";
 import { DEMO_SIGNUP_HREF } from "@/lib/demo-ui";
@@ -511,7 +511,7 @@ export function AppLayout({
               </Link>
             ) : null}
 
-            <ThemeButton />
+            <ThemeToggle />
 
             {currentUser && activeWorkspace ? (
               <NotificationBell

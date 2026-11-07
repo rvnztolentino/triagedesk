@@ -96,26 +96,6 @@ function useTheme() {
   return useSyncExternalStore(subscribeTheme, themeSnapshot, () => DEFAULT_THEME);
 }
 
-// A round icon button for the workspace header, sized like the controls beside
-// it. The icon names the active mode (moon for dark, sun for light).
-export function ThemeButton() {
-  const theme = useTheme();
-  const isDark = theme === "dark";
-  const nextTheme: ThemeMode = isDark ? "light" : "dark";
-
-  return (
-    <button
-      type="button"
-      aria-label={`Switch to ${nextTheme} mode`}
-      title={`Switch to ${nextTheme} mode`}
-      onClick={() => applyTheme(nextTheme)}
-      className="shell-ctrl h-10 w-10 text-muted hover:text-fg"
-    >
-      {isDark ? <Moon size={16} /> : <SunDim size={18} />}
-    </button>
-  );
-}
-
 // A two-state monochrome switch: the thumb covers one slot and the icon in the
 // other slot names the active mode (sun on the left for light, moon on the
 // right for dark).
