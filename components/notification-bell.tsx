@@ -145,15 +145,15 @@ export function NotificationBell({
         aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
         onClick={handleOpen}
         className={cn(
-          "relative inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border transition-colors duration-200",
-          open ? "border-border-strong bg-surface text-fg" : "border-transparent text-muted hover:border-border hover:bg-surface hover:text-fg"
+          "shell-ctrl relative h-10 w-10",
+          open ? "text-fg" : "text-muted hover:text-fg"
         )}
       >
         <Bell size={17} />
         {unreadCount > 0 ? (
           <span
             aria-hidden
-            className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full ring-2 ring-bg"
+            className="absolute right-2 top-2 h-2 w-2 rounded-full ring-2 ring-(--control-bg)"
             style={{ background: "var(--danger)" }}
           />
         ) : null}

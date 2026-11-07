@@ -32,8 +32,8 @@
   --color-accent-border: var(--accent-border);
   --color-accent-fg: var(--accent-fg);
 
-  --radius-card: 10px;
-  --radius-control: 8px;
+  --radius-card: 20px;
+  --radius-control: 12px;
 }
 
 /* ── Theme tokens ─────────────────────────────────────────────────────────
@@ -83,8 +83,9 @@
   --neutral-soft: color-mix(in srgb, var(--fg) 7%, transparent);
 
   /* geometry */
-  --r-card: 12px;
-  --r-ctrl: 8px;
+  --r-panel: 28px;
+  --r-card: 20px;
+  --r-ctrl: 12px;
   --r-pill: 999px;
 
   /* elevation (dark) */
@@ -92,6 +93,12 @@
   --shadow-md: 0 12px 30px -12px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
   --shadow-pop: 0 20px 50px -16px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --card-shadow: var(--shadow-sm);
+
+  /* The workspace panel: one large rounded card that holds every page. */
+  --panel: #0d0d0d;
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --panel-shadow: none;
 
   /* shell metrics + focus ring */
   --sidebar-w: 244px;
@@ -99,9 +106,13 @@
   --header-h: 60px;
   --ring: 0 0 0 3px var(--accent-soft);
 
-  /* Controls (buttons, inputs) and selected states (active nav item, segmented
-     filter). Dark keeps its tinted fills; light swaps them for raised white. */
+  /* Controls (buttons, inputs, header pills) and the selected state of the
+     segmented filter. Dark keeps bordered tinted fills; light drops the border
+     and uses a flat gray fill. */
   --control-bg: var(--surface-2);
+  --control-hover: var(--surface-hover);
+  --control-border: var(--border);
+  --control-border-hover: var(--border-strong);
   --control-shadow: none;
   --selected-bg: var(--accent-soft);
   --selected-fg: var(--accent-text);
@@ -109,25 +120,24 @@
 }
 
 html[data-theme="light"] {
-  /* Paper and card, cool neutral. A soft gray canvas behind the shell, pure
-     white cards and controls on top, and a faint tint reserved for insets
-     (chips, kbd, tracks). Interactive things are white and lifted by a
-     hairline shadow rather than filled gray, which is what keeps light mode
-     reading crisp instead of flat. */
-  --bg: #f7f7f8;
+  /* Flat and bright. A white canvas, white cards outlined by soft borders, and
+     gray-filled controls with a black primary. Depth comes from one wide, soft
+     shadow under the workspace panel rather than from lifting every control,
+     which is what keeps light mode reading current instead of dated. */
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f4f4f5;
-  --surface-hover: #f1f1f3;
-  --border: rgba(10, 10, 15, 0.085);
-  --border-strong: rgba(10, 10, 15, 0.15);
-  --fg: #111113;
-  --muted: #5d5d66;
-  --faint: #8b8b94;
+  --surface-2: #f3f3f3;
+  --surface-hover: #f7f7f7;
+  --border: #e8e8e8;
+  --border-strong: #d6d6d6;
+  --fg: #121212;
+  --muted: #676767;
+  --faint: #8e8e8e;
 
   --accent: #000000;
-  --accent-soft: color-mix(in srgb, var(--accent) 5%, white);
-  --accent-softer: color-mix(in srgb, var(--accent) 2.5%, white);
-  --accent-border: color-mix(in srgb, var(--accent) 11%, white);
+  --accent-soft: color-mix(in srgb, var(--accent) 6%, white);
+  --accent-softer: color-mix(in srgb, var(--accent) 3%, white);
+  --accent-border: color-mix(in srgb, var(--accent) 12%, white);
   --accent-text: var(--accent);
   --accent-fg: #ffffff;
 
@@ -138,28 +148,36 @@ html[data-theme="light"] {
   --st-done: #1f7a4d;
   --st-danger: #b91c1c;
 
-  --info-soft: color-mix(in srgb, var(--info) 7%, white);
-  --warn-soft: color-mix(in srgb, var(--warn) 7%, white);
-  --active-soft: color-mix(in srgb, var(--active) 7%, white);
-  --done-soft: color-mix(in srgb, var(--done) 7%, white);
-  --danger-soft: color-mix(in srgb, var(--danger) 7%, white);
-  --neutral-soft: color-mix(in srgb, var(--fg) 4%, white);
+  --info-soft: color-mix(in srgb, var(--info) 9%, white);
+  --warn-soft: color-mix(in srgb, var(--warn) 10%, white);
+  --active-soft: color-mix(in srgb, var(--active) 9%, white);
+  --done-soft: color-mix(in srgb, var(--done) 9%, white);
+  --danger-soft: color-mix(in srgb, var(--danger) 8%, white);
+  --neutral-soft: #f1f1f1;
 
-  /* elevation (light): a hairline lift so white surfaces sit on the canvas
-     instead of dissolving into it. Tight and low-opacity, never a glow. */
-  --shadow-xs: 0 1px 2px rgba(10, 10, 15, 0.05);
-  --shadow-sm: 0 1px 2px rgba(10, 10, 15, 0.04), 0 1px 3px rgba(10, 10, 15, 0.03);
-  --shadow-md: 0 8px 20px -10px rgba(10, 10, 15, 0.12), 0 2px 4px rgba(10, 10, 15, 0.04);
-  --shadow-lg: 0 16px 40px -16px rgba(10, 10, 15, 0.16), 0 2px 6px rgba(10, 10, 15, 0.04);
-  --shadow-pop: 0 18px 44px -14px rgba(10, 10, 15, 0.2), 0 3px 10px rgba(10, 10, 15, 0.06);
+  /* elevation (light): only floating things (menus, popovers, dialogs) and
+     the workspace panel cast a shadow. Cards sit flat on their border. */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 10px 28px -14px rgba(0, 0, 0, 0.14);
+  --shadow-lg: 0 20px 48px -20px rgba(0, 0, 0, 0.16);
+  --shadow-pop: 0 18px 44px -14px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.05);
+  --card-shadow: none;
 
-  --ring: 0 0 0 3px rgba(10, 10, 15, 0.08);
+  --panel: #ffffff;
+  --panel-border: #ebebeb;
+  --panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 16px 56px -24px rgba(0, 0, 0, 0.12);
 
-  --control-bg: #ffffff;
-  --control-shadow: var(--shadow-xs);
-  --selected-bg: #ffffff;
-  --selected-fg: var(--fg);
-  --selected-shadow: 0 0 0 1px var(--border), var(--shadow-xs);
+  --ring: 0 0 0 3px rgba(0, 0, 0, 0.08);
+
+  --control-bg: #efefef;
+  --control-hover: #e6e6e6;
+  --control-border: transparent;
+  --control-border-hover: transparent;
+  --control-shadow: none;
+  --selected-bg: var(--accent);
+  --selected-fg: var(--accent-fg);
+  --selected-shadow: none;
 }
 
 html {
@@ -427,7 +445,31 @@ select {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--r-card);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--card-shadow);
+  }
+  /* A card does not clip (popovers open out of some), so a full-bleed row at
+     its top or bottom edge would paint a square hover over the rounded corner.
+     Round those rows to match. */
+  .card > .list:first-child > :first-child { border-top-left-radius: calc(var(--r-card) - 1px); border-top-right-radius: calc(var(--r-card) - 1px); }
+  .card > .list:last-child > :last-child { border-bottom-left-radius: calc(var(--r-card) - 1px); border-bottom-right-radius: calc(var(--r-card) - 1px); }
+
+  /* The workspace panel: every signed-in page renders inside this one large
+     card. On a phone the chrome falls away so content keeps the full width. */
+  .ws-panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--r-panel);
+    box-shadow: var(--panel-shadow);
+    padding: clamp(20px, 3vw, 40px);
+  }
+  @media (max-width: 640px) {
+    .ws-panel {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 0;
+    }
   }
   .card-pad { padding: 18px; }
   .card-hover { transition: border-color 0.16s, transform 0.16s, box-shadow 0.16s; }
@@ -481,6 +523,7 @@ select {
   .badge[data-hue="danger"] { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 26%, transparent); }
   .badge[data-hue="neutral"] { color: var(--muted); background: var(--neutral-soft); border-color: var(--border); }
   .badge[data-hue="accent"] { color: var(--accent-text); background: var(--accent-soft); border-color: var(--accent-border); }
+  html[data-theme="light"] .badge { border-color: transparent; }
 
   .chip {
     display: inline-flex;
@@ -488,7 +531,7 @@ select {
     gap: 7px;
     padding: 5px 11px;
     border-radius: var(--r-pill);
-    border: 1px solid var(--border);
+    border: 1px solid var(--control-border);
     background: var(--surface-2);
     font-size: 12.5px;
     color: var(--muted);
@@ -537,18 +580,18 @@ select {
     align-items: center;
     justify-content: center;
     gap: 7px;
-    padding: 6px 13px;
-    border-radius: var(--r-ctrl);
+    padding: 7px 15px;
+    border-radius: var(--r-pill);
     font-weight: 550;
-    font-size: 12.5px;
-    border: 1px solid var(--border);
+    font-size: 13px;
+    border: 1px solid var(--control-border);
     background: var(--control-bg);
     color: var(--fg);
     box-shadow: var(--control-shadow);
     transition: background 0.15s, border-color 0.15s, transform 0.08s, color 0.15s, box-shadow 0.15s;
     white-space: nowrap;
   }
-  .btn:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+  .btn:hover { background: var(--control-hover); border-color: var(--control-border-hover); }
   .btn:active { transform: translateY(1px); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn:focus-visible { outline: none; box-shadow: var(--ring); }
@@ -556,11 +599,6 @@ select {
     background: var(--accent);
     color: var(--accent-ink);
     border-color: transparent;
-  }
-  /* Light: a soft top highlight and a tight drop shadow give the black button
-     some material instead of a flat cutout. */
-  html[data-theme="light"] .btn--primary {
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 1px 2px rgba(10, 10, 15, 0.2);
   }
   /* Mixing toward the page background (not white) keeps the hover shift visible
      in both directions now that the accent is white on dark / black on light. */
@@ -586,34 +624,31 @@ select {
   .btn--neutral {
     background: var(--control-bg);
     color: var(--fg);
-    border-color: var(--border);
+    border-color: var(--control-border);
     box-shadow: var(--control-shadow);
   }
-  .btn--neutral:hover { background: var(--surface-hover); border-color: var(--border-strong); box-shadow: var(--control-shadow); }
-  .btn--sm { padding: 4px 10px; font-size: 12.5px; gap: 6px; }
-  .btn--lg { padding: 9px 18px; font-size: 14px; }
+  .btn--neutral:hover { background: var(--control-hover); border-color: var(--control-border-hover); box-shadow: var(--control-shadow); }
+  .btn--sm { padding: 5px 12px; font-size: 12.5px; gap: 6px; }
+  .btn--lg { padding: 10px 20px; font-size: 14px; }
   .btn--block { width: 100%; }
 
   /* ── forms ── */
   .field { display: flex; flex-direction: column; gap: 7px; }
   .label {
-    font-family: var(--font-mono);
-    font-size: 10.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 12.5px;
     color: var(--muted);
-    font-weight: 500;
+    font-weight: 550;
   }
   .input,
   .textarea,
   .select {
     width: 100%;
     background: var(--control-bg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--control-border);
     border-radius: var(--r-ctrl);
     box-shadow: var(--control-shadow);
-    padding: 6px 11px;
-    font-size: 12.5px;
+    padding: 8px 13px;
+    font-size: 13px;
     font-weight: 450;
     line-height: 1.4;
     color: var(--fg);
@@ -625,14 +660,14 @@ select {
   .textarea::placeholder { color: var(--faint); }
   .input:hover,
   .textarea:hover,
-  .select:hover { border-color: var(--border-strong); }
+  .select:hover { border-color: var(--control-border-hover); background-color: var(--control-hover); }
   .input:focus,
   .textarea:focus,
   .select:focus {
     outline: none;
     border-color: var(--accent-border);
     box-shadow: var(--ring);
-    background: var(--surface);
+    background-color: var(--surface);
   }
   html[data-theme="light"] .input:focus,
   html[data-theme="light"] .textarea:focus,
@@ -642,8 +677,8 @@ select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' stroke='%23929e98' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 9px center;
-    padding-right: 28px;
+    background-position: right 12px center;
+    padding-right: 32px;
     cursor: pointer;
   }
   .field-hint { font-size: 12px; color: var(--faint); }
@@ -678,7 +713,7 @@ select {
     gap: 2px;
     padding: 3px;
     background: var(--surface-2);
-    border: 1px solid var(--border);
+    border: 1px solid var(--control-border);
     border-radius: var(--r-pill);
   }
   .seg-filter button,
@@ -701,12 +736,54 @@ select {
   .seg-filter button.on,
   .seg-filter a.on { background: var(--selected-bg); color: var(--selected-fg); box-shadow: var(--selected-shadow); }
 
-  /* Active sidebar link. Tinted in dark; a raised white tab in light. */
-  .nav-active {
-    background: var(--selected-bg);
-    color: var(--selected-fg);
-    box-shadow: var(--selected-shadow);
+  /* Sidebar links: each icon sits in a round chip. The current page fills
+     its chip with the accent and rings it, so the active item reads from
+     across the screen. Collapsed, only the chips remain, as an icon rail. */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 12px 5px 5px;
+    border-radius: var(--r-pill);
+    font-size: 14px;
+    font-weight: 550;
+    color: var(--muted);
+    transition: background 0.18s, color 0.18s;
   }
+  .nav-item:hover { background: var(--surface-hover); color: var(--fg); }
+  .nav-item:focus-visible { outline: none; box-shadow: var(--ring); }
+  .nav-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--r-pill);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    background: var(--surface-2);
+    color: var(--fg);
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+  }
+  .nav-item:hover .nav-icon { background: var(--control-hover); }
+  .nav-item[aria-current="page"] { color: var(--fg); }
+  .nav-item[aria-current="page"] .nav-icon {
+    background: var(--accent);
+    color: var(--accent-fg);
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent);
+  }
+  /* Round header and sidebar controls (icon buttons and pills). */
+  .shell-ctrl {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--control-border);
+    background: var(--control-bg);
+    color: var(--fg);
+    transition: background 0.18s, border-color 0.18s, color 0.18s;
+  }
+  .shell-ctrl:hover,
+  .shell-ctrl[aria-expanded="true"] { background: var(--control-hover); border-color: var(--control-border-hover); }
+  .shell-ctrl:focus-visible { outline: none; box-shadow: var(--ring); }
 
   /* ── metrics ── */
   .metric {
@@ -719,9 +796,9 @@ select {
   }
   .metric-top { display: flex; align-items: center; justify-content: space-between; }
   .metric-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 9px;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--r-pill);
     display: grid;
     place-items: center;
     background: var(--accent-soft);
@@ -735,10 +812,8 @@ select {
     line-height: 1;
   }
   .metric-label {
-    font-family: var(--font-mono);
-    font-size: 10.5px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--muted);
   }
   .metric-delta { font-size: 12px; font-family: var(--font-mono); }
@@ -774,7 +849,7 @@ select {
   .flow-num {
     width: 26px;
     height: 26px;
-    border-radius: 8px;
+    border-radius: var(--r-pill);
     display: grid;
     place-items: center;
     font-family: var(--font-mono);
@@ -794,7 +869,7 @@ select {
     border-radius: 999px;
     border: 2px solid var(--accent);
     margin-top: 5px;
-    background: var(--bg);
+    background: var(--surface);
   }
   .feed-line { width: 2px; flex: 1; background: var(--border); margin: 4px 0 -9px; }
   .feed-item:last-child .feed-line { display: none; }
@@ -1044,8 +1119,8 @@ select {
     background: var(--surface-2);
   }
   .callout--accent { border-color: var(--accent-border); background: var(--accent-softer); }
-  /* Page-level notice (the demo banner). Tinted in dark; a plain white card in
-     light, where a gray fill on a gray canvas reads heavy. */
+  /* Page-level notice (the demo banner). Tinted in dark; a plain outlined card
+     in light, matching the cards inside the workspace panel. */
   .notice {
     border: 1px solid var(--accent-border);
     background: var(--accent-soft);
@@ -1053,7 +1128,6 @@ select {
   html[data-theme="light"] .notice {
     border-color: var(--border);
     background: var(--surface);
-    box-shadow: var(--shadow-sm);
   }
   .ai-reason {
     border-left: 2px solid var(--accent);
@@ -1078,20 +1152,20 @@ select {
   .empty-glyph {
     width: 48px;
     height: 48px;
-    border-radius: 12px;
+    border-radius: var(--r-pill);
     display: grid;
     place-items: center;
     background: var(--surface-2);
-    border: 1px solid var(--border);
+    border: 1px solid var(--control-border);
     color: var(--faint);
   }
   .kbd {
     font-family: var(--font-mono);
     font-size: 11px;
     padding: 2px 6px;
-    border-radius: 5px;
+    border-radius: 6px;
     border: 1px solid var(--border);
-    background: var(--surface-2);
+    background: var(--surface);
     color: var(--muted);
   }
   .copy-code {

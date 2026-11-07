@@ -326,7 +326,7 @@ export function AppLayout({
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-[120] w-72 shrink-0 overscroll-contain flex flex-col overflow-hidden transition-[transform,width] duration-300 ease-out md:static md:z-auto md:w-[17rem] md:translate-x-0",
-          "bg-bg border-r border-border",
+          "bg-bg border-r border-border md:border-r-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
           collapsed && "md:w-[4.25rem]"
         )}
@@ -344,7 +344,7 @@ export function AppLayout({
             <button
               type="button"
               aria-label="Close sidebar"
-              className="md:hidden h-9 w-9 rounded-[var(--radius-control)] text-muted hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center justify-center"
+              className="shell-ctrl md:hidden h-9 w-9"
               onClick={() => setSidebarOpen(false)}
             >
               <X size={18} />
@@ -359,14 +359,14 @@ export function AppLayout({
               href="/onboarding"
               title={collapsed ? activeWorkspace?.name ?? "Choose workspace" : undefined}
               className={cn(
-                "group flex items-center gap-2.5 rounded-[var(--radius-control)] border border-border bg-surface shadow-(--control-shadow) px-3 py-2.5 transition-colors duration-200 hover:border-border-strong hover:bg-surface-hover",
-                collapsed && "md:justify-center md:px-0"
+                "shell-ctrl group flex w-full justify-start gap-2.5 rounded-[22px] py-1.5 pl-1.5 pr-3",
+                collapsed && "md:justify-center md:p-1.5"
               )}
             >
               <div
                 className={cn(
-                  "h-7 w-7 rounded-md flex items-center justify-center shrink-0",
-                  activeWorkspace ? "bg-accent-soft text-accent" : "bg-surface-hover text-muted"
+                  "h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-surface",
+                  activeWorkspace ? "text-fg" : "text-muted"
                 )}
               >
                 <Building2 size={14} />
@@ -396,7 +396,7 @@ export function AppLayout({
         ) : null}
 
         {/* Nav links */}
-        <nav className="flex-1 px-3 pb-3 space-y-0.5 overflow-y-auto overscroll-contain" aria-label="Main navigation">
+        <nav className="flex-1 px-3 pt-1 pb-3 space-y-1 overflow-y-auto overscroll-contain" aria-label="Main navigation">
           {currentUser
             ? navItems
                 .filter((item) => item.href !== "/onboarding")
@@ -409,22 +409,13 @@ export function AppLayout({
                       href={href}
                       prefetch={false}
                       title={collapsed ? item.label : undefined}
+                      aria-current={active ? "page" : undefined}
                       onClick={(event) => handleSidebarNavigate(event, href)}
-                      className={cn(
-                        "group flex items-center gap-3 px-3 py-2 rounded-[var(--radius-control)] text-sm font-medium transition-colors duration-200",
-                        active
-                          ? "nav-active"
-                          : "text-muted hover:text-fg hover:bg-surface-hover",
-                        collapsed && "md:justify-center md:gap-0 md:px-0"
-                      )}
+                      className={cn("nav-item", collapsed && "md:justify-center md:gap-0 md:pr-[5px]")}
                     >
-                      <item.icon
-                        size={17}
-                        className={cn(
-                          "shrink-0 transition-colors duration-200",
-                          active ? "text-accent" : "text-faint group-hover:text-fg"
-                        )}
-                      />
+                      <span className="nav-icon">
+                        <item.icon size={16} />
+                      </span>
                       <span className={cn("whitespace-nowrap", collapsed && "md:hidden")}>{item.label}</span>
                     </Link>
                   );
@@ -433,11 +424,11 @@ export function AppLayout({
         </nav>
 
         {/* Bottom section */}
-        <div className={cn("mt-auto px-4 pb-5 pt-3 border-t border-border", collapsed && "md:px-2")}>
+        <div className={cn("mt-auto px-3 pb-5 pt-3", collapsed && "md:px-2")}>
           {isDemoSession ? (
             <div
               className={cn(
-                "mb-3 flex items-center gap-2 rounded-[var(--radius-control)] border border-accent-border bg-accent-soft px-3 py-2 text-accent",
+                "mb-3 mx-1 flex items-center gap-2 rounded-full border border-accent-border bg-accent-soft px-3 py-2 text-accent",
                 collapsed && "md:justify-center md:px-0"
               )}
               title={collapsed ? demoPillLabel : undefined}
@@ -451,12 +442,11 @@ export function AppLayout({
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className={cn(
-              "hidden md:flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 py-2 text-[12.5px] font-medium text-faint hover:text-fg hover:bg-surface-hover transition-colors",
-              collapsed && "md:justify-center md:px-0"
-            )}
+            className={cn("nav-item hidden md:flex w-full", collapsed && "md:justify-center md:gap-0 md:pr-[5px]")}
           >
-            {collapsed ? <ChevronsRight size={17} className="shrink-0" /> : <ChevronsLeft size={17} className="shrink-0" />}
+            <span className="nav-icon">
+              {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
+            </span>
             <span className={cn("whitespace-nowrap", collapsed && "md:hidden")}>Collapse</span>
           </button>
         </div>
@@ -478,7 +468,7 @@ export function AppLayout({
             <button
               type="button"
               aria-label="Open sidebar"
-              className="md:hidden h-9 w-9 rounded-[var(--radius-control)] bg-transparent text-muted hover:text-fg hover:bg-surface-hover transition-colors inline-flex items-center justify-center"
+              className="shell-ctrl md:hidden h-10 w-10"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu size={18} />
@@ -498,10 +488,10 @@ export function AppLayout({
               <Link
                 href="/onboarding"
                 aria-label={activeWorkspace ? `Current workspace: ${activeWorkspace.name}` : "Choose a workspace"}
-                className="hidden sm:inline-flex items-center gap-2 h-9 rounded-[var(--radius-control)] border border-border bg-surface shadow-(--control-shadow) px-3 text-left hover:border-border-strong hover:bg-surface-hover transition-colors duration-200"
+                className="shell-ctrl hidden sm:inline-flex gap-2 h-10 px-4 text-left"
               >
-                <Building2 size={14} className={activeWorkspace ? "text-accent shrink-0" : "text-muted shrink-0"} />
-                <span className="max-w-[10rem] truncate text-xs font-medium text-muted">
+                <Building2 size={15} className={activeWorkspace ? "text-fg shrink-0" : "text-muted shrink-0"} />
+                <span className="max-w-[10rem] truncate text-[13px] font-medium text-fg">
                   {activeWorkspace?.name ?? "Choose workspace"}
                 </span>
               </Link>
@@ -525,17 +515,12 @@ export function AppLayout({
                   aria-expanded={profileOpen}
                   aria-haspopup="menu"
                   onClick={() => setProfileOpen((open) => !open)}
-                  className={cn(
-                    "flex items-center gap-2 py-1 pl-1 pr-2 rounded-[var(--radius-control)] border transition-colors duration-200",
-                    profileOpen
-                      ? "border-border-strong bg-surface"
-                      : "border-transparent hover:border-border hover:bg-surface"
-                  )}
+                  className="shell-ctrl h-10 gap-2 pl-1 pr-3"
                 >
-                  <span className="avatar" style={{ width: 30, height: 30, fontSize: 11 }}>
+                  <span className="avatar" style={{ width: 32, height: 32, fontSize: 11, background: "var(--surface)" }}>
                     {initials(currentUser)}
                   </span>
-                  <span className="hidden sm:block text-sm font-medium text-muted max-w-[8rem] truncate">
+                  <span className="hidden sm:block text-[13px] font-medium text-fg max-w-[8rem] truncate">
                     {currentUser.displayName}
                   </span>
                   <ChevronDown size={14} className={cn("text-faint transition-transform duration-200", profileOpen ? "rotate-180" : "")} />
@@ -596,11 +581,17 @@ export function AppLayout({
         {/* Main content */}
         <main
           ref={mainRef}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4 pt-20 md:px-8 md:pb-8 md:pt-24"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4 pt-20 md:pl-2 md:pr-6 md:pb-6"
           aria-busy={pendingPath ? true : undefined}
         >
-          {isDemoSession ? <DemoBanner expiresAt={demo?.expiresAt} initialLabel={demo?.remainingLabel} /> : null}
-          <div key={pathname} className="app-page-in">{children}</div>
+          {/* The panel fills the rest of the viewport even on a short page, and
+              stays mounted across navigations so only its contents animate. */}
+          <div className="flex min-h-full flex-col">
+            {isDemoSession ? <DemoBanner expiresAt={demo?.expiresAt} initialLabel={demo?.remainingLabel} /> : null}
+            <div className="ws-panel flex-1">
+              <div key={pathname} className="app-page-in">{children}</div>
+            </div>
+          </div>
         </main>
       </div>
     </div>
