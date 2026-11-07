@@ -971,6 +971,80 @@ select {
   .theme-switch[aria-checked="false"] .theme-switch-icon--sun,
   .theme-switch[aria-checked="true"] .theme-switch-icon--moon { opacity: 1; }
 
+  /* ── landing header ──
+     Full width and transparent at the top of the page. After a short scroll the
+     shell narrows, drops away from the top edge, and fills in as a floating
+     pill. Every changing property shares one duration and curve so the change
+     reads as a single motion. The scrolled radius is at least half the shell's
+     height, so the ends come out fully round. */
+  .home-nav {
+    --home-nav-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 50;
+    padding: 0;
+    transition: padding 0.45s var(--home-nav-ease);
+  }
+  .home-nav[data-scrolled="true"] { padding: 12px 12px 0; }
+  .home-nav-shell {
+    margin: 0 auto;
+    max-width: 72rem;
+    border: 1px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: 0 0 0 0 transparent;
+    -webkit-backdrop-filter: blur(0) saturate(1);
+    backdrop-filter: blur(0) saturate(1);
+    transition-property: max-width, border-color, border-radius, background-color, box-shadow, backdrop-filter;
+    transition-duration: 0.45s;
+    transition-timing-function: var(--home-nav-ease);
+  }
+  .home-nav[data-scrolled="true"] .home-nav-shell {
+    max-width: 64rem;
+    border-color: var(--border);
+    border-radius: var(--r-panel);
+    background: color-mix(in srgb, var(--bg) 72%, transparent);
+    box-shadow: var(--shadow-md);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+  }
+  /* The open mobile menu gets a solid fill so its links stay readable. */
+  .home-nav[data-menu-open="true"] .home-nav-shell { background: var(--bg); }
+  .home-nav-row {
+    padding: 14px 20px;
+    transition: padding 0.45s var(--home-nav-ease);
+  }
+  @media (min-width: 640px) { .home-nav-row { padding-inline: 24px; } }
+  @media (min-width: 1024px) { .home-nav-row { padding-inline: 32px; } }
+  .home-nav[data-scrolled="true"] .home-nav-row { padding: 8px 10px 8px 18px; }
+  /* Underline for the section currently on screen. It animates with a
+     transform only, so it stays on the compositor: it draws in from the left
+     when its section arrives and slides out to the right when it leaves. */
+  .home-nav-link { position: relative; }
+  .home-nav-link::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 3px;
+    height: 1.5px;
+    border-radius: var(--r-pill);
+    background: var(--fg);
+    transform: scaleX(0);
+    transform-origin: right center;
+    transition: transform 0.4s var(--home-nav-ease);
+  }
+  .home-nav-link[aria-current="location"]::after {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .home-nav,
+    .home-nav-shell,
+    .home-nav-row,
+    .home-nav-link::after { transition: none; }
+  }
+
   /* ── profile menu / dropdowns ── */
   .menu {
     position: absolute;

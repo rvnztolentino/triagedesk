@@ -5,6 +5,7 @@ import { Moon, SunDim } from "lucide-react";
 
 const THEME_KEY = "triagedesk-theme";
 const THEME_EVENT = "triagedesk-theme-change";
+const SYSTEM_LIGHT_QUERY = "(prefers-color-scheme: light)";
 const DEFAULT_THEME: ThemeMode = "dark";
 
 export type ThemeMode = "dark" | "light";
@@ -14,6 +15,28 @@ function isThemeMode(value: string | null): value is ThemeMode {
 }
 
 let cachedTheme: ThemeMode | null = null;
+
+function storedTheme(): ThemeMode | null {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    return isThemeMode(stored) ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+// Follows the OS setting. Dark is the fallback when the browser cannot report one.
+function systemTheme(): ThemeMode {
+  try {
+    return window.matchMedia(SYSTEM_LIGHT_QUERY).matches ? "light" : DEFAULT_THEME;
+  } catch {
+    return DEFAULT_THEME;
+  }
+}
+
+function resolveTheme(): ThemeMode {
+  return storedTheme() ?? systemTheme();
+}
 
 function applyTheme(theme: ThemeMode) {
   cachedTheme = theme;
@@ -32,26 +55,40 @@ function applyTheme(theme: ThemeMode) {
 
 function themeSnapshot(): ThemeMode {
   if (typeof window === "undefined") return DEFAULT_THEME;
-  if (cachedTheme === null) {
-    const stored = localStorage.getItem(THEME_KEY);
-    cachedTheme = isThemeMode(stored) ? stored : DEFAULT_THEME;
-  }
+  if (cachedTheme === null) cachedTheme = resolveTheme();
   return cachedTheme;
 }
 
 function subscribeTheme(callback: () => void) {
   if (typeof window === "undefined") return () => {};
-  function handleStorage(event: StorageEvent) {
-    if (event.key === THEME_KEY) {
-      cachedTheme = null;
-      callback();
-    }
+
+  function resync() {
+    cachedTheme = resolveTheme();
+    document.documentElement.dataset.theme = cachedTheme;
+    callback();
   }
+  function handleStorage(event: StorageEvent) {
+    if (event.key === THEME_KEY) resync();
+  }
+  // Only matters until the visitor picks a mode; after that the saved choice wins.
+  function handleSystemChange() {
+    if (storedTheme() === null) resync();
+  }
+
+  let media: MediaQueryList | null = null;
+  try {
+    media = window.matchMedia(SYSTEM_LIGHT_QUERY);
+  } catch {
+    media = null;
+  }
+
   window.addEventListener(THEME_EVENT, callback);
   window.addEventListener("storage", handleStorage);
+  media?.addEventListener("change", handleSystemChange);
   return () => {
     window.removeEventListener(THEME_EVENT, callback);
     window.removeEventListener("storage", handleStorage);
+    media?.removeEventListener("change", handleSystemChange);
   };
 }
 

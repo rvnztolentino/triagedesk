@@ -32,7 +32,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
             <div>
               <div style={{ fontWeight: 600 }}>Customize your view</div>
               <p className="muted" style={{ fontSize: 13.5, marginTop: 2 }}>
-                Use the dark / light switch in the header to change the theme. Your preference is saved on this device.
+                The theme follows your system setting by default. Use the dark / light switch in the header to override it; your choice is saved on this device.
               </p>
             </div>
           </div>

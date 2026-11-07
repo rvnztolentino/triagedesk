@@ -287,7 +287,10 @@ describe("workspace foundation", () => {
     // The thumb sits on fixed insets with no transform, so light mode moves
     // its left inset from 2px to 22px and it stays on the track's pixel grid.
     expect(globalStylesSource).toContain('.theme-switch[aria-checked="false"] .theme-switch-thumb { left: 22px; }');
-    expect(rootLayoutSource).toContain('document.documentElement.dataset.theme = stored === "light" ? "light" : "dark";');
+    // With no saved choice the theme follows the OS, and dark is the fallback.
+    expect(rootLayoutSource).toContain('var theme = "dark";');
+    expect(rootLayoutSource).toContain('window.matchMedia("(prefers-color-scheme: light)").matches');
+    expect(themeControlsSource).toContain("return storedTheme() ?? systemTheme();");
     expect(globalStylesSource).toContain("--accent: #ffffff;");
     expect(globalStylesSource).toContain("--accent: #000000;");
   });

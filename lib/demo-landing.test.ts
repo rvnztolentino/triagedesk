@@ -182,6 +182,37 @@ describe("landing page and header", () => {
   });
 });
 
+describe("new request example chips", () => {
+  // A chip used to overwrite the description outright, wiping whatever the user
+  // had typed. It may only replace text directly when there is nothing to lose.
+  it("asks before an example replaces a description the user wrote", () => {
+    const code = codeOnly(submitFormSource);
+    expect(code).toContain("onClick={() => chooseSample(sample)}");
+    expect(code).not.toContain("onClick={() => setDescription(sample)}");
+    expect(code).toContain('if (current === "" || SAMPLES.includes(current)) {');
+    expect(code).toContain("Replace your description with this example? What you wrote will be lost.");
+    expect(code).toContain("Keep mine");
+  });
+});
+
+describe("landing header section underline", () => {
+  // Every nav anchor must point at a real section, or its underline can never light up.
+  it("links only to sections that exist on the landing page", () => {
+    for (const id of ["workflow", "highlights"]) {
+      expect(headerSource).toContain(`href: "#${id}"`);
+      expect(landingSource).toContain(`<section id="${id}"`);
+    }
+  });
+
+  // One observer instead of measuring sections on every scroll event, and the
+  // active link is announced to assistive tech, not only drawn.
+  it("tracks the visible section with an observer and marks it as the current location", () => {
+    expect(codeOnly(headerSource)).toContain("new IntersectionObserver(");
+    expect(codeOnly(headerSource)).toContain("observer.disconnect()");
+    expect(occurrences(codeOnly(headerSource), 'aria-current={activeSectionId === item.href.slice(1) ? "location" : undefined}')).toBe(2);
+  });
+});
+
 describe("demo attachment lock", () => {
   // submitRequestAction refuses attachments from a demo principal, and both download
   // routes are guarded. Rendering the picker anyway meant the refusal only arrived

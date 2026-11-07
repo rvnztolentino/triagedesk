@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import { AlertTriangle, MapPin, Sparkles, User } from "lucide-react";
@@ -34,8 +34,32 @@ function FormBody({
   setDescription: (value: string) => void;
 }) {
   const { pending } = useFormStatus();
+  // The example the user clicked while the box held their own text. Held here
+  // until they confirm, so a stray click never wipes what they wrote.
+  const [pendingSample, setPendingSample] = useState<string | null>(null);
+  const keepButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (pendingSample) keepButtonRef.current?.focus();
+  }, [pendingSample]);
 
   if (pending) return <AiTriageLoading />;
+
+  function chooseSample(sample: string) {
+    const current = description.trim();
+    // Nothing to lose when the box is empty or still holds an untouched example.
+    if (current === "" || SAMPLES.includes(current)) {
+      setDescription(sample);
+      setPendingSample(null);
+      return;
+    }
+    setPendingSample(sample);
+  }
+
+  function confirmSample() {
+    if (pendingSample) setDescription(pendingSample);
+    setPendingSample(null);
+  }
 
   return (
     <fieldset className="min-w-0 space-y-6">
@@ -51,7 +75,10 @@ function FormBody({
           maxLength={1200}
           rows={5}
           value={description}
-          onChange={(event) => setDescription(event.target.value)}
+          onChange={(event) => {
+            setDescription(event.target.value);
+            setPendingSample(null);
+          }}
           placeholder="e.g. Aircon in Room 304 is leaking again. Floor is wet near the outlet."
           className="textarea"
         />
@@ -64,12 +91,39 @@ function FormBody({
               type="button"
               className="chip"
               style={{ fontSize: 11.5, padding: "3px 8px" }}
-              onClick={() => setDescription(sample)}
+              onClick={() => chooseSample(sample)}
             >
               {sample.slice(0, 26)}…
             </button>
           ))}
         </div>
+        {pendingSample ? (
+          <div
+            role="alert"
+            className="st-warn rounded-[var(--radius-control)] border px-3 py-2.5 text-sm flex flex-wrap items-center gap-x-3 gap-y-2"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setPendingSample(null);
+            }}
+          >
+            <AlertTriangle size={15} className="shrink-0" aria-hidden />
+            <p className="min-w-0 flex-1 basis-56">
+              Replace your description with this example? What you wrote will be lost.
+            </p>
+            <div className="cluster ml-auto" style={{ gap: 6 }}>
+              <button
+                ref={keepButtonRef}
+                type="button"
+                className="btn btn--ghost btn--sm"
+                onClick={() => setPendingSample(null)}
+              >
+                Keep mine
+              </button>
+              <button type="button" className="btn btn--neutral btn--sm" onClick={confirmSample}>
+                Replace
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid cols-2" style={{ gap: 14 }}>

@@ -83,15 +83,24 @@ export const viewport: Viewport = {
   ],
 };
 
-// Applies the saved mode before paint so there is no flash of the wrong theme.
-// Dark is the default; the accent color is derived from the mode in globals.css.
+// Applies the mode before paint so there is no flash of the wrong theme. A
+// saved choice wins; otherwise the OS preference is used, and dark is the
+// fallback when neither is available. The accent color is derived from the
+// mode in globals.css.
 const themeScript = `
-try {
-  var stored = localStorage.getItem("triagedesk-theme");
-  document.documentElement.dataset.theme = stored === "light" ? "light" : "dark";
-} catch (_) {
-  document.documentElement.dataset.theme = "dark";
-}
+(function () {
+  var stored = null;
+  try { stored = localStorage.getItem("triagedesk-theme"); } catch (_) {}
+  var theme = "dark";
+  if (stored === "light" || stored === "dark") {
+    theme = stored;
+  } else {
+    try {
+      if (window.matchMedia("(prefers-color-scheme: light)").matches) theme = "light";
+    } catch (_) {}
+  }
+  document.documentElement.dataset.theme = theme;
+})();
 `;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

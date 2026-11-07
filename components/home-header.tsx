@@ -49,33 +49,67 @@ const navItems = [
 // Fixed-header height to offset scroll targets so section headings aren't hidden.
 const HEADER_OFFSET = 80;
 
+// How far the page scrolls before the header turns into a pill.
+const SCROLL_THRESHOLD = 24;
+
+const SECTION_IDS = navItems.map((item) => item.href.slice(1));
+
+// A section counts as "on screen" while it crosses a thin band just above the
+// middle of the viewport, so exactly one section (or none, over the hero and
+// the closing sections) is active at a time.
+const ACTIVE_SECTION_BAND = "-40% 0px -55% 0px";
+
+// Tracks which nav section is on screen with one IntersectionObserver, so
+// scrolling never forces a layout read and the header only re-renders when the
+// active section changes.
+function useActiveSection(ids: readonly string[]) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const sections = ids
+      .map((id) => document.getElementById(id))
+      .filter((section): section is HTMLElement => section !== null);
+    if (sections.length === 0) return;
+
+    const inBand = new Set<string>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) inBand.add(entry.target.id);
+          else inBand.delete(entry.target.id);
+        }
+        // Sections follow page order, so the first one in the band wins.
+        setActiveId(ids.find((id) => inBand.has(id)) ?? null);
+      },
+      { rootMargin: ACTIVE_SECTION_BAND }
+    );
+
+    for (const section of sections) observer.observe(section);
+    return () => observer.disconnect();
+  }, [ids]);
+
+  return activeId;
+}
+
 // The header keeps a plain Sign in link next to Start now. It is text, not a
 // button, so the primary call to action stays the only button in the slot. The
 // demo lives in the hero and the closing CTA on the landing page instead.
 export function HomeHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
+  const activeSectionId = useActiveSection(SECTION_IDS);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
-  const lastScrollY = useRef(0);
   const contactRef = useRef<HTMLDivElement>(null);
 
+  // The header stays put and morphs into a floating pill once the page has
+  // scrolled a little. Run once on mount so a reload mid-page starts as a pill.
   useEffect(() => {
     function handleScroll() {
-      const currentScrollY = window.scrollY;
-
-      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
-        setIsVisible(false);
-        setIsMobileMenuOpen(false);
-        setIsContactOpen(false);
-      } else {
-        setIsVisible(true);
-      }
-
-      setIsScrolled(currentScrollY > 50);
-      lastScrollY.current = currentScrollY;
+      setIsScrolled(window.scrollY > SCROLL_THRESHOLD);
     }
 
+    handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -133,117 +167,125 @@ export function HomeHeader() {
 
   return (
     <nav
-      className={cn(
-        "fixed top-0 left-0 right-0 z-50 border-b transition-all duration-300 ease-out",
-        isScrolled ? "border-border bg-bg/70 backdrop-blur-lg" : "border-transparent bg-transparent",
-        isVisible ? "translate-y-0" : "-translate-y-full"
-      )}
+      className="home-nav"
+      data-scrolled={isScrolled}
+      data-menu-open={isMobileMenuOpen}
       aria-label="Home navigation"
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 sm:px-6 lg:px-8">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="TriageDesk home">
-          <BrandIcon size={26} className="rounded-md" />
-          <span className="text-[15px] font-semibold tracking-tight text-fg">TriageDesk</span>
-          <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none tracking-wide text-muted">
-            Beta
-          </span>
-        </Link>
+      <div className="home-nav-shell">
+        <div className="home-nav-row flex items-center justify-between gap-4">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="TriageDesk home">
+            <BrandIcon size={26} className="rounded-md" />
+            <span className="text-[15px] font-semibold tracking-tight text-fg">TriageDesk</span>
+            <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none tracking-wide text-muted">
+              Beta
+            </span>
+          </Link>
 
-        <div className="hidden items-center gap-1 lg:flex">
-          {navItems.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              onClick={(event) => handleAnchorClick(event, item.href)}
-              className="rounded-[var(--radius-control)] px-3 py-2 text-sm text-muted transition-colors hover:text-fg"
+          <div className="hidden items-center gap-1 lg:flex">
+            {navItems.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={(event) => handleAnchorClick(event, item.href)}
+                aria-current={activeSectionId === item.href.slice(1) ? "location" : undefined}
+                className={cn(
+                  "home-nav-link rounded-[var(--radius-control)] px-3 py-2 text-sm transition-colors hover:text-fg",
+                  activeSectionId === item.href.slice(1) ? "text-fg" : "text-muted"
+                )}
+              >
+                {item.label}
+              </a>
+            ))}
+
+            <div ref={contactRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setIsContactOpen((open) => !open)}
+                className="rounded-[var(--radius-control)] px-3 py-2 text-sm text-muted transition-colors hover:text-fg"
+                aria-expanded={isContactOpen}
+                aria-haspopup="dialog"
+              >
+                Contact
+              </button>
+              <div
+                role="dialog"
+                aria-label="Contact"
+                className={cn(
+                  "absolute right-0 top-full mt-2 w-64 origin-top-right overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface transition-all duration-200 ease-out",
+                  isContactOpen ? "visible scale-100 opacity-100" : "pointer-events-none invisible scale-95 opacity-0"
+                )}
+                style={{ boxShadow: "var(--shadow-lg)" }}
+              >
+                {contactPanel}
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden shrink-0 items-center gap-2 lg:flex">
+            <GithubLink />
+            <ThemeToggle />
+            <Link
+              href="/login"
+              className="rounded-[var(--radius-control)] px-3 py-2 text-sm text-muted no-underline transition-colors hover:text-fg hover:no-underline"
             >
-              {item.label}
-            </a>
-          ))}
+              Sign in
+            </Link>
+            <Link href="/signup?next=/onboarding" className="btn btn--primary btn--sm">
+              Start now
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
 
-          <div ref={contactRef} className="relative">
+          <div className="flex items-center gap-2 lg:hidden">
+            <GithubLink />
+            <ThemeToggle />
             <button
               type="button"
-              onClick={() => setIsContactOpen((open) => !open)}
-              className="rounded-[var(--radius-control)] px-3 py-2 text-sm text-muted transition-colors hover:text-fg"
-              aria-expanded={isContactOpen}
-              aria-haspopup="dialog"
+              className="relative inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] bg-transparent text-fg transition-colors hover:bg-surface-hover"
+              onClick={() => setIsMobileMenuOpen((open) => !open)}
+              aria-label="Toggle menu"
+              aria-expanded={isMobileMenuOpen}
             >
-              Contact
+              <Menu className={cn("absolute h-5 w-5 transition-all duration-300", isMobileMenuOpen ? "rotate-90 opacity-0" : "rotate-0 opacity-100")} />
+              <X className={cn("absolute h-5 w-5 transition-all duration-300", isMobileMenuOpen ? "rotate-0 opacity-100" : "-rotate-90 opacity-0")} />
             </button>
-            <div
-              role="dialog"
-              aria-label="Contact"
-              className={cn(
-                "absolute right-0 top-full mt-2 w-64 origin-top-right overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface transition-all duration-200 ease-out",
-                isContactOpen ? "visible scale-100 opacity-100" : "pointer-events-none invisible scale-95 opacity-0"
-              )}
-              style={{ boxShadow: "var(--shadow-lg)" }}
-            >
-              {contactPanel}
-            </div>
           </div>
         </div>
 
-        <div className="hidden shrink-0 items-center gap-2 lg:flex">
-          <GithubLink />
-          <ThemeToggle />
-          <Link
-            href="/login"
-            className="rounded-[var(--radius-control)] px-3 py-2 text-sm text-muted no-underline transition-colors hover:text-fg hover:no-underline"
-          >
-            Sign in
-          </Link>
-          <Link href="/signup?next=/onboarding" className="btn btn--primary btn--sm">
-            Start now
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
+        <div
+          className={cn(
+            "overflow-hidden border-t border-border transition-all duration-300 ease-out lg:hidden",
+            isMobileMenuOpen ? "max-h-[520px] opacity-100" : "pointer-events-none max-h-0 opacity-0"
+          )}
+        >
+          <div className="flex flex-col gap-1 px-5 py-4 sm:px-6">
+            {navItems.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={(event) => handleAnchorClick(event, item.href)}
+                aria-current={activeSectionId === item.href.slice(1) ? "location" : undefined}
+                className={cn(
+                  "rounded-[var(--radius-control)] px-3 py-3 text-base transition-colors hover:bg-surface-hover hover:text-fg",
+                  activeSectionId === item.href.slice(1) ? "text-fg" : "text-muted"
+                )}
+              >
+                {item.label}
+              </a>
+            ))}
 
-        <div className="flex items-center gap-2 lg:hidden">
-          <GithubLink />
-          <ThemeToggle />
-          <button
-            type="button"
-            className="relative inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] bg-transparent text-fg transition-colors hover:bg-surface-hover"
-            onClick={() => setIsMobileMenuOpen((open) => !open)}
-            aria-label="Toggle menu"
-            aria-expanded={isMobileMenuOpen}
-          >
-            <Menu className={cn("absolute h-5 w-5 transition-all duration-300", isMobileMenuOpen ? "rotate-90 opacity-0" : "rotate-0 opacity-100")} />
-            <X className={cn("absolute h-5 w-5 transition-all duration-300", isMobileMenuOpen ? "rotate-0 opacity-100" : "-rotate-90 opacity-0")} />
-          </button>
-        </div>
-      </div>
-
-      <div
-        className={cn(
-          "overflow-hidden border-t border-border bg-bg transition-all duration-300 ease-out lg:hidden",
-          isMobileMenuOpen ? "max-h-[520px] opacity-100" : "pointer-events-none max-h-0 opacity-0"
-        )}
-      >
-        <div className="flex flex-col gap-1 px-5 py-4 sm:px-6">
-          {navItems.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              onClick={(event) => handleAnchorClick(event, item.href)}
-              className="rounded-[var(--radius-control)] px-3 py-3 text-base text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+            <Link
+              href="/login"
+              className="rounded-[var(--radius-control)] px-3 py-3 text-base text-muted no-underline transition-colors hover:bg-surface-hover hover:text-fg hover:no-underline"
+              onClick={() => setIsMobileMenuOpen(false)}
             >
-              {item.label}
-            </a>
-          ))}
+              Sign in
+            </Link>
 
-          <Link
-            href="/login"
-            className="rounded-[var(--radius-control)] px-3 py-3 text-base text-muted no-underline transition-colors hover:bg-surface-hover hover:text-fg hover:no-underline"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Sign in
-          </Link>
-
-          <div className="mt-3 rounded-[var(--radius-card)] border border-border bg-surface">
-            {contactPanel}
+            <div className="mt-3 rounded-[var(--radius-card)] border border-border bg-surface">
+              {contactPanel}
+            </div>
           </div>
         </div>
       </div>
