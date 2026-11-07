@@ -221,7 +221,8 @@ describe("no em-dashes in the project", () => {
     const forms = [char, `&${"mdash"};`, `&#${8212};`, `&#${"x2014"};`, `\\${"u2014"}`];
     // Gitignored directories are skipped: the rule covers what we ship, and local
     // agent/tooling notes would otherwise fail this run for everyone but CI.
-    const skip = new Set(["node_modules", ".next", ".git", ".claude", "public"]);
+    // AGENTS.md is gitignored too: `next dev` rewrites it on every start.
+    const skip = new Set(["node_modules", ".next", ".git", ".claude", "public", "AGENTS.md"]);
     const offenders: string[] = [];
 
     const walk = (dir: URL, label: string) => {

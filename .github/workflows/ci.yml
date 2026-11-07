@@ -6,6 +6,11 @@ on:
     branches:
       - main
 
+# Read-only token. CI only checks out code and runs checks, so it never needs to
+# write to the repository, even on pull requests from forks.
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

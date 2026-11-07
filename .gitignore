@@ -15,3 +15,5 @@ dist/
 .mcp.json
 # clerk configuration (can include secrets)
 /.clerk/
+# written by next dev on every start; contains characters the em-dash test bans
+/AGENTS.md

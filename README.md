@@ -4,11 +4,14 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
-![License](https://img.shields.io/badge/license-proprietary-lightgrey)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/rvnztolentino/triagedesk/actions/workflows/ci.yml/badge.svg)](https://github.com/rvnztolentino/triagedesk/actions/workflows/ci.yml)
 
 TriageDesk is an AI triage tool for operations requests in schools, clinics, offices, and facilities teams. Staff describe a problem, AI drafts a priority and department, and an admin reviews the draft before it becomes a tracked ticket.
 
-![Dashboard](public/docs/dashboard.png)
+**Live demo:** [triagedesk.org](https://triagedesk.org). Click "Live demo" for a temporary workspace, no account needed.
+
+![TriageDesk demo: a request is submitted, triaged by AI, approved by an admin, and becomes a ticket](public/docs/preview.gif)
 
 ## Features
 
@@ -120,8 +123,14 @@ pnpm test
 - Zod for validation, Vitest for tests
 - Sentry for error monitoring (optional)
 
+## Contributing
+
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, conventions, and the checks CI runs, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for expected conduct. Open an issue before starting anything large.
+
+## Security
+
+Report vulnerabilities privately through [GitHub's private vulnerability reporting](https://github.com/rvnztolentino/triagedesk/security/advisories/new), not as a public issue. [SECURITY.md](SECURITY.md) covers scope, the disclosure process, and the known design limitations to read before deploying your own instance.
+
 ## License
 
-Copyright (c) 2026 Renz Tolentino. All rights reserved.
-
-This is a private repository. Access does not grant permission to copy, redistribute, or reuse the source.
+[MIT](LICENSE). Copyright (c) 2026 Renz Tolentino.

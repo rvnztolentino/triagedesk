@@ -2,6 +2,20 @@
   "name": "triagedesk",
   "version": "0.1.0",
   "private": true,
+  "description": "AI operations triage for schools, clinics, offices, and facilities teams. Turns messy internal requests into structured triage drafts with a human review loop.",
+  "license": "MIT",
+  "author": "Renz Tolentino",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rvnztolentino/triagedesk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rvnztolentino/triagedesk/issues"
+  },
+  "homepage": "https://github.com/rvnztolentino/triagedesk#readme",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,15 +26,15 @@
   },
   "dependencies": {
     "@clerk/nextjs": "7.5.19",
-    "@sentry/nextjs": "10.58.0",
+    "@sentry/nextjs": "10.78.0",
     "@supabase/supabase-js": "2.106.1",
     "clsx": "2.1.1",
     "lucide-react": "1.16.0",
-    "next": "16.3.8",
+    "next": "16.4.5",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "tailwind-merge": "3.6.0",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.0",
@@ -28,7 +42,7 @@
     "@types/react": "19.2.15",
     "@types/react-dom": "19.2.3",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.5",
     "tailwindcss": "4.3.0",
     "typescript": "6.0.3",
     "vitest": "4.1.7"
