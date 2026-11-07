@@ -101,20 +101,22 @@
 }
 
 html[data-theme="light"] {
-  /* Flat and quiet: white page, near-white secondary surface, hairline
-     neutral borders. Depth comes from borders, not shadows. */
-  --bg: #ffffff;
+  /* Paper and card: a soft off-white canvas behind the shell, pure white cards
+     on top, and a faint tint for insets (inputs, chips, buttons). Three steps,
+     the same layering dark mode gets from #0a0a0a / #0f0f0f / #141414. With
+     every layer white the borders had nothing to separate and pages read blank. */
+  --bg: #f6f6f4;
   --surface: #ffffff;
-  --surface-2: #fafafa;
-  --surface-hover: #f4f4f4;
-  --border: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.14);
+  --surface-2: #f9f9f8;
+  --surface-hover: #efefed;
+  --border: rgba(24, 24, 20, 0.1);
+  --border-strong: rgba(24, 24, 20, 0.17);
   --fg: #171717;
-  --muted: #646464;
-  --faint: #8c8c8c;
+  --muted: #5f5f5c;
+  --faint: #8a8a86;
 
   --accent: #000000;
-  --accent-soft: color-mix(in srgb, var(--accent) 6%, white);
+  --accent-soft: color-mix(in srgb, var(--accent) 8%, white);
   --accent-softer: color-mix(in srgb, var(--accent) 3%, white);
   --accent-border: color-mix(in srgb, var(--accent) 18%, white);
   --accent-text: var(--accent);
@@ -134,12 +136,12 @@ html[data-theme="light"] {
   --danger-soft: color-mix(in srgb, var(--danger) 8%, white);
   --neutral-soft: color-mix(in srgb, var(--fg) 5%, white);
 
-  /* elevation (light): no shadow on cards; one soft neutral shadow for
-     floating layers only */
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.06);
-  --shadow-pop: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* elevation (light): a hairline lift so white cards sit on the canvas
+     instead of dissolving into it. Tight and low-opacity, never a glow. */
+  --shadow-sm: 0 1px 2px rgba(24, 24, 20, 0.04), 0 1px 1px rgba(24, 24, 20, 0.02);
+  --shadow-md: 0 6px 18px -8px rgba(24, 24, 20, 0.12), 0 1px 2px rgba(24, 24, 20, 0.04);
+  --shadow-lg: 0 10px 28px -10px rgba(24, 24, 20, 0.14), 0 2px 6px rgba(24, 24, 20, 0.04);
+  --shadow-pop: 0 14px 36px -12px rgba(24, 24, 20, 0.18), 0 2px 8px rgba(24, 24, 20, 0.06);
 }
 
 html {
