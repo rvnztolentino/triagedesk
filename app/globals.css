@@ -763,6 +763,9 @@ select {
     transition: background 0.18s, color 0.18s, box-shadow 0.18s;
   }
   .nav-item:hover .nav-icon { background: var(--control-hover); }
+  /* A nav-shaped row that is not itself clickable (it holds its own control). */
+  .nav-static:hover { background: transparent; color: var(--muted); }
+  .nav-static:hover .nav-icon { background: var(--surface-2); }
   .nav-item[aria-current="page"] { color: var(--fg); }
   .nav-item[aria-current="page"] .nav-icon {
     background: var(--accent);

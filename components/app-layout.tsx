@@ -15,6 +15,7 @@ import {
   PlusCircle,
   Settings,
   Sparkles,
+  SunMoon,
   Ticket,
   Timer,
   UserRound,
@@ -446,6 +447,15 @@ export function AppLayout({
               <span className={cn("whitespace-nowrap text-[11px] font-medium", collapsed && "md:hidden")}>{demoPillLabel}</span>
             </div>
           ) : null}
+          {/* Theme row: laid out like the nav links so the switch sits in line with
+              them. Collapsed, only the switch stays. */}
+          <div className={cn("nav-item nav-static", collapsed && "md:justify-center md:p-[5px]")}>
+            <span className={cn("nav-icon", collapsed && "md:hidden")}>
+              <SunMoon size={16} />
+            </span>
+            <span className={cn("flex-1 whitespace-nowrap", collapsed && "md:hidden")}>Theme</span>
+            <ThemeToggle />
+          </div>
           <button
             type="button"
             onClick={toggleCollapsed}
@@ -510,8 +520,6 @@ export function AppLayout({
                 </span>
               </Link>
             ) : null}
-
-            <ThemeToggle />
 
             {currentUser && activeWorkspace ? (
               <NotificationBell
