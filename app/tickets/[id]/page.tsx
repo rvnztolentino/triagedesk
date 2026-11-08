@@ -49,7 +49,7 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
     notFound();
   }
 
-  const { ticket, aiPriority, summaryEdited, activity, notes, attachments, similarTickets } = detail;
+  const { ticket, aiPriority, summaryEdited, activity, notes, attachments, similarTickets, confidence } = detail;
   const requester = ticket.requesterUserId ? await getUserProfile(ticket.requesterUserId) : undefined;
   const requesterName = requester?.displayName || ticket.contactName || "Anonymous";
   // An assignee who has since left or been demoted is not in the list, so the ticket
@@ -122,7 +122,7 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
                     AI suggested {aiPriority} priority. This ticket is now {ticket.priority}, so the reasoning above describes the original suggestion.
                   </p>
                 ) : null}
-                <ConfidenceMeter seed={`${ticket.id}:${ticket.department}`} similarCount={similarTickets.length} className="mt-4" />
+                <ConfidenceMeter seed={confidence.seed} similarCount={confidence.similarCount} className="mt-4" />
               </div>
 
               {ticket.resolutionNotes ? (

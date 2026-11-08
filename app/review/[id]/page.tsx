@@ -4,6 +4,7 @@ import { AlertTriangle, Building2, ChevronRight, Clock, FileText, Inbox, MapPin,
 import { AttachmentFileName } from "@/components/attachment-file-name";
 import { CharLimitedTextarea } from "@/components/char-limited-textarea";
 import { ConfidenceMeter } from "@/components/confidence-meter";
+import { triageConfidenceInput } from "@/lib/confidence";
 import { ReviewDecisionForm } from "@/components/review-decision-form";
 import { getUserProfile, requireWorkspaceAdminContext } from "@/lib/auth";
 import { formatDateTime, relativeTime } from "@/lib/format";
@@ -152,7 +153,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
                 </div>
               </div>
               <div className="card-pad stack" style={{ gap: 16 }}>
-                <ConfidenceMeter seed={`${request.id}:${triage.department}`} similarCount={similarTickets.length} />
+                <ConfidenceMeter {...triageConfidenceInput(triage)} />
 
                 <div className="field">
                   <label htmlFor="title" className="label">Suggested title</label>

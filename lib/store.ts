@@ -25,6 +25,7 @@ import {
   type TriageResultRecord,
 } from "@/lib/schema";
 import { assertWorkspaceMutable, DEMO_WORKSPACE_ID, MAX_CUSTOM_WORKSPACE_DEPARTMENTS, requireAssignableWorkspaceMember } from "@/lib/workspaces";
+import { triageConfidenceInput } from "@/lib/confidence";
 import { PublicError } from "@/lib/errors";
 import {
   getUserDisplayName,
@@ -1160,6 +1161,7 @@ export async function getTicketDetail(ticketId: string, requesterUserId?: string
   ]);
   requireNoError(activityError, "Get ticket activity");
   requireNoError(notesError, "Get ticket notes");
+  const similarTickets = rankSimilarTickets(candidates, `${ticket.title} ${ticket.description} ${ticket.location}`, ticket.id, ticket.department);
 
   return {
     ticket,
@@ -1171,7 +1173,11 @@ export async function getTicketDetail(ticketId: string, requesterUserId?: string
     activity: ((activityData ?? []) as SupabaseRow[]).map(activityFromRow),
     notes: ((notesData ?? []) as SupabaseRow[]).map(noteFromRow),
     attachments,
-    similarTickets: rankSimilarTickets(candidates, `${ticket.title} ${ticket.description} ${ticket.location}`, ticket.id, ticket.department),
+    similarTickets,
+    // A ticket made without an AI triage has nothing stored to anchor the meter to.
+    confidence: triage
+      ? triageConfidenceInput(triage)
+      : { seed: `${ticket.id}:${ticket.department}`, similarCount: similarTickets.length },
   };
 }
 

@@ -3,6 +3,8 @@
 // a couple of soft signals. Same input → same score across renders, which keeps
 // the confidence meter from flickering between requests.
 
+import type { TriageResultRecord } from "@/lib/schema";
+
 export type ConfidenceLevel = "high" | "moderate" | "low";
 
 export interface TriageConfidence {
@@ -39,4 +41,13 @@ export function triageConfidence(
   const label = level === "high" ? "High confidence" : level === "moderate" ? "Moderate confidence" : "Low confidence";
 
   return { value, percent, level, label };
+}
+
+// The meter describes the AI's triage, which is fixed once it runs, so its inputs come
+// from that stored record: the request it ran on, the department it picked, and the
+// similar tickets it was shown. The review screen and the approved ticket then read
+// the same score, even after an admin changes the department at approval or new
+// tickets change what the live similarity list finds.
+export function triageConfidenceInput(triage: Pick<TriageResultRecord, "requestId" | "department" | "similarTicketIds">) {
+  return { seed: `${triage.requestId}:${triage.department}`, similarCount: triage.similarTicketIds.length };
 }
