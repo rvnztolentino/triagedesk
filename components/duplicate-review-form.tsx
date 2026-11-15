@@ -79,7 +79,7 @@ export function DuplicateReviewForm({ requestId, tickets, approveFormId, workspa
           <div className="font-mono text-xs font-medium text-muted uppercase tracking-[0.1em] mb-3">Selected ticket</div>
           {selectedTicket ? (
             <div className="space-y-2">
-              <div className="font-mono text-[10px] font-medium text-accent">{selectedTicket.id}</div>
+              <div className="font-mono text-[10px] font-medium text-accent-text">{selectedTicket.id}</div>
               <div className="text-sm font-medium text-fg leading-snug">{selectedTicket.title}</div>
               <div className="text-xs text-muted">{selectedTicket.location}</div>
               <div className="flex flex-wrap gap-2 pt-2">

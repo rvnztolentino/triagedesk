@@ -22,7 +22,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       ) : null}
 
       {params.deleted ? (
-        <div className="rounded-[var(--radius-control)] border border-accent-border bg-accent-soft px-4 py-3 text-sm text-accent" style={{ marginBottom: 16 }}>
+        <div className="rounded-[var(--radius-control)] border border-accent-border bg-accent-soft px-4 py-3 text-sm text-accent-text" style={{ marginBottom: 16 }}>
           Your account has been deleted.
         </div>
       ) : null}

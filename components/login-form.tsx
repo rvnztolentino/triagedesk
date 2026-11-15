@@ -198,7 +198,7 @@ export function LoginForm({ next }: { next?: string }) {
           </div>
         ) : null}
         {resent ? (
-          <div className="rounded-[var(--radius-control)] border border-accent-border bg-accent-soft px-4 py-3 text-sm text-accent" role="status">
+          <div className="rounded-[var(--radius-control)] border border-accent-border bg-accent-soft px-4 py-3 text-sm text-accent-text" role="status">
             A new code is on its way.
           </div>
         ) : null}
@@ -221,7 +221,7 @@ export function LoginForm({ next }: { next?: string }) {
           type="button"
           onClick={handleResend}
           disabled={cooldown > 0 || resending}
-          className="text-sm text-accent hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className="text-sm text-accent-text hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {cooldown > 0
             ? `Resend code in ${formatResendCountdown(cooldown)}`

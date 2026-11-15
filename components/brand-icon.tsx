@@ -6,7 +6,7 @@ export function BrandIcon({ size = 32, className = "" }: { size?: number; classN
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center overflow-hidden border border-accent-border bg-accent-soft text-accent",
+        "inline-flex shrink-0 items-center justify-center overflow-hidden border border-accent-border bg-accent-soft text-accent-text",
         className,
         "rounded-[28%]"
       )}

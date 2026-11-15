@@ -47,7 +47,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <div className="st-danger rounded-[var(--radius-card)] border px-4 py-3 text-sm">{params.error}</div>
       ) : null}
       {successMessage ? (
-        <div className="rounded-[var(--radius-card)] border border-accent-border bg-accent-soft px-4 py-3 text-sm text-accent">
+        <div className="rounded-[var(--radius-card)] border border-accent-border bg-accent-soft px-4 py-3 text-sm text-accent-text">
           {successMessage}
         </div>
       ) : null}

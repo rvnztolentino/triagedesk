@@ -95,7 +95,7 @@ export function RequestAttachmentsInput() {
 
       {files.length > 0 ? (
         <div className="mt-4 rounded-[var(--radius-card)] border border-border bg-bg divide-y divide-border">
-          <div className="px-4 py-3 text-xs font-medium text-accent">{files.length} file{files.length === 1 ? "" : "s"} ready to upload</div>
+          <div className="px-4 py-3 text-xs font-medium text-accent-text">{files.length} file{files.length === 1 ? "" : "s"} ready to upload</div>
           {files.map((file) => (
             <div key={fileKey(file)} className="px-4 py-3 flex items-center gap-3">
               <FileText size={16} className="text-muted shrink-0" />

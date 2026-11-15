@@ -3,8 +3,8 @@
 /* ============================================================================
    TriageDesk design system: operations-console aesthetic.
    Dark is the default theme; light has full parity. A single `--accent`
-   custom property drives the highlight color system-wide; it is monochrome and
-   derived from the theme (white on dark, black on light).
+   custom property drives the highlight color system-wide: a muted, dark forest
+   green, tuned per theme so it reads as both a fill and a text color.
 
    The reusable component classes live in `@layer components` so Tailwind
    utilities (and the unlayered `.st-*` helpers) always win when a caller
@@ -31,14 +31,19 @@
   --color-accent-soft: var(--accent-soft);
   --color-accent-border: var(--accent-border);
   --color-accent-fg: var(--accent-fg);
+  --color-accent-text: var(--accent-text);
 
   --radius-card: 20px;
   --radius-control: 12px;
 }
 
 /* ── Theme tokens ─────────────────────────────────────────────────────────
-   The accent is monochrome and owned by the theme: white in dark mode, black
-   in light mode. The inline theme script only sets `data-theme` before paint. */
+   The accent is a muted, dark forest green owned by the theme. `--accent` is
+   the fill (buttons, the active nav chip, chart strokes) and `--accent-text`
+   is a lighter step for text on dark surfaces. `--ink` keeps the old
+   monochrome pair (white on dark, black on light) for controls that should
+   stay neutral, like the theme switch. The inline theme script only sets
+   `data-theme` before paint. */
 
 :root {
   /* DARK (default) */
@@ -52,13 +57,16 @@
   --muted: #8f8f8f;
   --faint: #5e5e5e;
 
-  --accent: #ffffff;
-  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
-  --accent-softer: color-mix(in srgb, var(--accent) 6%, transparent);
-  --accent-border: color-mix(in srgb, var(--accent) 26%, transparent);
-  --accent-text: var(--accent);
-  --accent-fg: #000000;
+  --accent: #2f7a52;
+  --accent-soft: color-mix(in srgb, var(--accent) 22%, transparent);
+  --accent-softer: color-mix(in srgb, var(--accent) 11%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent) 45%, transparent);
+  --accent-text: #6fbf92;
+  --accent-fg: #ffffff;
   --accent-ink: var(--accent-fg);
+
+  --ink: #ffffff;
+  --ink-fg: #000000;
 
   /* status hues (dark) */
   --st-warn: #f5b945;
@@ -134,12 +142,15 @@ html[data-theme="light"] {
   --muted: #676767;
   --faint: #8e8e8e;
 
-  --accent: #000000;
-  --accent-soft: color-mix(in srgb, var(--accent) 6%, white);
-  --accent-softer: color-mix(in srgb, var(--accent) 3%, white);
-  --accent-border: color-mix(in srgb, var(--accent) 12%, white);
+  --accent: #1f5c3d;
+  --accent-soft: color-mix(in srgb, var(--accent) 9%, white);
+  --accent-softer: color-mix(in srgb, var(--accent) 4%, white);
+  --accent-border: color-mix(in srgb, var(--accent) 22%, white);
   --accent-text: var(--accent);
   --accent-fg: #ffffff;
+
+  --ink: #000000;
+  --ink-fg: #ffffff;
 
   /* status hues (light): saturated enough to scan, still readable on white */
   --st-warn: #b45309;
@@ -600,7 +611,7 @@ select {
     border-color: transparent;
   }
   /* Mixing toward the page background (not white) keeps the hover shift visible
-     in both directions now that the accent is white on dark / black on light. */
+     in both themes: it darkens the green on dark and lightens it on light. */
   .btn--primary:hover {
     background: color-mix(in srgb, var(--accent) 86%, var(--bg));
     border-color: transparent;
@@ -736,8 +747,8 @@ select {
   .seg-filter a.on { background: var(--selected-bg); color: var(--selected-fg); box-shadow: var(--selected-shadow); }
 
   /* Sidebar links: each icon sits in a round chip. The current page fills
-     its chip with the accent and rings it, so the active item reads from
-     across the screen. Collapsed, only the chips remain, as an icon rail. */
+     its chip with the accent, so the active item reads from across the
+     screen. Collapsed, only the chips remain, as an icon rail. */
   .nav-item {
     display: flex;
     align-items: center;
@@ -770,7 +781,6 @@ select {
   .nav-item[aria-current="page"] .nav-icon {
     background: var(--accent);
     color: var(--accent-fg);
-    box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--accent);
   }
   /* Round header and sidebar controls (icon buttons and pills). */
   .shell-ctrl {
@@ -919,7 +929,7 @@ select {
   /* ── dark/light switch ──────────────────────────────────────────────────
      Track holds two 22px icon slots (sun, moon) that exactly fill its inner
      width; the thumb slides between them and tints the active icon with
-     --accent-fg, so it stays legible against the accent in both themes. */
+     --ink-fg, so it stays legible against the ink in both themes. */
   /* Monochrome pill switch. Light mode fills the track with a soft charcoal
      and parks the thumb right, leaving the sun visible on the left; dark mode
      dims the track to a soft gray and parks the thumb left over the sun,
@@ -935,13 +945,13 @@ select {
     padding: 0 2px;
     border: 0;
     border-radius: var(--r-pill);
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    background: color-mix(in srgb, var(--ink) 18%, transparent);
     cursor: pointer;
     transition: background 0.2s;
   }
-  .theme-switch:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
-  .theme-switch[aria-checked="false"] { background: color-mix(in srgb, var(--accent) 75%, var(--accent-fg)); }
-  .theme-switch[aria-checked="false"]:hover { background: color-mix(in srgb, var(--accent) 68%, var(--accent-fg)); }
+  .theme-switch:hover { background: color-mix(in srgb, var(--ink) 24%, transparent); }
+  .theme-switch[aria-checked="false"] { background: color-mix(in srgb, var(--ink) 75%, var(--ink-fg)); }
+  .theme-switch[aria-checked="false"]:hover { background: color-mix(in srgb, var(--ink) 68%, var(--ink-fg)); }
   .theme-switch:focus-visible { outline: none; box-shadow: var(--ring); }
   .theme-switch-thumb {
     position: absolute;
@@ -969,7 +979,7 @@ select {
     opacity: 0;
     transition: opacity 0.2s;
   }
-  .theme-switch-icon--sun { color: var(--accent-fg); }
+  .theme-switch-icon--sun { color: var(--ink-fg); }
   .theme-switch-icon--moon { color: var(--muted); }
   .theme-switch[aria-checked="false"] .theme-switch-icon--sun,
   .theme-switch[aria-checked="true"] .theme-switch-icon--moon { opacity: 1; }

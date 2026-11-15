@@ -37,7 +37,7 @@ export default async function JoinWorkspacePage({
     return (
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col justify-center px-4 py-10">
         <div className="bg-surface border border-border rounded-[var(--radius-card)] p-8 text-center">
-          <div className="w-12 h-12 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center mx-auto mb-5">
+          <div className="w-12 h-12 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent-text flex items-center justify-center mx-auto mb-5">
             <ArrowUpRight size={22} />
           </div>
           <h1 className="text-2xl font-semibold text-fg">You already belong to {workspace.name}</h1>
@@ -59,7 +59,7 @@ export default async function JoinWorkspacePage({
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col justify-center px-4 py-10">
       <div className="bg-surface border border-border rounded-[var(--radius-card)] p-8">
-        <div className="w-12 h-12 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center mb-5">
+        <div className="w-12 h-12 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent-text flex items-center justify-center mb-5">
           <Link2 size={22} />
         </div>
         <h1 className="text-2xl font-semibold text-fg">Join {workspace?.name || "workspace"}</h1>

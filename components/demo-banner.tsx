@@ -37,7 +37,7 @@ export function DemoBanner({ expiresAt, initialLabel }: { expiresAt?: string; in
           the two-line block, while the timer icon stays level with the first line. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2 text-sm">
-          <Timer size={15} className="mt-0.5 shrink-0 text-accent" />
+          <Timer size={15} className="mt-0.5 shrink-0 text-accent-text" />
           <div className="min-w-0">
             <p className="text-fg">
               <span className="font-semibold">Demo workspace</span>

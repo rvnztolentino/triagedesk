@@ -108,7 +108,7 @@ export default function CheckEmailPage() {
     <main className="min-h-screen flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
         <div className="bg-surface border border-border rounded-[var(--radius-card)] p-8 text-center">
-          <div className="mx-auto mb-5 w-12 h-12 bg-accent-soft text-accent border border-accent-border rounded-[var(--radius-control)] flex items-center justify-center">
+          <div className="mx-auto mb-5 w-12 h-12 bg-accent-soft text-accent-text border border-accent-border rounded-[var(--radius-control)] flex items-center justify-center">
             <MailCheck size={24} />
           </div>
           <h1 className="text-xl font-semibold tracking-tight text-fg">Check your email</h1>
@@ -124,7 +124,7 @@ export default function CheckEmailPage() {
               </div>
             ) : null}
             {resent ? (
-              <div className="rounded-[var(--radius-control)] border border-accent-border bg-accent-soft px-4 py-3 text-sm text-accent" role="status">
+              <div className="rounded-[var(--radius-control)] border border-accent-border bg-accent-soft px-4 py-3 text-sm text-accent-text" role="status">
                 A new code is on its way.
               </div>
             ) : null}
@@ -149,7 +149,7 @@ export default function CheckEmailPage() {
             type="button"
             onClick={handleResend}
             disabled={cooldown > 0 || resending}
-            className="mt-4 text-sm text-accent hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="mt-4 text-sm text-accent-text hover:opacity-90 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {cooldown > 0
               ? `Resend code in ${formatResendCountdown(cooldown)}`
@@ -159,7 +159,7 @@ export default function CheckEmailPage() {
           </button>
 
           <p className="text-sm text-muted mt-4 leading-relaxed">
-            Wrong email? <Link href="/signup" className="text-accent hover:opacity-90 font-medium">Start over</Link>
+            Wrong email? <Link href="/signup" className="text-accent-text hover:opacity-90 font-medium">Start over</Link>
           </p>
         </div>
       </div>

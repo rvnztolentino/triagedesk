@@ -162,12 +162,12 @@ export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string 
   const activeDepartments = departmentWorkload.filter((item) => item.count > 0);
 
   const metrics = [
-    { label: "Pending Triage", value: counts.newRequests, icon: Inbox, hue: "warn", to: "/review" },
-    { label: "Open Tickets", value: counts.openTickets, icon: Ticket, hue: "info", to: "/tickets" },
-    { label: "High Priority", value: counts.highPriority, icon: AlertTriangle, hue: "danger", to: "/tickets" },
-    { label: "SLA Risk", value: counts.slaRisk, icon: Clock, hue: "warn", to: "/tickets" },
-    { label: "Aging", value: counts.agingTickets, icon: History, hue: "active", to: "/tickets" },
-    { label: "Assigned", value: counts.assigned, icon: UserCheck, hue: "done", to: "/tickets" },
+    { label: "Pending Triage", value: counts.newRequests, icon: Inbox, to: "/review" },
+    { label: "Open Tickets", value: counts.openTickets, icon: Ticket, to: "/tickets" },
+    { label: "High Priority", value: counts.highPriority, icon: AlertTriangle, to: "/tickets" },
+    { label: "SLA Risk", value: counts.slaRisk, icon: Clock, to: "/tickets" },
+    { label: "Aging", value: counts.agingTickets, icon: History, to: "/tickets" },
+    { label: "Assigned", value: counts.assigned, icon: UserCheck, to: "/tickets" },
   ] as const;
 
   const workflow = [
@@ -212,7 +212,7 @@ export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string 
           return (
             <Link key={m.label} href={href(m.to)} className="card card-hover metric">
               <div className="metric-top">
-                <span className="metric-icon" style={{ background: `var(--${m.hue}-soft)`, color: `var(--${m.hue})` }}>
+                <span className="metric-icon">
                   <Icon size={16} />
                 </span>
                 <ArrowUpRight size={15} className="faint" />

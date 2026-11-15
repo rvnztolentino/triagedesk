@@ -36,7 +36,7 @@ export default function DemoExpiredPage() {
             display: "grid",
             placeItems: "center",
             background: "var(--accent-soft)",
-            color: "var(--accent)",
+            color: "var(--accent-text)",
             border: "1px solid var(--accent-border)",
           }}
         >

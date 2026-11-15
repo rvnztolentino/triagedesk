@@ -17,7 +17,7 @@ export function WorkspaceSwitchPrompt({
   return (
     <div className="max-w-xl mx-auto">
       <div className="bg-surface border border-border rounded-[var(--radius-card)] p-8 text-center">
-        <div className="w-12 h-12 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent flex items-center justify-center mx-auto mb-5">
+        <div className="w-12 h-12 rounded-[var(--radius-control)] bg-accent-soft border border-accent-border text-accent-text flex items-center justify-center mx-auto mb-5">
           <LayoutGrid size={22} />
         </div>
         <h1 className="text-2xl font-semibold text-fg">You&apos;re viewing {name}</h1>

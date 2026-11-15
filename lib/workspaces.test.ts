@@ -277,7 +277,7 @@ describe("workspace foundation", () => {
     expect(themeControlsSource).not.toContain("--accent");
     expect(rootLayoutSource).not.toContain("--accent");
     expect(globalStylesSource).not.toContain("data-accent-dragging");
-    // Dark stays the default; the accent is monochrome per theme.
+    // Dark stays the default; the accent is a dark green tuned per theme.
     expect(themeControlsSource).toContain('const DEFAULT_THEME: ThemeMode = "dark";');
     // The control is a switch with both icons inside the track.
     expect(themeControlsSource).toContain('role="switch"');
@@ -291,8 +291,8 @@ describe("workspace foundation", () => {
     expect(rootLayoutSource).toContain('var theme = "dark";');
     expect(rootLayoutSource).toContain('window.matchMedia("(prefers-color-scheme: light)").matches');
     expect(themeControlsSource).toContain("return storedTheme() ?? systemTheme();");
-    expect(globalStylesSource).toContain("--accent: #ffffff;");
-    expect(globalStylesSource).toContain("--accent: #000000;");
+    expect(globalStylesSource).toContain("--accent: #2f7a52;");
+    expect(globalStylesSource).toContain("--accent: #1f5c3d;");
   });
 
   it("keeps ticket and request rows whole on mobile by scrolling them horizontally", () => {

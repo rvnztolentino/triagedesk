@@ -145,11 +145,11 @@ function HeroTriageFlow() {
       </div>
 
       <div className="rounded-[var(--radius-card)] border border-accent-border bg-accent-soft p-4">
-        <div className="flex items-center gap-2 text-xs text-accent">
+        <div className="flex items-center gap-2 text-xs text-accent-text">
           <Sparkles className="h-3.5 w-3.5" /> AI suggestion
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
-          <span className="rounded-md bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent">Maintenance</span>
+          <span className="rounded-md bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent-text">Maintenance</span>
           <span className="st-warn rounded-md border px-2 py-0.5 text-[11px] font-medium">
             <AlertTriangle className="mr-1 inline h-3 w-3" />
             High priority
@@ -169,7 +169,7 @@ function HeroTriageFlow() {
           <div className="flex items-center gap-2 font-mono text-xs text-muted">
             <Ticket className="h-3.5 w-3.5" /> Review outcome
           </div>
-          <span className="inline-flex items-center gap-1 rounded-md bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent">
+          <span className="inline-flex items-center gap-1 rounded-md bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent-text">
             <CheckCircle2 className="h-3 w-3" /> Admin controlled
           </span>
         </div>
@@ -208,7 +208,7 @@ const stepWindows: Record<string, { title: string; body: React.ReactNode }> = {
     title: "triagedesk / ai triage",
     body: (
       <>
-        <div className="mb-2 flex items-center gap-2 text-xs text-accent">
+        <div className="mb-2 flex items-center gap-2 text-xs text-accent-text">
           <Sparkles className="h-3.5 w-3.5" /> AI triage · confidence 0.91
         </div>
         <div className="text-sm font-medium text-fg">AC leaking - Room 204</div>
@@ -296,7 +296,7 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
                   <ArrowRight className="h-3.5 w-3.5" />
                 </a>
                 <h1 className="mt-5 text-4xl font-semibold tracking-tight text-fg sm:text-5xl">
-                  Turn messy internal requests into <span className="text-accent">review-ready tickets</span>
+                  Turn messy internal requests into <span className="text-accent-text">review-ready tickets</span>
                 </h1>
                 <p className="mt-5 max-w-xl text-base leading-7 text-muted sm:text-lg">
                   AI reads every staff request and suggests a category, priority, and next action. An admin reviews it before
@@ -379,7 +379,7 @@ function SignedOutLandingPage({ demoEnabled }: { demoEnabled: boolean }) {
 
         <section className="border-b border-border">
           <div data-reveal className="mx-auto max-w-4xl px-5 py-24 text-center">
-            <Layers className="mx-auto h-6 w-6 text-accent" />
+            <Layers className="mx-auto h-6 w-6 text-accent-text" />
             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-fg sm:text-4xl">Bring order to your internal requests</h2>
             <p className="mx-auto mt-3 max-w-xl text-muted">
               Start in minutes. Every AI suggestion waits for a human to approve it.

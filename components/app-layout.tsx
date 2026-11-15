@@ -440,7 +440,7 @@ export function AppLayout({
           {isDemoSession ? (
             <div
               className={cn(
-                "mb-3 mx-1 flex items-center gap-2 rounded-full border border-accent-border bg-accent-soft px-3 py-2 text-accent",
+                "mb-3 mx-1 flex items-center gap-2 rounded-full border border-accent-border bg-accent-soft px-3 py-2 text-accent-text",
                 collapsed && "md:justify-center md:px-0"
               )}
               title={collapsed ? demoPillLabel : undefined}
@@ -579,7 +579,7 @@ export function AppLayout({
                         settings are reached from the sidebar, not from here. */}
                     {isDemoSession ? (
                       <Link href={DEMO_SIGNUP_HREF} role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
-                        <Sparkles size={15} className="text-accent" /> Create free account
+                        <Sparkles size={15} className="text-accent-text" /> Create free account
                       </Link>
                     ) : (
                       <Link href="/account" role="menuitem" className="menu-item" onClick={() => setProfileOpen(false)}>
