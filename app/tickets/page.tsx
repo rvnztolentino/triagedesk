@@ -14,21 +14,6 @@ export const dynamic = "force-dynamic";
 
 const TICKETS_PER_PAGE = 10;
 
-const PRIORITY_HUE: Record<string, string> = {
-  low: "neutral",
-  medium: "info",
-  high: "warn",
-  critical: "danger",
-};
-
-const STATUS_HUE: Record<string, string> = {
-  new: "neutral",
-  open: "info",
-  "in-progress": "active",
-  resolved: "done",
-  closed: "neutral",
-};
-
 interface TicketParams {
   filter?: string;
   q?: string;
@@ -157,10 +142,10 @@ async function TicketTable({
                     </div>
                   </div>
                   <div className="cluster" style={{ gap: 10 }}>
-                    <span className="badge" data-hue={PRIORITY_HUE[ticket.priority] ?? "neutral"}>
+                    <span className="badge" data-hue="neutral">
                       {ticket.priority}
                     </span>
-                    <span className="badge" data-hue={STATUS_HUE[ticket.status] ?? "neutral"}>
+                    <span className="badge" data-hue="neutral">
                       {ticket.status.replace("-", " ")}
                     </span>
                   </div>

@@ -77,7 +77,7 @@ function AuthAside() {
             <span className="badge" data-hue="accent">
               <Sparkles size={12} /> AI suggestion
             </span>
-            <span className="badge" data-hue="warn">
+            <span className="badge" data-hue="neutral">
               High
             </span>
           </div>

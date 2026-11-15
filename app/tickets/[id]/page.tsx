@@ -6,7 +6,6 @@ import { ConfidenceMeter } from "@/components/confidence-meter";
 import { TicketUpdateForm } from "@/components/ticket-update-form";
 import { getUserProfile, requireWorkspaceContext } from "@/lib/auth";
 import { formatDateTime, relativeTime } from "@/lib/format";
-import type { Priority } from "@/lib/schema";
 import { getTicketDetail, listDepartments } from "@/lib/store";
 import { ticketStatusBadgeClass } from "@/lib/ticket-status";
 import { cn } from "@/lib/utils";
@@ -14,13 +13,6 @@ import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { listTicketAssignees } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
-
-const PRIORITY_HUE: Record<Priority, string> = {
-  low: "neutral",
-  medium: "info",
-  high: "warn",
-  critical: "danger",
-};
 
 function Meta({ label, value, icon: Icon }: { label: string; value: string; icon: typeof MapPin }) {
   return (
@@ -66,7 +58,7 @@ export async function TicketDetailView({ params, workspaceSlug }: { params: Prom
             <span className={cn("border text-[10px] px-2 py-1 uppercase tracking-wider font-medium rounded-md", ticketStatusBadgeClass(ticket.status))}>
               {ticket.status.replace("-", " ")}
             </span>
-            <span className="badge" data-hue={PRIORITY_HUE[ticket.priority]}>{ticket.priority} priority</span>
+            <span className="badge" data-hue="neutral">{ticket.priority} priority</span>
           </div>
           <h1 className="page-title" style={{ marginTop: 10 }}>{ticket.title}</h1>
         </div>

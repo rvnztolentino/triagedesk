@@ -49,7 +49,7 @@ const navItems = [
 // Fixed-header height to offset scroll targets so section headings aren't hidden.
 const HEADER_OFFSET = 80;
 
-// How far the page scrolls before the header turns into a pill.
+// How far the page scrolls before the header fills in its background.
 const SCROLL_THRESHOLD = 24;
 
 const SECTION_IDS = navItems.map((item) => item.href.slice(1));
@@ -102,8 +102,8 @@ export function HomeHeader() {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const contactRef = useRef<HTMLDivElement>(null);
 
-  // The header stays put and morphs into a floating pill once the page has
-  // scrolled a little. Run once on mount so a reload mid-page starts as a pill.
+  // The header stays put and fills in its background once the page has
+  // scrolled a little. Run once on mount so a reload mid-page starts filled.
   useEffect(() => {
     function handleScroll() {
       setIsScrolled(window.scrollY > SCROLL_THRESHOLD);

@@ -40,8 +40,8 @@ function resolveTheme(): ThemeMode {
 
 function applyTheme(theme: ThemeMode) {
   cachedTheme = theme;
-  // The accent color is derived from the theme in globals.css (a dark green
-  // tuned per mode), so switching the mode is the only thing to persist.
+  // The accent color is derived from the theme in globals.css (white on dark,
+  // black on light), so switching the mode is the only thing to persist.
   document.documentElement.dataset.theme = theme;
 
   try {

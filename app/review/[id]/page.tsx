@@ -8,19 +8,11 @@ import { triageConfidenceInput } from "@/lib/confidence";
 import { ReviewDecisionForm } from "@/components/review-decision-form";
 import { getUserProfile, requireWorkspaceAdminContext } from "@/lib/auth";
 import { formatDateTime, relativeTime } from "@/lib/format";
-import type { RequestStatus } from "@/lib/schema";
 import { getRequestBundle, listDepartments } from "@/lib/store";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 import { listTicketAssignees } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_HUE: Record<RequestStatus, string> = {
-  "needs-review": "warn",
-  approved: "done",
-  rejected: "danger",
-  duplicate: "neutral",
-};
 
 function Meta({ label, value, icon: Icon }: { label: string; value: string; icon: typeof MapPin }) {
   return (
@@ -62,7 +54,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
           <span className="eyebrow">Review · {request.id}</span>
           <h1 className="page-title" style={{ marginTop: 8 }}>{triage.title}</h1>
         </div>
-        <span className="badge" data-hue={STATUS_HUE[request.status]}>{statusLabel}</span>
+        <span className="badge" data-hue="neutral">{statusLabel}</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
@@ -215,7 +207,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
           {decided ? (
             <div className="card card-pad" style={{ marginTop: 16 }}>
               <div className="cluster" style={{ gap: 10 }}>
-                <span className="badge" data-hue={STATUS_HUE[request.status]}>{statusLabel}</span>
+                <span className="badge" data-hue="neutral">{statusLabel}</span>
                 {request.reviewedAt ? <span className="muted" style={{ fontSize: 13 }}>{formatDateTime(request.reviewedAt)}</span> : null}
               </div>
             </div>

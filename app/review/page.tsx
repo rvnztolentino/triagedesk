@@ -7,13 +7,6 @@ import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 
 export const dynamic = "force-dynamic";
 
-const PRIORITY_HUE: Record<string, string> = {
-  low: "neutral",
-  medium: "info",
-  high: "warn",
-  critical: "danger",
-};
-
 function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
@@ -98,7 +91,7 @@ export async function ReviewQueueView({ workspaceSlug }: { workspaceSlug?: strin
                       </div>
                     </div>
                     <div className="cluster" style={{ gap: 10 }}>
-                      <span className="badge" data-hue={PRIORITY_HUE[triage.priority] ?? "neutral"}>
+                      <span className="badge" data-hue="neutral">
                         {triage.priority}
                       </span>
                       <span className="badge" data-hue="accent">

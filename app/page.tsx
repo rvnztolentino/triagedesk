@@ -213,7 +213,7 @@ const stepWindows: Record<string, { title: string; body: React.ReactNode }> = {
         </div>
         <div className="text-sm font-medium text-fg">AC leaking - Room 204</div>
         <div className="mt-2 flex flex-wrap gap-1.5">
-          <span className="badge" data-hue="warn">High</span>
+          <span className="badge" data-hue="neutral">High</span>
           <span className="chip">Facilities</span>
         </div>
         <div className="ai-reason mt-3" style={{ fontSize: 12 }}>
@@ -244,7 +244,7 @@ const stepWindows: Record<string, { title: string; body: React.ReactNode }> = {
       <>
         <div className="mb-2 flex items-center justify-between">
           <span className="font-mono text-xs text-muted">TRG-1041</span>
-          <span className="badge" data-hue="active">In progress</span>
+          <span className="badge" data-hue="neutral">In progress</span>
         </div>
         <div className="text-sm font-medium text-fg">AC leaking - Room 204</div>
         <div className="mt-3 space-y-1.5 text-xs text-muted">

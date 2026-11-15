@@ -3,8 +3,8 @@
 /* ============================================================================
    TriageDesk design system: operations-console aesthetic.
    Dark is the default theme; light has full parity. A single `--accent`
-   custom property drives the highlight color system-wide: a muted, dark forest
-   green, tuned per theme so it reads as both a fill and a text color.
+   custom property drives the highlight color system-wide; it is monochrome and
+   derived from the theme (white on dark, black on light).
 
    The reusable component classes live in `@layer components` so Tailwind
    utilities (and the unlayered `.st-*` helpers) always win when a caller
@@ -38,12 +38,8 @@
 }
 
 /* ── Theme tokens ─────────────────────────────────────────────────────────
-   The accent is a muted, dark forest green owned by the theme. `--accent` is
-   the fill (buttons, the active nav chip, chart strokes) and `--accent-text`
-   is a lighter step for text on dark surfaces. `--ink` keeps the old
-   monochrome pair (white on dark, black on light) for controls that should
-   stay neutral, like the theme switch. The inline theme script only sets
-   `data-theme` before paint. */
+   The accent is monochrome and owned by the theme: white in dark mode, black
+   in light mode. The inline theme script only sets `data-theme` before paint. */
 
 :root {
   /* DARK (default) */
@@ -57,16 +53,13 @@
   --muted: #8f8f8f;
   --faint: #5e5e5e;
 
-  --accent: #2f7a52;
-  --accent-soft: color-mix(in srgb, var(--accent) 22%, transparent);
-  --accent-softer: color-mix(in srgb, var(--accent) 11%, transparent);
-  --accent-border: color-mix(in srgb, var(--accent) 45%, transparent);
-  --accent-text: #6fbf92;
-  --accent-fg: #ffffff;
+  --accent: #ffffff;
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-softer: color-mix(in srgb, var(--accent) 6%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent) 26%, transparent);
+  --accent-text: var(--accent);
+  --accent-fg: #000000;
   --accent-ink: var(--accent-fg);
-
-  --ink: #ffffff;
-  --ink-fg: #000000;
 
   /* status hues (dark) */
   --st-warn: #f5b945;
@@ -142,15 +135,12 @@ html[data-theme="light"] {
   --muted: #676767;
   --faint: #8e8e8e;
 
-  --accent: #1f5c3d;
-  --accent-soft: color-mix(in srgb, var(--accent) 9%, white);
-  --accent-softer: color-mix(in srgb, var(--accent) 4%, white);
-  --accent-border: color-mix(in srgb, var(--accent) 22%, white);
+  --accent: #000000;
+  --accent-soft: color-mix(in srgb, var(--accent) 6%, white);
+  --accent-softer: color-mix(in srgb, var(--accent) 3%, white);
+  --accent-border: color-mix(in srgb, var(--accent) 12%, white);
   --accent-text: var(--accent);
   --accent-fg: #ffffff;
-
-  --ink: #000000;
-  --ink-fg: #ffffff;
 
   /* status hues (light): saturated enough to scan, still readable on white */
   --st-warn: #b45309;
@@ -611,7 +601,7 @@ select {
     border-color: transparent;
   }
   /* Mixing toward the page background (not white) keeps the hover shift visible
-     in both themes: it darkens the green on dark and lightens it on light. */
+     in both directions now that the accent is white on dark / black on light. */
   .btn--primary:hover {
     background: color-mix(in srgb, var(--accent) 86%, var(--bg));
     border-color: transparent;
@@ -929,7 +919,7 @@ select {
   /* ── dark/light switch ──────────────────────────────────────────────────
      Track holds two 22px icon slots (sun, moon) that exactly fill its inner
      width; the thumb slides between them and tints the active icon with
-     --ink-fg, so it stays legible against the ink in both themes. */
+     --accent-fg, so it stays legible against the accent in both themes. */
   /* Monochrome pill switch. Light mode fills the track with a soft charcoal
      and parks the thumb right, leaving the sun visible on the left; dark mode
      dims the track to a soft gray and parks the thumb left over the sun,
@@ -945,13 +935,13 @@ select {
     padding: 0 2px;
     border: 0;
     border-radius: var(--r-pill);
-    background: color-mix(in srgb, var(--ink) 18%, transparent);
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
     cursor: pointer;
     transition: background 0.2s;
   }
-  .theme-switch:hover { background: color-mix(in srgb, var(--ink) 24%, transparent); }
-  .theme-switch[aria-checked="false"] { background: color-mix(in srgb, var(--ink) 75%, var(--ink-fg)); }
-  .theme-switch[aria-checked="false"]:hover { background: color-mix(in srgb, var(--ink) 68%, var(--ink-fg)); }
+  .theme-switch:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+  .theme-switch[aria-checked="false"] { background: color-mix(in srgb, var(--accent) 75%, var(--accent-fg)); }
+  .theme-switch[aria-checked="false"]:hover { background: color-mix(in srgb, var(--accent) 68%, var(--accent-fg)); }
   .theme-switch:focus-visible { outline: none; box-shadow: var(--ring); }
   .theme-switch-thumb {
     position: absolute;
@@ -979,57 +969,43 @@ select {
     opacity: 0;
     transition: opacity 0.2s;
   }
-  .theme-switch-icon--sun { color: var(--ink-fg); }
+  .theme-switch-icon--sun { color: var(--accent-fg); }
   .theme-switch-icon--moon { color: var(--muted); }
   .theme-switch[aria-checked="false"] .theme-switch-icon--sun,
   .theme-switch[aria-checked="true"] .theme-switch-icon--moon { opacity: 1; }
 
   /* ── landing header ──
-     Full width and transparent at the top of the page. After a short scroll the
-     shell narrows, drops away from the top edge, and fills in as a floating
-     pill. Every changing property shares one duration and curve so the change
-     reads as a single motion. The scrolled radius is at least half the shell's
-     height, so the ends come out fully round. */
+     A full-width bar stuck to the top edge. It is transparent over the top of
+     the hero and, after a short scroll, fills in with a blurred background and
+     a bottom border so the links stay readable over the content. Its shape and
+     size never change. */
   .home-nav {
-    --home-nav-ease: cubic-bezier(0.22, 1, 0.36, 1);
     position: fixed;
     inset: 0 0 auto;
     z-index: 50;
-    padding: 0;
-    transition: padding 0.45s var(--home-nav-ease);
-  }
-  .home-nav[data-scrolled="true"] { padding: 12px 12px 0; }
-  .home-nav-shell {
-    margin: 0 auto;
-    max-width: 72rem;
-    border: 1px solid transparent;
-    border-radius: 0;
+    border-bottom: 1px solid transparent;
     background: transparent;
-    box-shadow: 0 0 0 0 transparent;
     -webkit-backdrop-filter: blur(0) saturate(1);
     backdrop-filter: blur(0) saturate(1);
-    transition-property: max-width, border-color, border-radius, background-color, box-shadow, backdrop-filter;
-    transition-duration: 0.45s;
-    transition-timing-function: var(--home-nav-ease);
+    transition-property: border-color, background-color, backdrop-filter;
+    transition-duration: 0.2s;
+    transition-timing-function: ease;
   }
-  .home-nav[data-scrolled="true"] .home-nav-shell {
-    max-width: 64rem;
-    border-color: var(--border);
-    border-radius: var(--r-panel);
-    background: color-mix(in srgb, var(--bg) 72%, transparent);
-    box-shadow: var(--shadow-md);
+  .home-nav[data-scrolled="true"] {
+    border-bottom-color: var(--border);
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
     -webkit-backdrop-filter: blur(16px) saturate(1.4);
     backdrop-filter: blur(16px) saturate(1.4);
   }
   /* The open mobile menu gets a solid fill so its links stay readable. */
-  .home-nav[data-menu-open="true"] .home-nav-shell { background: var(--bg); }
-  .home-nav-row {
-    padding: 14px 20px;
-    transition: padding 0.45s var(--home-nav-ease);
+  .home-nav[data-menu-open="true"] { background: var(--bg); }
+  .home-nav-shell {
+    margin: 0 auto;
+    max-width: 72rem;
   }
+  .home-nav-row { padding: 14px 20px; }
   @media (min-width: 640px) { .home-nav-row { padding-inline: 24px; } }
   @media (min-width: 1024px) { .home-nav-row { padding-inline: 32px; } }
-  .home-nav[data-scrolled="true"] .home-nav-row { padding: 8px 10px 8px 18px; }
   /* Underline for the section currently on screen. It animates with a
      transform only, so it stays on the compositor: it draws in from the left
      when its section arrives and slides out to the right when it leaves. */
@@ -1045,7 +1021,7 @@ select {
     background: var(--fg);
     transform: scaleX(0);
     transform-origin: right center;
-    transition: transform 0.4s var(--home-nav-ease);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .home-nav-link[aria-current="location"]::after {
     transform: scaleX(1);

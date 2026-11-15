@@ -22,12 +22,6 @@ function inviteStatus(invite: { revokedAt?: string; expiresAt?: string; usedAt?:
   return "Active";
 }
 
-function statusHue(status: string) {
-  if (status === "Active") return "active";
-  if (status === "Revoked") return "danger";
-  return "neutral";
-}
-
 export default async function WorkspaceLandingPage({
   params,
   searchParams,
@@ -166,7 +160,7 @@ export default async function WorkspaceLandingPage({
                             <div style={{ minWidth: 0 }}>
                               <div className="cluster wrap" style={{ gap: 8 }}>
                                 <CopyInviteCode code={invite.code} />
-                                <span className="badge" data-hue={statusHue(status)}>
+                                <span className="badge" data-hue="neutral">
                                   {status}
                                 </span>
                                 <span className="badge" data-hue={ROLE_HUE[invite.role] ?? "neutral"}>

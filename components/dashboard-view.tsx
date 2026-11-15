@@ -264,7 +264,7 @@ export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string 
               <div className="card-pad">
                 <div className="between wrap" style={{ gap: 10 }}>
                   <div style={{ fontWeight: 650, fontSize: 16 }}>{featured.triage.title}</div>
-                  <span className="badge" data-hue={PRIORITY_HUE[featured.triage.priority] ?? "neutral"}>
+                  <span className="badge" data-hue="neutral">
                     {featured.triage.priority}
                   </span>
                 </div>

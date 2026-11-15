@@ -3,18 +3,10 @@ import { ArrowRight, Building2, Check, FileText, Plus, Sparkles } from "lucide-r
 import { AttachmentFileName } from "@/components/attachment-file-name";
 import { isDemoUser, requireWorkspaceContext } from "@/lib/auth";
 import { DEMO_SIGNUP_HREF } from "@/lib/demo-ui";
-import type { Priority } from "@/lib/schema";
 import { getLatestRequestBundle, getRequestBundle } from "@/lib/store";
 import { scopedWorkspaceHref } from "@/lib/workspace-routing";
 
 export const dynamic = "force-dynamic";
-
-const PRIORITY_HUE: Record<Priority, string> = {
-  low: "neutral",
-  medium: "info",
-  high: "warn",
-  critical: "danger",
-};
 
 export async function SubmitConfirmView({ searchParams, requestId, workspaceSlug }: { searchParams?: Promise<{ id?: string }>; requestId?: string; workspaceSlug?: string }) {
   const { user, workspace, membership } = await requireWorkspaceContext(workspaceSlug);
@@ -70,7 +62,7 @@ export async function SubmitConfirmView({ searchParams, requestId, workspaceSlug
           </div>
           <div style={{ fontWeight: 650, fontSize: 15.5 }}>{triage.title}</div>
           <div className="cluster wrap" style={{ gap: 8, marginTop: 12 }}>
-            <span className="badge" data-hue={PRIORITY_HUE[triage.priority]}>{triage.priority}</span>
+            <span className="badge" data-hue="neutral">{triage.priority}</span>
             <span className="chip"><Building2 size={13} /> {triage.department}</span>
             <span className="chip">{triage.category}</span>
           </div>

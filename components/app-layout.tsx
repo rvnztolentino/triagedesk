@@ -12,7 +12,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  PlusCircle,
+  Plus,
   Settings,
   Sparkles,
   SunMoon,
@@ -36,7 +36,7 @@ import { isNavPathActive, scopedWorkspaceHref } from "@/lib/workspace-routing";
 
 const ownerNavItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/submit", icon: PlusCircle, label: "New Request" },
+  { href: "/submit", icon: Plus, label: "New Request" },
   { href: "/review", icon: Inbox, label: "Review Queue" },
   { href: "/tickets", icon: Ticket, label: "All Tickets" },
   { href: "/users", icon: Users, label: "Users" },
@@ -46,7 +46,7 @@ const ownerNavItems = [
 const adminNavItems = ownerNavItems;
 
 const requesterNavItems = [
-  { href: "/submit", icon: PlusCircle, label: "New Request" },
+  { href: "/submit", icon: Plus, label: "New Request" },
   { href: "/tickets", icon: Ticket, label: "My Tickets" },
 ];
 
