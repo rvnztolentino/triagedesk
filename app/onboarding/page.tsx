@@ -36,8 +36,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   return (
     <div className="mx-auto w-full max-w-[1120px]">
       <div className="page-head">
-        <div className="eyebrow">Workspace hub</div>
-        <h1 className="page-title" style={{ marginTop: 8 }}>
+        <h1 className="page-title">
           Your workspaces
         </h1>
         <p className="page-sub">Switch between teams, spin up a new workspace, or join one with an invite.</p>

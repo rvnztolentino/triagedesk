@@ -51,7 +51,7 @@ export async function ReviewDetailView({ params, workspaceSlug }: { params: Prom
     <div className="max-w-5xl mx-auto space-y-6 py-4">
       <div className="between wrap" style={{ gap: 14, alignItems: "flex-start" }}>
         <div style={{ minWidth: 0 }}>
-          <span className="eyebrow">Review · {request.id}</span>
+          <span className="eyebrow">{request.id}</span>
           <h1 className="page-title" style={{ marginTop: 8 }}>{triage.title}</h1>
         </div>
         <span className="badge" data-hue="neutral">{statusLabel}</span>

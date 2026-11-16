@@ -62,8 +62,7 @@ export default async function WorkspaceLandingPage({
       </Link>
 
       <div className="page-head">
-        <div className="eyebrow">Workspace</div>
-        <h1 className="page-title" style={{ marginTop: 8 }}>
+        <h1 className="page-title">
           {workspace.name}
         </h1>
         <p className="page-sub">Share access, manage invites, and control your membership.</p>

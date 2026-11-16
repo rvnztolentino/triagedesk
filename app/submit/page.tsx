@@ -47,8 +47,7 @@ export async function SubmitRequestView({ workspaceSlug }: { workspaceSlug?: str
   return (
     <div className="max-w-2xl mx-auto w-full py-4">
       <div className="page-head">
-        <span className="eyebrow">New request</span>
-        <h1 className="page-title" style={{ marginTop: 8 }}>Submit a request</h1>
+        <h1 className="page-title">Submit a request</h1>
         <p className="page-sub">Describe what&apos;s wrong in plain language. AI triage structures the rest.</p>
       </div>
 

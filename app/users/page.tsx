@@ -66,8 +66,7 @@ export async function UsersPageView({ workspaceSlug }: { workspaceSlug?: string 
     <div className="mx-auto w-full max-w-[1120px] space-y-5">
       <div className="page-head between wrap" style={{ gap: 14 }}>
         <div>
-          <div className="eyebrow">Members</div>
-          <h1 className="page-title" style={{ marginTop: 8 }}>
+          <h1 className="page-title">
             People in {workspace.name}
           </h1>
           <p className="page-sub">

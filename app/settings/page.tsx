@@ -18,8 +18,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
     return (
       <div className="mx-auto w-full max-w-[720px] space-y-5">
         <div className="page-head">
-          <div className="eyebrow">Settings</div>
-          <h1 className="page-title" style={{ marginTop: 8 }}>
+          <h1 className="page-title">
             Appearance
           </h1>
           <p className="page-sub">Only admins can manage system settings and departments.</p>
@@ -60,8 +59,7 @@ export async function SettingsPageView({ searchParams, workspaceSlug }: { search
   return (
     <div className="mx-auto w-full max-w-[1120px] space-y-5">
       <div className="page-head">
-        <div className="eyebrow">Settings</div>
-        <h1 className="page-title" style={{ marginTop: 8 }}>
+        <h1 className="page-title">
           Workspace settings
         </h1>
         <p className="page-sub">System status, access policy, and department routing for {workspace.name}.</p>

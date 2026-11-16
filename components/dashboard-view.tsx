@@ -180,8 +180,7 @@ export async function DashboardView({ workspaceSlug }: { workspaceSlug?: string 
     <div className="mx-auto w-full max-w-[1280px] space-y-4">
       <div className="page-head between wrap" style={{ gap: 14 }}>
         <div>
-          <div className="eyebrow">Operations overview</div>
-          <h1 className="page-title" style={{ marginTop: 8 }}>
+          <h1 className="page-title">
             {workspace.name}
           </h1>
           <p className="page-sub">Everything moving through the desk today, at a glance.</p>

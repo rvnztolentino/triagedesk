@@ -36,8 +36,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   return (
     <div className="mx-auto w-full max-w-[720px] space-y-5">
       <div className="page-head">
-        <div className="eyebrow">Account</div>
-        <h1 className="page-title" style={{ marginTop: 8 }}>
+        <h1 className="page-title">
           Account settings
         </h1>
         <p className="page-sub">Manage your profile, sign-in security, and account for {user.email}.</p>

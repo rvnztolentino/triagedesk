@@ -210,8 +210,7 @@ export async function TicketListView({ searchParams, workspaceSlug }: { searchPa
   return (
     <div className="mx-auto w-full max-w-[1280px] space-y-5">
       <div className="page-head">
-        <div className="eyebrow">{isAdmin ? "All tickets" : "My tickets"}</div>
-        <h1 className="page-title" style={{ marginTop: 8 }}>
+        <h1 className="page-title">
           {isAdmin ? "Ticket board" : "Tickets you submitted"}
         </h1>
         <p className="page-sub">

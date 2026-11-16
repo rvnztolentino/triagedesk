@@ -85,8 +85,7 @@ export async function NotificationsPageView({ workspaceSlug }: { workspaceSlug?:
       <div className="page-head">
         <div className="between" style={{ alignItems: "flex-start", gap: 16 }}>
           <div>
-            <div className="eyebrow">Activity</div>
-            <h1 className="page-title" style={{ marginTop: 8 }}>
+            <h1 className="page-title">
               Notifications
             </h1>
             <p className="page-sub">

@@ -22,8 +22,7 @@ export async function ReviewQueueView({ workspaceSlug }: { workspaceSlug?: strin
   return (
     <div className="mx-auto w-full max-w-[1280px] space-y-5">
       <div className="page-head">
-        <div className="eyebrow">Review queue</div>
-        <h1 className="page-title" style={{ marginTop: 8 }}>
+        <h1 className="page-title">
           Requests awaiting review
         </h1>
         <p className="page-sub">AI-triaged requests waiting for a human approve / edit / reject decision.</p>
