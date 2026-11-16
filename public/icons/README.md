@@ -1,6 +1,6 @@
 # TriageDesk Icons
 
-These files are generated from `public/icons/triagedesk.png`: a near-black tile with the inbox glyph in the dark-theme sage accent (`#a3b19b`). The in-app `BrandIcon` (`components/brand-icon.tsx`) draws the same Lucide `Inbox` glyph with the accent tokens, so keep the two visually in sync when the accent changes.
+These files are generated from `public/icons/triagedesk.png`: a near-black tile with a gray inbox glyph. The in-app `BrandIcon` (`components/brand-icon.tsx`) draws the same Lucide `Inbox` glyph with the accent tokens, so keep the two visually in sync when the accent changes.
 
 Current icon outputs:
 

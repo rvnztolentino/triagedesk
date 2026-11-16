@@ -3,8 +3,8 @@
 /* ============================================================================
    TriageDesk design system: operations-console aesthetic.
    Dark is the default theme; light has full parity. A single `--accent`
-   custom property drives the highlight color system-wide: a muted sage,
-   tuned per theme so it reads as both a fill and a text color.
+   custom property drives the highlight color system-wide; it is monochrome and
+   derived from the theme (off-white on dark, near-black on light).
 
    The reusable component classes live in `@layer components` so Tailwind
    utilities (and the unlayered `.st-*` helpers) always win when a caller
@@ -39,11 +39,9 @@
 }
 
 /* ── Theme tokens ─────────────────────────────────────────────────────────
-   The accent is a muted sage owned by the theme: light sage on dark, deep
-   sage on light, each with a readable label color in `--accent-fg`. `--ink`
-   is the monochrome pair (off-white on dark, near-black on light) for
-   controls that stay neutral, like the theme switch and the segmented
-   filter. The inline theme script only sets `data-theme` before paint. */
+   The accent is monochrome and owned by the theme: off-white (#dcdad9) in
+   dark mode, near-black (#1a1a1a) in light mode. The inline theme script
+   only sets `data-theme` before paint. */
 
 :root {
   /* DARK (default) */
@@ -57,17 +55,13 @@
   --muted: #8f8f8f;
   --faint: #5e5e5e;
 
-  --accent: #a3b19b;
-  --accent-hover: #b4c0ad;
-  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
-  --accent-softer: color-mix(in srgb, var(--accent) 7%, transparent);
-  --accent-border: color-mix(in srgb, var(--accent) 30%, transparent);
+  --accent: #dcdad9;
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-softer: color-mix(in srgb, var(--accent) 6%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent) 26%, transparent);
   --accent-text: var(--accent);
   --accent-fg: #1a1a1a;
   --accent-ink: var(--accent-fg);
-
-  --ink: #dcdad9;
-  --ink-fg: #1a1a1a;
 
   /* status hues (dark) */
   --st-warn: #f5b945;
@@ -123,8 +117,8 @@
   --control-border: var(--border);
   --control-border-hover: var(--border-strong);
   --control-shadow: none;
-  --selected-bg: color-mix(in srgb, var(--ink) 12%, transparent);
-  --selected-fg: var(--ink);
+  --selected-bg: var(--accent-soft);
+  --selected-fg: var(--accent-text);
   --selected-shadow: none;
 }
 
@@ -143,16 +137,12 @@ html[data-theme="light"] {
   --muted: #676767;
   --faint: #8e8e8e;
 
-  --accent: #5f6f58;
-  --accent-hover: #4f5e49;
-  --accent-soft: color-mix(in srgb, var(--accent) 10%, white);
-  --accent-softer: color-mix(in srgb, var(--accent) 5%, white);
-  --accent-border: color-mix(in srgb, var(--accent) 24%, white);
+  --accent: #1a1a1a;
+  --accent-soft: color-mix(in srgb, var(--accent) 6%, white);
+  --accent-softer: color-mix(in srgb, var(--accent) 3%, white);
+  --accent-border: color-mix(in srgb, var(--accent) 12%, white);
   --accent-text: var(--accent);
   --accent-fg: #ffffff;
-
-  --ink: #1a1a1a;
-  --ink-fg: #ffffff;
 
   /* status hues (light): saturated enough to scan, still readable on white */
   --st-warn: #b45309;
@@ -188,8 +178,8 @@ html[data-theme="light"] {
   --control-border: transparent;
   --control-border-hover: transparent;
   --control-shadow: none;
-  --selected-bg: var(--ink);
-  --selected-fg: var(--ink-fg);
+  --selected-bg: var(--accent);
+  --selected-fg: var(--accent-fg);
   --selected-shadow: none;
 }
 
@@ -622,10 +612,11 @@ select {
     color: var(--accent-ink);
     border-color: transparent;
   }
-  /* A step away from the label color, so the label keeps its contrast:
-     lighter on dark, deeper on light. */
+  /* Mixing toward the page background (not white) keeps the hover shift visible
+     in both directions now that the accent is off-white on dark / near-black
+     on light. */
   .btn--primary:hover {
-    background: var(--accent-hover);
+    background: color-mix(in srgb, var(--accent) 86%, var(--bg));
     border-color: transparent;
   }
   .btn--ghost { background: transparent; border-color: transparent; color: var(--muted); box-shadow: none; }
@@ -941,7 +932,7 @@ select {
   /* ── dark/light switch ──────────────────────────────────────────────────
      Track holds two 22px icon slots (sun, moon) that exactly fill its inner
      width; the thumb slides between them and tints the active icon with
-     --ink-fg, so it stays legible against the ink in both themes. */
+     --accent-fg, so it stays legible against the accent in both themes. */
   /* Monochrome pill switch. Light mode fills the track with a soft charcoal
      and parks the thumb right, leaving the sun visible on the left; dark mode
      dims the track to a soft gray and parks the thumb left over the sun,
@@ -957,13 +948,13 @@ select {
     padding: 0 2px;
     border: 0;
     border-radius: var(--r-pill);
-    background: color-mix(in srgb, var(--ink) 18%, transparent);
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
     cursor: pointer;
     transition: background 0.2s;
   }
-  .theme-switch:hover { background: color-mix(in srgb, var(--ink) 24%, transparent); }
-  .theme-switch[aria-checked="false"] { background: color-mix(in srgb, var(--ink) 75%, var(--ink-fg)); }
-  .theme-switch[aria-checked="false"]:hover { background: color-mix(in srgb, var(--ink) 68%, var(--ink-fg)); }
+  .theme-switch:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+  .theme-switch[aria-checked="false"] { background: color-mix(in srgb, var(--accent) 75%, var(--accent-fg)); }
+  .theme-switch[aria-checked="false"]:hover { background: color-mix(in srgb, var(--accent) 68%, var(--accent-fg)); }
   .theme-switch:focus-visible { outline: none; box-shadow: var(--ring); }
   .theme-switch-thumb {
     position: absolute;
@@ -991,7 +982,7 @@ select {
     opacity: 0;
     transition: opacity 0.2s;
   }
-  .theme-switch-icon--sun { color: var(--ink-fg); }
+  .theme-switch-icon--sun { color: var(--accent-fg); }
   .theme-switch-icon--moon { color: var(--muted); }
   .theme-switch[aria-checked="false"] .theme-switch-icon--sun,
   .theme-switch[aria-checked="true"] .theme-switch-icon--moon { opacity: 1; }
