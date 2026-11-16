@@ -3,8 +3,8 @@
 /* ============================================================================
    TriageDesk design system: operations-console aesthetic.
    Dark is the default theme; light has full parity. A single `--accent`
-   custom property drives the highlight color system-wide; it is monochrome and
-   derived from the theme (white on dark, black on light).
+   custom property drives the highlight color system-wide: a muted sage,
+   tuned per theme so it reads as both a fill and a text color.
 
    The reusable component classes live in `@layer components` so Tailwind
    utilities (and the unlayered `.st-*` helpers) always win when a caller
@@ -15,6 +15,7 @@
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+  --font-display: var(--font-funnel-display), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 
   /* Semantic colors → Tailwind utilities (bg-bg, bg-surface, text-fg, …) */
   --color-bg: var(--bg);
@@ -38,8 +39,11 @@
 }
 
 /* ── Theme tokens ─────────────────────────────────────────────────────────
-   The accent is monochrome and owned by the theme: white in dark mode, black
-   in light mode. The inline theme script only sets `data-theme` before paint. */
+   The accent is a muted sage owned by the theme: light sage on dark, deep
+   sage on light, each with a readable label color in `--accent-fg`. `--ink`
+   is the monochrome pair (off-white on dark, near-black on light) for
+   controls that stay neutral, like the theme switch and the segmented
+   filter. The inline theme script only sets `data-theme` before paint. */
 
 :root {
   /* DARK (default) */
@@ -53,13 +57,17 @@
   --muted: #8f8f8f;
   --faint: #5e5e5e;
 
-  --accent: #ffffff;
-  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
-  --accent-softer: color-mix(in srgb, var(--accent) 6%, transparent);
-  --accent-border: color-mix(in srgb, var(--accent) 26%, transparent);
+  --accent: #a3b19b;
+  --accent-hover: #b4c0ad;
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --accent-softer: color-mix(in srgb, var(--accent) 7%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent) 30%, transparent);
   --accent-text: var(--accent);
-  --accent-fg: #000000;
+  --accent-fg: #1a1a1a;
   --accent-ink: var(--accent-fg);
+
+  --ink: #dcdad9;
+  --ink-fg: #1a1a1a;
 
   /* status hues (dark) */
   --st-warn: #f5b945;
@@ -115,8 +123,8 @@
   --control-border: var(--border);
   --control-border-hover: var(--border-strong);
   --control-shadow: none;
-  --selected-bg: var(--accent-soft);
-  --selected-fg: var(--accent-text);
+  --selected-bg: color-mix(in srgb, var(--ink) 12%, transparent);
+  --selected-fg: var(--ink);
   --selected-shadow: none;
 }
 
@@ -135,12 +143,16 @@ html[data-theme="light"] {
   --muted: #676767;
   --faint: #8e8e8e;
 
-  --accent: #000000;
-  --accent-soft: color-mix(in srgb, var(--accent) 6%, white);
-  --accent-softer: color-mix(in srgb, var(--accent) 3%, white);
-  --accent-border: color-mix(in srgb, var(--accent) 12%, white);
+  --accent: #5f6f58;
+  --accent-hover: #4f5e49;
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, white);
+  --accent-softer: color-mix(in srgb, var(--accent) 5%, white);
+  --accent-border: color-mix(in srgb, var(--accent) 24%, white);
   --accent-text: var(--accent);
   --accent-fg: #ffffff;
+
+  --ink: #1a1a1a;
+  --ink-fg: #ffffff;
 
   /* status hues (light): saturated enough to scan, still readable on white */
   --st-warn: #b45309;
@@ -176,8 +188,8 @@ html[data-theme="light"] {
   --control-border: transparent;
   --control-border-hover: transparent;
   --control-shadow: none;
-  --selected-bg: var(--accent);
-  --selected-fg: var(--accent-fg);
+  --selected-bg: var(--ink);
+  --selected-fg: var(--ink-fg);
   --selected-shadow: none;
 }
 
@@ -210,6 +222,16 @@ textarea {
      those component classes and blew the control text up to the parent size. */
   font-family: inherit;
   letter-spacing: inherit;
+}
+
+/* Headings use the display face. Layered as base so a font utility on the
+   element (font-mono, font-sans) still wins. */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+  }
 }
 
 select {
@@ -600,10 +622,10 @@ select {
     color: var(--accent-ink);
     border-color: transparent;
   }
-  /* Mixing toward the page background (not white) keeps the hover shift visible
-     in both directions now that the accent is white on dark / black on light. */
+  /* A step away from the label color, so the label keeps its contrast:
+     lighter on dark, deeper on light. */
   .btn--primary:hover {
-    background: color-mix(in srgb, var(--accent) 86%, var(--bg));
+    background: var(--accent-hover);
     border-color: transparent;
   }
   .btn--ghost { background: transparent; border-color: transparent; color: var(--muted); box-shadow: none; }
@@ -919,7 +941,7 @@ select {
   /* ── dark/light switch ──────────────────────────────────────────────────
      Track holds two 22px icon slots (sun, moon) that exactly fill its inner
      width; the thumb slides between them and tints the active icon with
-     --accent-fg, so it stays legible against the accent in both themes. */
+     --ink-fg, so it stays legible against the ink in both themes. */
   /* Monochrome pill switch. Light mode fills the track with a soft charcoal
      and parks the thumb right, leaving the sun visible on the left; dark mode
      dims the track to a soft gray and parks the thumb left over the sun,
@@ -935,13 +957,13 @@ select {
     padding: 0 2px;
     border: 0;
     border-radius: var(--r-pill);
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    background: color-mix(in srgb, var(--ink) 18%, transparent);
     cursor: pointer;
     transition: background 0.2s;
   }
-  .theme-switch:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
-  .theme-switch[aria-checked="false"] { background: color-mix(in srgb, var(--accent) 75%, var(--accent-fg)); }
-  .theme-switch[aria-checked="false"]:hover { background: color-mix(in srgb, var(--accent) 68%, var(--accent-fg)); }
+  .theme-switch:hover { background: color-mix(in srgb, var(--ink) 24%, transparent); }
+  .theme-switch[aria-checked="false"] { background: color-mix(in srgb, var(--ink) 75%, var(--ink-fg)); }
+  .theme-switch[aria-checked="false"]:hover { background: color-mix(in srgb, var(--ink) 68%, var(--ink-fg)); }
   .theme-switch:focus-visible { outline: none; box-shadow: var(--ring); }
   .theme-switch-thumb {
     position: absolute;
@@ -969,7 +991,7 @@ select {
     opacity: 0;
     transition: opacity 0.2s;
   }
-  .theme-switch-icon--sun { color: var(--accent-fg); }
+  .theme-switch-icon--sun { color: var(--ink-fg); }
   .theme-switch-icon--moon { color: var(--muted); }
   .theme-switch[aria-checked="false"] .theme-switch-icon--sun,
   .theme-switch[aria-checked="true"] .theme-switch-icon--moon { opacity: 1; }
@@ -1181,14 +1203,10 @@ select {
     background: var(--surface-2);
   }
   .callout--accent { border-color: var(--accent-border); background: var(--accent-softer); }
-  /* Page-level notice (the demo banner). Tinted in dark; a plain outlined card
-     in light, matching the cards inside the workspace panel. */
+  /* Page-level notice (the demo banner). A plain outlined card in both themes,
+     matching the cards inside the workspace panel. */
   .notice {
-    border: 1px solid var(--accent-border);
-    background: var(--accent-soft);
-  }
-  html[data-theme="light"] .notice {
-    border-color: var(--border);
+    border: 1px solid var(--border);
     background: var(--surface);
   }
   .ai-reason {

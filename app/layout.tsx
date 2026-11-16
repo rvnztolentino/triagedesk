@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Funnel_Display, Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { AppLayout } from "@/components/app-layout";
@@ -17,6 +17,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
+  display: "swap",
+});
+
+// Display face for headings (h1 to h3), wired up in globals.css.
+const funnelDisplay = Funnel_Display({
+  subsets: ["latin"],
+  variable: "--font-funnel-display",
   display: "swap",
 });
 
@@ -115,7 +122,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <ClerkProvider>
-      <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+      <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${funnelDisplay.variable}`} suppressHydrationWarning>
         <head>
           {/* Warm the connection to Clerk's Frontend API before clerk.browser.js is
               discovered, so the OAuth return on /auth/callback isn't waiting on a
