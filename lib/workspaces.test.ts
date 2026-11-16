@@ -246,6 +246,7 @@ describe("workspace foundation", () => {
   });
 
   it("keeps the active workspace visible in the shell and workspace dashboard", () => {
+    // The sidebar pill is the single workspace indicator; the header no longer repeats it.
     expect(appLayoutSource).toContain("Current workspace: ${activeWorkspace.name}");
     expect(appLayoutSource).toContain('{activeWorkspace?.name ?? "Choose workspace"}');
     expect(appLayoutSource).toContain('href="/onboarding"');

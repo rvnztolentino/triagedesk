@@ -159,11 +159,10 @@ export function TicketsTableShell({
           })}
         </div>
 
-        <div className="cluster wrap" style={{ gap: 10, justifyContent: "flex-end" }}>
+        <div className="cluster wrap w-full sm:w-auto" style={{ gap: 10, justifyContent: "flex-end" }}>
           <TicketSearch query={query} onNavigate={handleSearchNavigate} />
           <select
-            className="select"
-            style={{ width: "auto" }}
+            className="select min-w-0 flex-1 basis-[140px] sm:flex-none"
             value={priority}
             onChange={(event) => handleSelectNavigate(ticketsHref(workspaceSlug, current, { priority: event.target.value, page: 1 }))}
           >
@@ -175,8 +174,7 @@ export function TicketsTableShell({
             ))}
           </select>
           <select
-            className="select"
-            style={{ width: "auto" }}
+            className="select min-w-0 flex-1 basis-[140px] sm:flex-none"
             value={dept}
             onChange={(event) => handleSelectNavigate(ticketsHref(workspaceSlug, current, { dept: event.target.value, page: 1 }))}
           >
@@ -189,8 +187,7 @@ export function TicketsTableShell({
           </select>
           {showAssigneeFilter ? (
             <select
-              className="select"
-              style={{ width: "auto" }}
+              className="select min-w-0 flex-1 basis-[140px] sm:flex-none"
               aria-label="Filter by assignee"
               value={assignee}
               onChange={(event) => handleSelectNavigate(ticketsHref(workspaceSlug, current, { assignee: event.target.value, page: 1 }))}

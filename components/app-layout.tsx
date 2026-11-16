@@ -17,7 +17,6 @@ import {
   Sparkles,
   SunMoon,
   Ticket,
-  Timer,
   UserRound,
   Users,
   X,
@@ -129,9 +128,6 @@ export function AppLayout({
   // Keyed off the principal rather than the active workspace, so the demo chrome
   // still renders on pages reached before the active-workspace cookie is set.
   const isDemoSession = currentUser?.isDemo === true;
-  // Static on purpose. The countdown lives in the banner only, so the shell runs one
-  // timer rather than two ticking the same value in two places.
-  const demoPillLabel = "Demo workspace";
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
 
@@ -368,6 +364,7 @@ export function AppLayout({
             <Link
               href="/onboarding"
               title={collapsed ? activeWorkspace?.name ?? "Choose workspace" : undefined}
+              aria-label={activeWorkspace ? `Current workspace: ${activeWorkspace.name}` : "Choose a workspace"}
               aria-current={workspaceSectionActive ? "page" : undefined}
               className={cn(
                 "shell-ctrl group flex w-full justify-start gap-2.5 rounded-[22px] py-1.5 pl-1.5 pr-3",
@@ -383,13 +380,8 @@ export function AppLayout({
               >
                 <Building2 size={14} />
               </div>
-              <div className={cn("min-w-0 flex-1", collapsed && "md:hidden")}>
-                <div className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-faint leading-none">
-                  {isDemoSession ? "Demo" : "Workspace"}
-                </div>
-                <div className="mt-1 truncate text-sm font-medium text-fg leading-tight transition-colors">
-                  {activeWorkspace?.name ?? "Choose workspace"}
-                </div>
+              <div className={cn("min-w-0 flex-1 truncate text-sm font-medium text-fg", collapsed && "md:hidden")}>
+                {activeWorkspace?.name ?? "Choose workspace"}
               </div>
               <ChevronDown size={14} className={cn("text-faint shrink-0", collapsed && "md:hidden")} />
             </Link>
@@ -437,18 +429,6 @@ export function AppLayout({
 
         {/* Bottom section */}
         <div className={cn("mt-auto px-3 pb-5 pt-3", collapsed && "md:px-2")}>
-          {isDemoSession ? (
-            <div
-              className={cn(
-                "mb-3 mx-1 flex items-center gap-2 rounded-full border border-accent-border bg-accent-soft px-3 py-2 text-accent-text",
-                collapsed && "md:justify-center md:px-0"
-              )}
-              title={collapsed ? demoPillLabel : undefined}
-            >
-              <Timer size={12} className="shrink-0" />
-              <span className={cn("whitespace-nowrap text-[11px] font-medium", collapsed && "md:hidden")}>{demoPillLabel}</span>
-            </div>
-          ) : null}
           {/* Theme row: laid out like the nav links so the switch sits in line with
               them. Collapsed, only the switch stays. */}
           <div className={cn("nav-item nav-static", collapsed && "md:justify-center md:p-[5px]")}>
@@ -509,20 +489,6 @@ export function AppLayout({
 
           {/* Right side: actions */}
           <div className="flex items-center gap-2">
-            {/* Workspace switcher: header (visible on tablet+) */}
-            {currentUser ? (
-              <Link
-                href="/onboarding"
-                aria-label={activeWorkspace ? `Current workspace: ${activeWorkspace.name}` : "Choose a workspace"}
-                className="shell-ctrl hidden sm:inline-flex gap-2 h-10 px-4 text-left"
-              >
-                <Building2 size={15} className={activeWorkspace ? "text-fg shrink-0" : "text-muted shrink-0"} />
-                <span className="max-w-[10rem] truncate text-[13px] font-medium text-fg">
-                  {activeWorkspace?.name ?? "Choose workspace"}
-                </span>
-              </Link>
-            ) : null}
-
             {currentUser && activeWorkspace ? (
               <NotificationBell
                 notifications={notifications}
